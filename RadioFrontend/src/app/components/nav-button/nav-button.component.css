@@ -1,0 +1,13 @@
+.mat-mdc-button-base {
+  margin: 8px 8px 8px 0;
+}
+
+.menu-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+img {
+  height: 24px;
+}

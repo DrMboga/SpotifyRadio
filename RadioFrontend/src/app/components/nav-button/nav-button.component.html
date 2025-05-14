@@ -1,0 +1,15 @@
+@if (router.url === routerLink()) {
+  <a mat-stroked-button [routerLink]="routerLink()">
+    <div class="menu-button">
+      <mat-icon>{{ icon() }}</mat-icon>
+      {{ label() }}
+    </div>
+  </a>
+} @else {
+  <a mat-button [routerLink]="routerLink()">
+    <div class="menu-button">
+      <mat-icon>{{ icon() }}</mat-icon>
+      {{ label() }}
+    </div>
+  </a>
+}

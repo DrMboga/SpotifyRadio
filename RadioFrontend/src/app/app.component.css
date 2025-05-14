@@ -1,0 +1,15 @@
+.flex-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.button-row {
+  display: table-cell;
+  max-width: 600px;
+}
+
+.button-row .mat-mdc-button-base {
+  margin: 8px 8px 8px 0;
+}
