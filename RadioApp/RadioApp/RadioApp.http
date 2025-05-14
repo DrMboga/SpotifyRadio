@@ -1,0 +1,6 @@
+@RadioApp_HostAddress = http://localhost:5262
+
+GET {{RadioApp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
