@@ -1,1 +1,11 @@
-<p>spotify-settings works!</p>
+@if (forecast(); as forecasts)
+{
+  <mat-list role="list">
+    @for(forecast of forecasts; track forecast.date)
+    {
+      <mat-list-item role="listitem">
+        {{forecast.date}} | {{forecast.summary}} | {{forecast.temperatureC}}°C
+      </mat-list-item>
+    }
+  </mat-list>
+}
