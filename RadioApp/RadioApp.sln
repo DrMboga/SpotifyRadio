@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp", "RadioApp\RadioA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp.Common", "RadioApp.Common\RadioApp.Common.csproj", "{CAD45FCA-E15D-49D6-BA99-CFCFA8922CB8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp.Persistence", "RadioApp.Persistence\RadioApp.Persistence.csproj", "{F9070258-CC78-4DCB-85D1-31C15FA445FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{CAD45FCA-E15D-49D6-BA99-CFCFA8922CB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CAD45FCA-E15D-49D6-BA99-CFCFA8922CB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CAD45FCA-E15D-49D6-BA99-CFCFA8922CB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9070258-CC78-4DCB-85D1-31C15FA445FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9070258-CC78-4DCB-85D1-31C15FA445FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9070258-CC78-4DCB-85D1-31C15FA445FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9070258-CC78-4DCB-85D1-31C15FA445FD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

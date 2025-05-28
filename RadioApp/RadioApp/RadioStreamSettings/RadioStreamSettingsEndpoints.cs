@@ -1,4 +1,6 @@
-﻿using RadioApp.Common.Contracts;
+﻿using MediatR;
+using RadioApp.Common.Contracts;
+using RadioApp.Common.Messages.RadioStream;
 
 namespace RadioApp.RadioStreamSettings;
 
@@ -6,25 +8,15 @@ public static class RadioStreamSettingsEndpoints
 {
     public static void MapRadioStreamSettingsEndpoints(this WebApplication app)
     {
-        app.MapGet("radio-regions", async () =>
+        app.MapGet("radio-regions", async (IMediator mediator) =>
         {
-            string[] regions = ["Rheinland-Pfalz", "Saarland"];
-            return  regions;
+            var regions = await mediator.Send(new GetRadioRegionsListRequest());
+            return regions;
         }).WithName("RadioRegionsList");
         
-        app.MapGet("radio-stations-by-region", async (string region) =>
+        app.MapGet("radio-stations-by-region", async (string region, IMediator mediator) =>
         {
-            RadioStationInfo[] radioStations =
-            [
-                new RadioStationInfo
-                {
-                    Name = "Station1",
-                    Frequency = 88.3m,
-                    Region = region,
-                    DetailsUrl = "https://spotify.apple.com",
-                }
-            ];
-
+            var radioStations = await mediator.Send(new GetRadioStationsListByRegionRequest(region));
             return radioStations;
         }).WithName("RadioStationsListByRegion");
 

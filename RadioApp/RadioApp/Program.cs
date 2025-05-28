@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.FileProviders;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
@@ -22,12 +23,15 @@ if (builder.Environment.IsDevelopment())
     });
 }
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-
 //https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-9.0&tabs=visual-studio%2Cvisual-studio-code
 // /openapi/v1.json
 builder.Services.AddOpenApi();
+
+// MediatR
+Assembly[] mediatRAssemblies = [ 
+    Assembly.LoadFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RadioApp.Persistence.dll")) 
+];
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(mediatRAssemblies));
 
 var app = builder.Build();
 
