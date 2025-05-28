@@ -14,4 +14,8 @@
       <Folder Include="wwwroot\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\RadioApp.Common\RadioApp.Common.csproj" />
+    </ItemGroup>
+
 </Project>
