@@ -14,6 +14,8 @@ public static class SpotifySettingsEndpoints
         app.MapPatch("/spotify-settings", async (SpotifySettings spotifySettings) =>
         {
             return spotifySettings;
-        }).WithName("PatchSpotifySettings");
+        })
+            .WithName("PatchSpotifySettings")
+            .WithDescription("Patching Spotify settings in the DB.");
     }
 }

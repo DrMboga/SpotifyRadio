@@ -1,4 +1,5 @@
 using Microsoft.Extensions.FileProviders;
+using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
 
 const string allowCors = "AllowCorsPolicy";
@@ -56,5 +57,6 @@ if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "browse
 app.UseHttpsRedirection();
 
 app.MapSpotifySettingsEndpoints();
+app.MapRadioStreamSettingsEndpoints();
 
 app.Run();
