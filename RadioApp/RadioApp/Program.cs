@@ -1,5 +1,7 @@
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using RadioApp.Persistence;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
 
@@ -33,7 +35,18 @@ Assembly[] mediatRAssemblies = [
 ];
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(mediatRAssemblies));
 
+// Data Access
+builder.Services.AddDbContextFactory<Persistence>();
+
 var app = builder.Build();
+
+// Create database
+if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")))
+{
+    var dbContextFactory = app.Services.GetService<IDbContextFactory<Persistence>>();
+    await using var dbContext = await dbContextFactory!.CreateDbContextAsync();
+    dbContext.Database.EnsureCreated();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

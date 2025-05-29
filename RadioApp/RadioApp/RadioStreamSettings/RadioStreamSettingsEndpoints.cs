@@ -20,16 +20,9 @@ public static class RadioStreamSettingsEndpoints
             return radioStations;
         }).WithName("RadioStationsListByRegion");
 
-        app.MapGet("radio-button-region", async () =>
+        app.MapGet("radio-button-region", async (IMediator mediator) =>
         {
-            RadioRegion[] regionButtonsMap =
-            [
-                new()
-                {
-                    SabaRadioButton = SabaRadioButtons.L,
-                    Region = "Saarland",
-                }
-            ];
+            var regionButtonsMap = await mediator.Send(new GetButtonsRegionsRequest());
             return regionButtonsMap;
         }).WithName("RadioRegionByButtonMap");
         

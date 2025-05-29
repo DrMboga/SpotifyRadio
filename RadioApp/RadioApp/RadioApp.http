@@ -1,6 +1,68 @@
+# https://www.jetbrains.com/help/rider/Http_client_in__product__code_editor.html#run-specific-requests-from-another-http-file
+
 @RadioApp_HostAddress = http://localhost:5262
 
-GET {{RadioApp_HostAddress}}/weatherforecast/
+# Spotify Settings
+
+GET {{RadioApp_HostAddress}}/spotify-settings
 Accept: application/json
+###
+
+PATCH {{RadioApp_HostAddress}}/spotify-settings
+Accept: application/json
+Content-Type: application/json
+
+{
+  "clientId": "12345",
+  "clientSecret": "Hi there",
+  "redirectUrl": "{{RadioApp_HostAddress}}/spotify-settings",
+  "authToken": null,
+  "authTokenExpiration": null,
+  "refreshToken": null,
+  "deviceName": null,
+  "playlistName": null
+}
+###
+
+# Radio settings
+# ------------
+GET {{RadioApp_HostAddress}}/radio-regions
 
 ###
+@region=Baden-Württemberg
+GET {{RadioApp_HostAddress}}/radio-stations-by-region?region={{region}}
+
+###
+GET {{RadioApp_HostAddress}}/radio-buttons
+
+# ------------
+###
+GET {{RadioApp_HostAddress}}/radio-button-region
+
+###
+POST {{RadioApp_HostAddress}}/radio-button-region
+Content-Type: application/json
+
+{
+    "sabaRadioButton": 1,
+    "region": "{{region}}"
+}
+
+###
+# ------------
+###
+@saba_button = 1
+GET {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}
+
+###
+POST {{RadioApp_HostAddress}}/radio-stations-by-button
+Content-Type: application/json
+
+{
+  "button": 1,
+  "region": "Saarland",
+  "name": "Station1",
+  "sabaFrequency": 1,
+  "streamUrl": "https://spotify.apple.com",
+  "radioLogoBase64": "Saarland img"
+}
