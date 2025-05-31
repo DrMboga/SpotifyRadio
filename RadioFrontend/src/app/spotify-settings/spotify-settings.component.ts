@@ -36,7 +36,8 @@ export class SpotifySettingsComponent {
     this.spotifyStore.saveSpotifySettings(this.spotifySettings());
 
     // Redirect to Spotify login page
-    // const url = `https://accounts.spotify.com/authorize/?client_id=${this.clientId}&response_type=code&redirect_uri=${this.redirectUri}&show_dialog=true&scope=user-read-private user-read-email user-modify-playback-state user-read-playback-position user-library-read streaming user-read-playback-state user-read-recently-played playlist-read-private`;
+    const url = this.spotifyStore.spotifyLoginUrl();
+    console.log(url);
     // window.location.href = url;
   }
 }

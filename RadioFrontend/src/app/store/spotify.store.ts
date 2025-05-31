@@ -14,12 +14,25 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 
+const SPOTIFY_LOGIN_BASE_URL = 'https://accounts.spotify.com/authorize/';
+const SPOTIFY_LOGIN_URL_PARAMETERS =
+  '&response_type=code&show_dialog=true&scope=user-read-private user-read-email user-modify-playback-state user-read-playback-position user-library-read streaming user-read-playback-state user-read-recently-played playlist-read-private';
+
 type SpotifyState = {
   settings: SpotifySettings;
 };
 
 const initialState: SpotifyState = {
-  settings: {},
+  settings: {
+    clientId: '',
+    clientSecret: '',
+    redirectUrl: '',
+    authToken: '',
+    authTokenExpiration: new Date(1),
+    refreshToken: '',
+    deviceName: '',
+    playlistName: '',
+  },
 };
 
 export const SpotifyStore = signalStore(
@@ -52,6 +65,13 @@ export const SpotifyStore = signalStore(
       const expiration = settings.authTokenExpiration();
       const now = new Date();
       return expiration!.getTime() >= now.getTime();
+    }),
+    spotifyLoginUrl: computed(() => {
+      if (!settings.clientId || !settings.clientId()) {
+        return '';
+      }
+      const redirectUri = `${location.origin}/spotify-login`;
+      return `${SPOTIFY_LOGIN_BASE_URL}?client_id=${settings.clientId()}&redirect_uri=${redirectUri}${SPOTIFY_LOGIN_URL_PARAMETERS}`;
     }),
   })),
   withMethods((store, backend = inject(BackendService)) => ({
