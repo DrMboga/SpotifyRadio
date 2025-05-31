@@ -32,26 +32,16 @@ public static class RadioStreamSettingsEndpoints
             return regionButton;   
         }).WithName("SetsMappingBetweenButtonAndRegion");
         
-        app.MapGet("radio-stations-by-button", async (SabaRadioButtons button) =>
+        app.MapGet("radio-stations-by-button", async (SabaRadioButtons button, IMediator mediator) =>
         {
-            RadioStation[] stationsList =
-            [
-                new()
-                {
-                    Button = button,
-                    Name = "Station1",
-                    Region = "Saarland",
-                    SabaFrequency = (int)button,
-                    StreamUrl = "https://spotify.apple.com",
-                    RadioLogoBase64 = "Saarland img",
-                }
-            ];
+            var stationsList = await mediator.Send(new GetRadioStationsByButtonRequest(button));
             return stationsList;
         }).WithName("RadioStationsListConnectedWithButton");
 
-        app.MapPost("radio-stations-by-button", async (RadioStation stationButton) =>
+        app.MapPost("radio-stations-by-button", async (RadioStation station, IMediator mediator) =>
         {
-            return stationButton;
+            await mediator.Publish(new SaveRadioStationNotification(station));
+            return station;
         }).WithName("SavesStationInfo");
         
         app.MapGet("radio-buttons", () =>

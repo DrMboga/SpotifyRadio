@@ -59,10 +59,10 @@ POST {{RadioApp_HostAddress}}/radio-stations-by-button
 Content-Type: application/json
 
 {
-  "button": 1,
+  "button": {{saba_button}},
   "region": "Saarland",
   "name": "Station1",
-  "sabaFrequency": 1,
+  "sabaFrequency": 88,
   "streamUrl": "https://spotify.apple.com",
   "radioLogoBase64": "Saarland img"
 }
