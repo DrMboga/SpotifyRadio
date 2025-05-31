@@ -36,8 +36,6 @@ export class SpotifySettingsComponent {
     this.spotifyStore.saveSpotifySettings(this.spotifySettings());
 
     // Redirect to Spotify login page
-    const url = this.spotifyStore.spotifyLoginUrl();
-    console.log(url);
-    // window.location.href = url;
+    window.location.href = this.spotifyStore.spotifyLoginUrl();
   }
 }
