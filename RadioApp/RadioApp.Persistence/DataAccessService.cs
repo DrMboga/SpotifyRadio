@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.RadioStream;
+using RadioApp.Common.Messages.Spotify;
 using RadioApp.Persistence.Model;
 
 namespace RadioApp.Persistence;
@@ -10,7 +11,9 @@ public class DataAccessService:
     IRequestHandler<GetButtonsRegionsRequest, RadioRegion[]>,
     INotificationHandler<SetButtonRegionNotification>,
     IRequestHandler<GetRadioStationsByButtonRequest, RadioStation[]>,
-    INotificationHandler<SaveRadioStationNotification>
+    INotificationHandler<SaveRadioStationNotification>,
+    IRequestHandler<GetSpotifySettingsRequest, SpotifySettings>,
+    INotificationHandler<SetSpotifySettingsNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -77,6 +80,35 @@ public class DataAccessService:
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<SpotifySettings> Handle(GetSpotifySettingsRequest request, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var settings = await dbContext.SpotifySettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        return settings ?? new SpotifySettings();
+    }
+
+    public async Task Handle(SetSpotifySettingsNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var settings = await dbContext.SpotifySettings.FirstOrDefaultAsync(cancellationToken);
+        if (settings is null)
+        {
+            await dbContext.AddAsync(notification.SpotifySettings, cancellationToken);
+        }
+        else
+        {
+            settings.ClientId = notification.SpotifySettings.ClientId;
+            settings.ClientSecret = notification.SpotifySettings.ClientSecret;
+            settings.RedirectUrl = notification.SpotifySettings.RedirectUrl;
+            settings.AuthToken = notification.SpotifySettings.AuthToken;
+            settings.AuthTokenExpiration = notification.SpotifySettings.AuthTokenExpiration;
+            settings.RefreshToken = notification.SpotifySettings.RefreshToken;
+            settings.DeviceName = notification.SpotifySettings.DeviceName;
+            settings.PlaylistName = notification.SpotifySettings.PlaylistName;
+        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+    
     private RadioStationEntity ConvertToStationEntity(RadioStation station)
     {
         // TODO: Use AutoMapper
