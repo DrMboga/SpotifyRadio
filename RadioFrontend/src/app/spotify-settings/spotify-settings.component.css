@@ -1,0 +1,28 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 100px;
+  gap: 5px;
+
+  mat-form-field {
+    width: 100%;
+    margin: 5px;
+  }
+
+  .song-info {
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .song-picture {
+      width: 64px;
+      height: 64px;
+    }
+
+    .song-name {
+      font-weight: bold;
+    }
+  }
+}
