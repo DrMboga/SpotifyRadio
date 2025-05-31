@@ -19,6 +19,7 @@ if (builder.Environment.IsDevelopment())
                     .WithOrigins("http://localhost:4200", "http://localhost:4200/") // Or .AllowAnyOrigin()
                     .AllowAnyHeader()
                     .AllowCredentials()
+                    .AllowAnyMethod()
                     ;
             });
     });

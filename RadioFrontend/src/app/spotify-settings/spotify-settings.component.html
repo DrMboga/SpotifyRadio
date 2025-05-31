@@ -8,7 +8,7 @@
     <mat-label>Client Secret</mat-label>
     <input matInput [(ngModel)]="spotifySettings.clientSecret">
   </mat-form-field>
-  <button mat-flat-button (click)="authorize()" >Authorize</button>
+  <button mat-flat-button (click)="authorize()" [disabled]="isAuthorized()" >Authorize</button>
 
 <!--  <div style="margin-top: 50px;">-->
 <!--    <mat-form-field>-->
