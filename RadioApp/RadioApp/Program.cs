@@ -29,14 +29,11 @@ if (builder.Environment.IsDevelopment())
 // /openapi/v1.json
 builder.Services.AddOpenApi();
 
-// MediatR
-Assembly[] mediatRAssemblies = [ 
-    Assembly.LoadFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RadioApp.Persistence.dll")) 
-];
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(mediatRAssemblies));
-
 // Data Access
 builder.Services.AddDbContextFactory<Persistence>();
+
+// MediatR
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(AppDomain.CurrentDomain.GetAssemblies()));
 
 var app = builder.Build();
 

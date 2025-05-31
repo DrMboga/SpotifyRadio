@@ -26,8 +26,9 @@ public static class RadioStreamSettingsEndpoints
             return regionButtonsMap;
         }).WithName("RadioRegionByButtonMap");
         
-        app.MapPost("radio-button-region", async (RadioRegion regionButton) =>
+        app.MapPost("radio-button-region", async (RadioRegion regionButton, IMediator mediator) =>
         {
+            await mediator.Publish(new SetButtonRegionNotification(regionButton));
             return regionButton;   
         }).WithName("SetsMappingBetweenButtonAndRegion");
         
