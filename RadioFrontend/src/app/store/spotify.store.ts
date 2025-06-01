@@ -14,7 +14,6 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { SpotifyApiService } from '../services/spotify-api.service';
-import { utcEpochToDate } from '../helpers/date-helper';
 
 const SPOTIFY_LOGIN_BASE_URL = 'https://accounts.spotify.com/authorize/';
 const SPOTIFY_LOGIN_URL_PARAMETERS =
@@ -30,7 +29,7 @@ const initialState: SpotifyState = {
     clientSecret: '',
     redirectUrl: '',
     authToken: '',
-    authTokenExpiration: new Date(1),
+    authTokenExpiration: 0,
     refreshToken: '',
     deviceName: '',
     playlistName: '',
@@ -64,9 +63,9 @@ export const SpotifyStore = signalStore(
       ) {
         return false;
       }
-      const expiration = settings.authTokenExpiration();
+      const expiration = settings.authTokenExpiration() ?? 0;
       const now = new Date();
-      return expiration!.getTime() >= now.getTime();
+      return expiration >= now.getTime();
     }),
     spotifyLoginUrl: computed(() => {
       if (!settings.clientId || !settings.clientId()) {
@@ -115,7 +114,7 @@ export const SpotifyStore = signalStore(
                       ...store.settings(),
                       redirectUrl: redirectUri,
                       authToken: tokenResponse.accessToken,
-                      authTokenExpiration: utcEpochToDate(tokenResponse.expiration),
+                      authTokenExpiration: tokenResponse.expiration * 1000,
                       refreshToken: tokenResponse.refreshToken,
                     })
                     .pipe(
@@ -126,7 +125,7 @@ export const SpotifyStore = signalStore(
                               ...store.settings(),
                               redirectUrl: redirectUri,
                               authToken: tokenResponse.accessToken,
-                              authTokenExpiration: utcEpochToDate(tokenResponse.expiration),
+                              authTokenExpiration: tokenResponse.expiration * 1000,
                               refreshToken: tokenResponse.refreshToken,
                             },
                           })),
@@ -135,7 +134,7 @@ export const SpotifyStore = signalStore(
                             settings: {
                               ...store.settings(),
                               authToken: '',
-                              authTokenExpiration: new Date(0),
+                              authTokenExpiration: 0,
                               refreshToken: '',
                             },
                           }));

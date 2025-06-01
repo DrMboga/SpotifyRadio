@@ -3,7 +3,7 @@ export interface SpotifySettings {
   clientSecret?: string;
   redirectUrl?: string;
   authToken?: string;
-  authTokenExpiration?: Date;
+  authTokenExpiration?: number;
   refreshToken?: string;
   deviceName?: string;
   playlistName?: string;
