@@ -13,6 +13,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
+import { SpotifyApiService } from '../services/spotify-api.service';
+import { utcEpochToDate } from '../helpers/date-helper';
 
 const SPOTIFY_LOGIN_BASE_URL = 'https://accounts.spotify.com/authorize/';
 const SPOTIFY_LOGIN_URL_PARAMETERS =
@@ -74,21 +76,78 @@ export const SpotifyStore = signalStore(
       return `${SPOTIFY_LOGIN_BASE_URL}?client_id=${settings.clientId()}&redirect_uri=${redirectUri}${SPOTIFY_LOGIN_URL_PARAMETERS}`;
     }),
   })),
-  withMethods((store, backend = inject(BackendService)) => ({
-    saveSpotifySettings: rxMethod<SpotifySettings>(
-      pipe(
-        switchMap(settings =>
-          backend.saveSpotifySettings(settings).pipe(
-            tapResponse({
-              next: () => patchState(store, () => ({ settings })),
-              error: err => {
-                patchState(store, () => ({ settings: {} }));
-                console.error(err);
-              },
-            }),
+  withMethods(
+    (store, backend = inject(BackendService), spotifyApi = inject(SpotifyApiService)) => ({
+      saveSpotifySettings: rxMethod<SpotifySettings>(
+        pipe(
+          switchMap(settings =>
+            backend.saveSpotifySettings(settings).pipe(
+              tapResponse({
+                next: () => patchState(store, () => ({ settings })),
+                error: err => {
+                  patchState(store, () => ({ settings: {} }));
+                  console.error(err);
+                },
+              }),
+            ),
           ),
         ),
       ),
-    ),
-  })),
+      getAndSaveAuthenticationToken: rxMethod<{
+        code: string;
+        clientId: string;
+        clientSecret: string;
+      }>(
+        pipe(
+          switchMap(parameters => {
+            const redirectUri = `${location.origin}/spotify-login`;
+            return spotifyApi
+              .getToken(
+                parameters.code,
+                redirectUri,
+                parameters.clientId ?? '',
+                parameters.clientSecret ?? '',
+              )
+              .pipe(
+                switchMap(tokenResponse => {
+                  return backend
+                    .saveSpotifySettings({
+                      ...store.settings(),
+                      redirectUrl: redirectUri,
+                      authToken: tokenResponse.accessToken,
+                      authTokenExpiration: utcEpochToDate(tokenResponse.expiration),
+                      refreshToken: tokenResponse.refreshToken,
+                    })
+                    .pipe(
+                      tapResponse({
+                        next: () =>
+                          patchState(store, () => ({
+                            settings: {
+                              ...store.settings(),
+                              redirectUrl: redirectUri,
+                              authToken: tokenResponse.accessToken,
+                              authTokenExpiration: utcEpochToDate(tokenResponse.expiration),
+                              refreshToken: tokenResponse.refreshToken,
+                            },
+                          })),
+                        error: err => {
+                          patchState(store, () => ({
+                            settings: {
+                              ...store.settings(),
+                              authToken: '',
+                              authTokenExpiration: new Date(0),
+                              refreshToken: '',
+                            },
+                          }));
+                          console.error(err);
+                        },
+                      }),
+                    );
+                }),
+              );
+          }),
+        ),
+      ),
+    }),
+  ),
 );

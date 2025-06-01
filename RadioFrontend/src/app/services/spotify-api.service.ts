@@ -32,6 +32,9 @@ export class SpotifyApiService {
     clientId: string,
     clientSecret: string,
   ): Observable<{ accessToken: string; expiration: number; refreshToken: string }> {
+    if (!redirectUri || !clientId || !clientSecret) {
+      throw new Error('Redirect URI or client id or client secret is not set');
+    }
     const formData = new URLSearchParams();
     formData.set('grant_type', 'authorization_code');
     formData.set('code', code);
