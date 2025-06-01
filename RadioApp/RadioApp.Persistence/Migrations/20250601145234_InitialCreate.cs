@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -51,7 +50,7 @@ namespace RadioApp.Persistence.Migrations
                     ClientSecret = table.Column<string>(type: "TEXT", nullable: true),
                     RedirectUrl = table.Column<string>(type: "TEXT", nullable: true),
                     AuthToken = table.Column<string>(type: "TEXT", nullable: true),
-                    AuthTokenExpiration = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    AuthTokenExpiration = table.Column<long>(type: "INTEGER", nullable: true),
                     RefreshToken = table.Column<string>(type: "TEXT", nullable: true),
                     DeviceName = table.Column<string>(type: "TEXT", nullable: true),
                     PlaylistName = table.Column<string>(type: "TEXT", nullable: true)
