@@ -1,5 +1,28 @@
 @if (spotifySettings(); as spotifySettings)
 {
+  @if(spotifyDevices(); as spotifyDevices) {
+      <div style="margin-top: 50px;">
+        <mat-form-field>
+          <mat-label>Active Spotify devices</mat-label>
+          <mat-select [(ngModel)]="spotifySettings.deviceName">
+            @for (device of spotifyDevices; track device.id) {
+              <mat-option [value]="device.name">{{ device.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+    <!--    <mat-form-field>-->
+    <!--      <mat-label>Play lists</mat-label>-->
+    <!--      <mat-select [(ngModel)]="selectedPlayList">-->
+    <!--        @for (playListItem of playlists(); track playListItem.id) {-->
+    <!--          <mat-option [value]="playListItem.name">{{ playListItem.name }}</mat-option>-->
+    <!--        }-->
+    <!--      </mat-select>-->
+    <!--    </mat-form-field>-->
+      </div>
+
+    <!--  <button mat-flat-button (click)="saveDeviceAndPlayList()">Save</button>-->
+  }
+
   <mat-form-field>
     <mat-label>ClientId</mat-label>
     <input matInput [(ngModel)]="spotifySettings.clientId">
