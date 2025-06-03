@@ -15,6 +15,7 @@ import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { SpotifyApiService } from '../services/spotify-api.service';
 import { SpotifyDevice } from '../model/spotify-device';
+import { PlayListItem } from '../model/spotify-playlist-item';
 
 const SPOTIFY_LOGIN_BASE_URL = 'https://accounts.spotify.com/authorize/';
 const SPOTIFY_LOGIN_URL_PARAMETERS =
@@ -23,6 +24,7 @@ const SPOTIFY_LOGIN_URL_PARAMETERS =
 type SpotifyState = {
   settings: SpotifySettings;
   devices: SpotifyDevice[];
+  playLists: PlayListItem[];
 };
 
 const initialState: SpotifyState = {
@@ -36,7 +38,8 @@ const initialState: SpotifyState = {
     deviceName: '',
     playlistName: '',
   },
-  devices: []
+  devices: [],
+  playLists: []
 };
 
 export const SpotifyStore = signalStore(
@@ -159,6 +162,16 @@ export const SpotifyStore = signalStore(
             console.error(err);
           }
         }))),
+      )),
+
+      readPlayLists: rxMethod<string>(pipe(
+        switchMap(authToken => spotifyApi.getPlayLists(authToken).pipe(tapResponse({
+          next: playLists => patchState(store, () => ({playLists})),
+          error: err => {
+            patchState(store, () => ({playLists: []}));
+            console.error(err);
+          }
+        })))
       ))
     }),
   ),

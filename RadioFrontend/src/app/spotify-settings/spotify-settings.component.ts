@@ -5,6 +5,7 @@ import { MatInput } from '@angular/material/input';
 import { MatButton } from '@angular/material/button';
 import { SpotifyStore } from '../store/spotify.store';
 import { MatOption, MatSelect } from '@angular/material/select';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-spotify-settings',
@@ -17,6 +18,7 @@ import { MatOption, MatSelect } from '@angular/material/select';
     MatButton,
     MatSelect,
     MatOption,
+    MatDividerModule
   ],
   templateUrl: './spotify-settings.component.html',
   styleUrl: './spotify-settings.component.css',
@@ -26,6 +28,7 @@ export class SpotifySettingsComponent {
 
   spotifySettings = this.spotifyStore.settings;
   spotifyDevices = this.spotifyStore.devices;
+  spotifyPlaylists = this.spotifyStore.playLists;
   isAuthorized = this.spotifyStore.isAuthorized;
 
   private authToken = computed(() => {
@@ -40,6 +43,7 @@ export class SpotifySettingsComponent {
       const authToken = this.authToken();
       if (authToken) {
         this.spotifyStore.readSpotifyDevices(authToken);
+        this.spotifyStore.readPlayLists(authToken);
       }
     });
   }
@@ -53,5 +57,12 @@ export class SpotifySettingsComponent {
 
     // Redirect to Spotify login page
     window.location.href = this.spotifyStore.spotifyLoginUrl();
+  }
+
+  public saveDeviceAndPlayList(): void {
+    if (!this.spotifySettings()) {
+      return;
+    }
+    this.spotifyStore.saveSpotifySettings(this.spotifySettings());
   }
 }

@@ -1,58 +1,35 @@
-@if (spotifySettings(); as spotifySettings)
-{
-  @if(spotifyDevices(); as spotifyDevices) {
-      <div style="margin-top: 50px;">
-        <mat-form-field>
-          <mat-label>Active Spotify devices</mat-label>
-          <mat-select [(ngModel)]="spotifySettings.deviceName">
-            @for (device of spotifyDevices; track device.id) {
-              <mat-option [value]="device.name">{{ device.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-    <!--    <mat-form-field>-->
-    <!--      <mat-label>Play lists</mat-label>-->
-    <!--      <mat-select [(ngModel)]="selectedPlayList">-->
-    <!--        @for (playListItem of playlists(); track playListItem.id) {-->
-    <!--          <mat-option [value]="playListItem.name">{{ playListItem.name }}</mat-option>-->
-    <!--        }-->
-    <!--      </mat-select>-->
-    <!--    </mat-form-field>-->
-      </div>
+@if (spotifySettings(); as spotifySettings) {
+  <div style="width: 80%">
+    <div style="margin-bottom: 50px;">
+      <mat-form-field>
+        <mat-label>Active Spotify devices</mat-label>
+        <mat-select [(ngModel)]="spotifySettings.deviceName">
+          @for (device of spotifyDevices(); track device.id) {
+            <mat-option [value]="device.name">{{ device.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Play lists</mat-label>
+        <mat-select [(ngModel)]="spotifySettings.playlistName">
+          @for (playListItem of spotifyPlaylists(); track playListItem.id) {
+            <mat-option [value]="playListItem.name">{{ playListItem.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <button mat-flat-button (click)="saveDeviceAndPlayList()">Save device and playList</button>
+    </div>
 
-    <!--  <button mat-flat-button (click)="saveDeviceAndPlayList()">Save</button>-->
-  }
+    <mat-divider></mat-divider>
 
-  <mat-form-field>
-    <mat-label>ClientId</mat-label>
-    <input matInput [(ngModel)]="spotifySettings.clientId">
-  </mat-form-field>
-  <mat-form-field>
-    <mat-label>Client Secret</mat-label>
-    <input matInput [(ngModel)]="spotifySettings.clientSecret">
-  </mat-form-field>
-  <button mat-flat-button (click)="authorize()" [disabled]="isAuthorized()" >Authorize</button>
-
-<!--  <div style="margin-top: 50px;">-->
-<!--    <mat-form-field>-->
-<!--      <mat-label>Devices</mat-label>-->
-<!--      <mat-select [(ngModel)]="selectedDevice">-->
-<!--        @for (device of devices(); track device.id) {-->
-<!--          <mat-option [value]="device.name">{{ device.name }}</mat-option>-->
-<!--        }-->
-<!--      </mat-select>-->
-<!--    </mat-form-field>-->
-<!--    <mat-form-field>-->
-<!--      <mat-label>Play lists</mat-label>-->
-<!--      <mat-select [(ngModel)]="selectedPlayList">-->
-<!--        @for (playListItem of playlists(); track playListItem.id) {-->
-<!--          <mat-option [value]="playListItem.name">{{ playListItem.name }}</mat-option>-->
-<!--        }-->
-<!--      </mat-select>-->
-<!--    </mat-form-field>-->
-<!--  </div>-->
-
-<!--  <button mat-flat-button (click)="saveDeviceAndPlayList()">Save</button>-->
-<!--  <button mat-flat-button (click)="play()">Play</button>-->
-<!--  <button mat-flat-button (click)="getInfo()">GetInfo</button>-->
+    <mat-form-field style="margin-top: 50px;">
+      <mat-label>ClientId</mat-label>
+      <input matInput [(ngModel)]="spotifySettings.clientId">
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Client Secret</mat-label>
+      <input matInput [(ngModel)]="spotifySettings.clientSecret">
+    </mat-form-field>
+    <button mat-flat-button (click)="authorize()" [disabled]="isAuthorized()">Authorize</button>
+  </div>
 }
