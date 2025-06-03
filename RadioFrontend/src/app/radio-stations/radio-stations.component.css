@@ -1,0 +1,39 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 30px;
+  gap: 5px;
+
+  .top-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    gap: 25px;
+  }
+
+  .top-row-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .radio-buttons {
+    display: flex;
+    flex-direction: row;
+    margin: 15px 0;
+    align-items: center;
+    gap: 10px;
+  }
+
+  mat-form-field {
+    width: 100%;
+    margin: 5px;
+  }
+
+  .vertical-divider {
+    height: 20px;
+  }
+}

@@ -1,1 +1,34 @@
-<p>radio-stations works!</p>
+<div class="top-row">
+  @if (buttons(); as buttonsList) {
+    <div class="top-row-item">
+      <label>SABA Buttons:</label>
+      <mat-radio-group aria-label="SABA Buttons" class="radio-buttons" [(ngModel)]="selectedButton">
+        @for (button of buttonsList; track button.button) {
+          <mat-radio-button [value]="button.button" [disabled]="button.button === 1">{{ button.buttonLabel }}</mat-radio-button>
+        }
+      </mat-radio-group>
+    </div>
+  }
+  <div class="top-row-item">
+    <mat-divider [vertical]="true" class="vertical-divider"></mat-divider>
+  </div>
+  @if (regionsList(); as regionsList) {
+    <div class="top-row-item">
+      <label>Region:</label>
+      <mat-form-field>
+        <mat-select [(ngModel)]="selectedRegion">
+          @for (region of regionsList; track region) {
+            <mat-option [value]="region">{{ region }}</mat-option>
+            <mat-divider></mat-divider>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div class="top-row-item">
+      <mat-divider [vertical]="true" class="vertical-divider"></mat-divider>
+    </div>
+    <div class="top-row-item">
+      <button mat-flat-button (click)="setRadioButtonRegion()" [disabled]="!regionChanged()">Set region for radio button</button>
+    </div>
+  }
+</div>
