@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButton } from '@angular/material/button';
 import { MatFormField, MatOption, MatSelect } from '@angular/material/select';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-radio-stations',
@@ -16,6 +17,8 @@ import { MatFormField, MatOption, MatSelect } from '@angular/material/select';
     MatSelect,
     MatOption,
     MatFormField,
+    CdkDropList,
+    CdkDrag,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
@@ -62,5 +65,40 @@ export class RadioStationsComponent {
     });
     this.regionChanged.set(false);
     // TODO: Clean button radio stations (In backend)
+  }
+
+  radioStationDrop(event: CdkDragDrop<string[]>) {
+    const sameContainer = event.previousContainer === event.container;
+
+    if (!sameContainer) {
+      const channel = this.getSabaChannelByIndex(event.previousIndex);
+      console.log(`Channel ${channel} has been dropped`);
+    }
+  }
+
+  sabaChannelDrop(event: CdkDragDrop<string[]>) {
+    const sameContainer = event.previousContainer === event.container;
+    const radioStations = this.regionStationsList();
+    if (!sameContainer && radioStations.length > event.previousIndex) {
+      const radioStation = radioStations[event.previousIndex];
+      const channel = this.getSabaChannelByIndex(event.currentIndex);
+      console.log(
+        `Station [${radioStation.frequency} | ${radioStation.name}] has been attached to channel ${channel}`,
+      );
+    }
+    if (sameContainer) {
+      const previousChannel = this.getSabaChannelByIndex(event.previousIndex);
+      const currentChannel = this.getSabaChannelByIndex(event.currentIndex);
+      console.log(
+        `Station ... has been moved from channel ${previousChannel} to channel ${currentChannel}`,
+      );
+    }
+  }
+
+  private getSabaChannelByIndex(index: number) {
+    if (this.sabaStationsFrequenciesList().length > index) {
+      return this.sabaStationsFrequenciesList()[index];
+    }
+    return -1;
   }
 }

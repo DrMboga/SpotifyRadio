@@ -4,7 +4,8 @@
       <label>SABA Buttons:</label>
       <mat-radio-group aria-label="SABA Buttons" class="radio-buttons" [(ngModel)]="selectedButton">
         @for (button of buttonsList; track button.button) {
-          <mat-radio-button [value]="button.button" [disabled]="button.button === 1">{{ button.buttonLabel }}</mat-radio-button>
+          <mat-radio-button [value]="button.button" [disabled]="button.button === 1">{{ button.buttonLabel }}
+          </mat-radio-button>
         }
       </mat-radio-group>
     </div>
@@ -28,30 +29,36 @@
       <mat-divider [vertical]="true" class="vertical-divider"></mat-divider>
     </div>
     <div class="top-row-item">
-      <button mat-flat-button (click)="setRadioButtonRegion()" [disabled]="!regionChanged()">Set region for radio button</button>
+      <button mat-flat-button (click)="setRadioButtonRegion()" [disabled]="!regionChanged()">Set region for radio
+        button
+      </button>
     </div>
   }
 </div>
-@if(currentButtonRegion(); as currentButtonRegion) {
+@if (currentButtonRegion()) {
   <div class="radio-stations-panel">
     <div class="radio-stations-left-panel">
-      <table class="mat-elevation-z8" title="SABA channels">
+      <table class="mat-elevation-z8" title="SABA channels" cdkDropList (cdkDropListDropped)="sabaChannelDrop($event)"
+             #channels="cdkDropList" [cdkDropListConnectedTo]="[stations]">
         <caption>SABA channels:</caption>
         @for (stationFrequency of sabaStationsFrequenciesList(); track stationFrequency) {
           <tr>
-            <td>{{stationFrequency}} MHz</td>
-            <td></td>
+            <td style="width: 60px;">{{ stationFrequency }} MHz</td>
+            <td cdkDrag></td>
           </tr>
         }
       </table>
     </div>
     <div class="radio-stations-right-panel">
-      <table class="mat-elevation-z8">
-        <caption>{{selectedRegion()}} stations:</caption>
-        @for (stationInfo of regionStationsList();track (stationInfo.name + stationInfo.frequency)) {
-          <tr>
-            <td>{{stationInfo.frequency}} MHz</td>
-            <td>{{stationInfo.name}}</td>
+      <table class="mat-elevation-z8" cdkDropList (cdkDropListDropped)="radioStationDrop($event)"
+             #stations="cdkDropList" [cdkDropListConnectedTo]="[channels]">
+        <caption>{{ selectedRegion() }} stations:</caption>
+        @for (stationInfo of regionStationsList(); track (stationInfo.name + stationInfo.frequency)) {
+          <tr cdkDrag>
+            <td>{{ stationInfo.frequency }} MHz</td>
+            <td>
+              {{ stationInfo.name }}
+            </td>
           </tr>
         }
       </table>
