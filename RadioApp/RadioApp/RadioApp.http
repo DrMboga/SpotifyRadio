@@ -29,7 +29,7 @@ Content-Type: application/json
 GET {{RadioApp_HostAddress}}/radio-regions
 
 ###
-@region=Baden-Württemberg
+@region=Saarland
 GET {{RadioApp_HostAddress}}/radio-stations-by-region?region={{region}}
 
 ###
@@ -44,7 +44,7 @@ POST {{RadioApp_HostAddress}}/radio-button-region
 Content-Type: application/json
 
 {
-    "sabaRadioButton": 1,
+    "sabaRadioButton": 2,
     "region": "{{region}}"
 }
 

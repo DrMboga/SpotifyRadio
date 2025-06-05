@@ -13,7 +13,8 @@ public class DataAccessService:
     IRequestHandler<GetRadioStationsByButtonRequest, RadioStation[]>,
     INotificationHandler<SaveRadioStationNotification>,
     IRequestHandler<GetSpotifySettingsRequest, SpotifySettings>,
-    INotificationHandler<SetSpotifySettingsNotification>
+    INotificationHandler<SetSpotifySettingsNotification>,
+    INotificationHandler<RemoveAllRadioStationsByButtonNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -53,7 +54,7 @@ public class DataAccessService:
     public async Task<RadioStation[]> Handle(GetRadioStationsByButtonRequest request, CancellationToken cancellationToken)
     {
         await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var stations = await dbContext.RadioStation.AsNoTracking().ToArrayAsync(cancellationToken);
+        var stations = await dbContext.RadioStation.AsNoTracking().Where(s => s.Button == request.Button).ToArrayAsync(cancellationToken);
         return stations.ToArray<RadioStation>();
     }
 
@@ -106,6 +107,14 @@ public class DataAccessService:
             settings.DeviceName = notification.SpotifySettings.DeviceName;
             settings.PlaylistName = notification.SpotifySettings.PlaylistName;
         }
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+    
+    public async Task Handle(RemoveAllRadioStationsByButtonNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var stations = await dbContext.RadioStation.Where(s => s.Button == notification.Button).ToArrayAsync(cancellationToken);
+        dbContext.RadioStation.RemoveRange(stations);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
     
