@@ -8,6 +8,7 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { RadioStationInfo } from '../model/radio-station-info';
+import { RadioChannel } from '../model/radio-channel';
 
 const SABA_MIN_FREQUENCY = 87;
 const SABA_MAX_FREQUENCY = 105;
@@ -18,6 +19,7 @@ type RadioSettingsState = {
   radioButtonRegions: RadioButtonRegion[];
   sabaStationsList: number[]; //87-105 MHz
   regionStationsList: RadioStationInfo[];
+  sabaRadioChannels: RadioChannel[];
 };
 
 const initialState: RadioSettingsState = {
@@ -26,6 +28,7 @@ const initialState: RadioSettingsState = {
   radioButtonRegions: [],
   sabaStationsList: [],
   regionStationsList: [],
+  sabaRadioChannels: [],
 };
 
 export const RadioStore = signalStore(
@@ -92,6 +95,43 @@ export const RadioStore = signalStore(
               next: regionStationsList => patchState(store, () => ({ regionStationsList })),
               error: err => {
                 patchState(store, () => ({ regionStationsList: [] }));
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+    getSabaRadioChannels: rxMethod<number>(
+      pipe(
+        switchMap(button =>
+          backend.getSabaChannels(button).pipe(
+            tapResponse({
+              next: sabaRadioChannels => patchState(store, () => ({ sabaRadioChannels })),
+              error: err => {
+                patchState(store, () => ({ sabaRadioChannels: [] }));
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+    setSabaRadioChannel: rxMethod<RadioChannel>(
+      pipe(
+        switchMap(channel =>
+          backend.setSabaChannel(channel).pipe(
+            tapResponse({
+              next: channel =>
+                patchState(store, () => ({
+                  sabaRadioChannels: [
+                    ...store
+                      .sabaRadioChannels()
+                      .filter(c => c.sabaFrequency !== channel.sabaFrequency),
+                    channel,
+                  ],
+                })),
+              error: err => {
                 console.error(err);
               },
             }),

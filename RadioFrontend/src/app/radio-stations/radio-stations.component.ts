@@ -7,6 +7,10 @@ import { MatButton } from '@angular/material/button';
 import { MatFormField, MatOption, MatSelect } from '@angular/material/select';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { RadioStationInfo } from '../model/radio-station-info';
+import { RadioChannel } from '../model/radio-channel';
+import { SabaRadioChannelInfoComponent } from '../components/saba-radio-channel-info/saba-radio-channel-info.component';
+import { RadioChannelPipe } from '../pipes/radio-channel.pipe';
+import { RadioInfoInUsePipe } from '../pipes/radio-info-in-use.pipe';
 
 @Component({
   selector: 'app-radio-stations',
@@ -20,6 +24,9 @@ import { RadioStationInfo } from '../model/radio-station-info';
     MatFormField,
     CdkDropList,
     CdkDrag,
+    SabaRadioChannelInfoComponent,
+    RadioChannelPipe,
+    RadioInfoInUsePipe,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
@@ -32,6 +39,7 @@ export class RadioStationsComponent {
   buttonRegions = this.radioStore.radioButtonRegions;
   sabaStationsFrequenciesList = this.radioStore.sabaStationsList;
   regionStationsList = this.radioStore.regionStationsList;
+  sabaRadioChannels = this.radioStore.sabaRadioChannels;
 
   selectedButton = signal<number>(2);
   selectedRegion = signal<string>('');
@@ -48,6 +56,7 @@ export class RadioStationsComponent {
       const currentButtonRegion = this.currentButtonRegion();
       this.regionChanged.set(false);
       this.selectedRegion.set(currentButtonRegion ? currentButtonRegion.region : '');
+      this.radioStore.getSabaRadioChannels(button);
     });
     effect(() => {
       const selectedRegion = this.selectedRegion();
@@ -82,9 +91,7 @@ export class RadioStationsComponent {
     if (!sameContainer) {
       const radioStation = event.item.data as RadioStationInfo;
       const channel = this.getSabaChannelByIndex(event.currentIndex);
-      console.log(
-        `Station [${radioStation.frequency} | ${radioStation.name}] has been attached to channel ${channel}`,
-      );
+      this.attachRadioChannel(channel, radioStation);
     }
     if (sameContainer) {
       const previousChannel = this.getSabaChannelByIndex(event.previousIndex);
@@ -100,5 +107,16 @@ export class RadioStationsComponent {
       return this.sabaStationsFrequenciesList()[index];
     }
     return -1;
+  }
+
+  private attachRadioChannel(sabaFrequency: number, radio: RadioStationInfo) {
+    const channel: RadioChannel = {
+      sabaFrequency,
+      name: radio.name,
+      button: this.selectedButton(),
+      region: radio.region,
+      streamUrl: radio.stationStreamUrl,
+    };
+    this.radioStore.setSabaRadioChannel(channel);
   }
 }

@@ -51,7 +51,7 @@ Content-Type: application/json
 ###
 # ------------
 ###
-@saba_button = 1
+@saba_button = 2
 GET {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}
 
 ###
@@ -61,8 +61,8 @@ Content-Type: application/json
 {
   "button": {{saba_button}},
   "region": "Saarland",
-  "name": "Station1",
+  "name": "CityRadio Homburg",
   "sabaFrequency": 88,
-  "streamUrl": "https://spotify.apple.com",
-  "radioLogoBase64": "Saarland img"
+  "streamUrl": "https://stream.radiogroup.de/cityradio-homburg/mp3-192",
+  "radioLogoBase64": null
 }

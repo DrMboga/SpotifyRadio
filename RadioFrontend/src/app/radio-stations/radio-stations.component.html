@@ -44,7 +44,7 @@
         @for (stationFrequency of sabaStationsFrequenciesList(); track stationFrequency) {
           <tr cdkDrag>
             <td style="width: 60px;">{{ stationFrequency }} MHz</td>
-            <td ></td>
+            <td><app-saba-radio-channel-info [radioChannel]="stationFrequency | radioChannel: sabaRadioChannels()"></app-saba-radio-channel-info></td>
           </tr>
         }
       </table>
@@ -54,7 +54,7 @@
              #stations="cdkDropList" [cdkDropListConnectedTo]="[channels]">
         <caption>{{ selectedRegion() }} stations:</caption>
         @for (stationInfo of regionStationsList(); track (stationInfo.name + stationInfo.frequency)) {
-          <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo.frequency === 92.9)">
+          <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo | radioInfoInUse: sabaRadioChannels())">
             <td>{{ stationInfo.frequency }} MHz</td>
             <td>
               {{ stationInfo.name }}

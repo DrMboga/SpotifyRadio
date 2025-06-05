@@ -6,6 +6,7 @@ import { SpotifySettings } from '../model/spotify-settings';
 import { RadioButtonInfo } from '../model/radio-button-info';
 import { RadioButtonRegion } from '../model/radio-button-region';
 import { RadioStationInfo } from '../model/radio-station-info';
+import { RadioChannel } from '../model/radio-channel';
 
 @Injectable({
   providedIn: 'root',
@@ -46,5 +47,15 @@ export class BackendService {
   getRadioStationsByRegion(region: string): Observable<RadioStationInfo[]> {
     const url = `${this.baseUrl}/radio-stations-by-region?region=${region}`;
     return this.http.get<RadioStationInfo[]>(url);
+  }
+
+  getSabaChannels(button: number): Observable<RadioChannel[]> {
+    const url = `${this.baseUrl}/radio-stations-by-button?button=${button}`;
+    return this.http.get<RadioChannel[]>(url);
+  }
+
+  setSabaChannel(channel: RadioChannel): Observable<RadioChannel> {
+    const url = `${this.baseUrl}/radio-stations-by-button`;
+    return this.http.post<RadioChannel>(url, channel);
   }
 }
