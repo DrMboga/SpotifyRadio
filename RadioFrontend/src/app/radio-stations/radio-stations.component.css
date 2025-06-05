@@ -68,18 +68,16 @@
 }
 
 .cdk-drag-placeholder {
-  opacity: 0;
+  opacity: 0.2;
 }
 
 .cdk-drag-animating {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-.example-box:last-child {
-  border: none;
-}
-
-.example-list.cdk-drop-list-dragging .example-box:not(.cdk-drag-placeholder) {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+.cdk-drag-disabled {
+  color: darkgrey;
+  cursor: not-allowed;
+  user-select: none;
 }
 

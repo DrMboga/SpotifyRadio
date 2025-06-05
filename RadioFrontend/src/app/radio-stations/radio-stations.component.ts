@@ -6,6 +6,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatButton } from '@angular/material/button';
 import { MatFormField, MatOption, MatSelect } from '@angular/material/select';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { RadioStationInfo } from '../model/radio-station-info';
 
 @Component({
   selector: 'app-radio-stations',
@@ -67,7 +68,7 @@ export class RadioStationsComponent {
     // TODO: Clean button radio stations (In backend)
   }
 
-  radioStationDrop(event: CdkDragDrop<string[]>) {
+  radioStationDrop(event: CdkDragDrop<string>) {
     const sameContainer = event.previousContainer === event.container;
 
     if (!sameContainer) {
@@ -76,11 +77,10 @@ export class RadioStationsComponent {
     }
   }
 
-  sabaChannelDrop(event: CdkDragDrop<string[]>) {
+  sabaChannelDrop(event: CdkDragDrop<RadioStationInfo>) {
     const sameContainer = event.previousContainer === event.container;
-    const radioStations = this.regionStationsList();
-    if (!sameContainer && radioStations.length > event.previousIndex) {
-      const radioStation = radioStations[event.previousIndex];
+    if (!sameContainer) {
+      const radioStation = event.item.data as RadioStationInfo;
       const channel = this.getSabaChannelByIndex(event.currentIndex);
       console.log(
         `Station [${radioStation.frequency} | ${radioStation.name}] has been attached to channel ${channel}`,
