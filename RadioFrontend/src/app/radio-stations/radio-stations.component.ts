@@ -26,6 +26,8 @@ export class RadioStationsComponent {
   buttons = this.radioStore.radioButtonsList;
   regionsList = this.radioStore.regionsList;
   buttonRegions = this.radioStore.radioButtonRegions;
+  sabaStationsFrequenciesList = this.radioStore.sabaStationsList;
+  regionStationsList = this.radioStore.regionStationsList;
 
   selectedButton = signal<number>(2);
   selectedRegion = signal<string>('');
@@ -49,6 +51,7 @@ export class RadioStationsComponent {
       if (selectedRegion && selectedRegion != currentButtonRegion?.region) {
         this.regionChanged.set(true);
       }
+      this.radioStore.getRadioStationsByRegion(selectedRegion);
     });
   }
 

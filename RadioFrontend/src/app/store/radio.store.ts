@@ -7,17 +7,25 @@ import { RadioButtonRegion } from '../model/radio-button-region';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
+import { RadioStationInfo } from '../model/radio-station-info';
+
+const SABA_MIN_FREQUENCY = 87;
+const SABA_MAX_FREQUENCY = 105;
 
 type RadioSettingsState = {
   regionsList: string[];
   radioButtonsList: RadioButtonInfo[];
   radioButtonRegions: RadioButtonRegion[];
+  sabaStationsList: number[]; //87-105 MHz
+  regionStationsList: RadioStationInfo[];
 };
 
 const initialState: RadioSettingsState = {
   regionsList: [],
   radioButtonsList: [],
   radioButtonRegions: [],
+  sabaStationsList: [],
+  regionStationsList: [],
 };
 
 export const RadioStore = signalStore(
@@ -25,6 +33,11 @@ export const RadioStore = signalStore(
   withState(initialState),
   withHooks({
     onInit: (store, backend = inject(BackendService)) => {
+      const sabaStationsList = Array.from(
+        { length: SABA_MAX_FREQUENCY - SABA_MIN_FREQUENCY + 1 },
+        (_, i) => i + SABA_MIN_FREQUENCY,
+      );
+      patchState(store, { sabaStationsList });
       backend
         .readRadioRegions()
         .pipe(takeUntilDestroyed())
@@ -64,6 +77,21 @@ export const RadioStore = signalStore(
                 }));
               },
               error: err => {
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+    getRadioStationsByRegion: rxMethod<string>(
+      pipe(
+        switchMap(region =>
+          backend.getRadioStationsByRegion(region).pipe(
+            tapResponse({
+              next: regionStationsList => patchState(store, () => ({ regionStationsList })),
+              error: err => {
+                patchState(store, () => ({ regionStationsList: [] }));
                 console.error(err);
               },
             }),

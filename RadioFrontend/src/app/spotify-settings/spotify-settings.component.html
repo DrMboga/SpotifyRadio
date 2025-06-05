@@ -1,6 +1,6 @@
 @if (spotifySettings(); as spotifySettings) {
   <div style="width: 80%">
-    <div style="margin-bottom: 50px;">
+    <div style="margin-bottom: 50px; padding: 50px;" class="mat-elevation-z8">
       <mat-form-field>
         <mat-label>Active Spotify devices</mat-label>
         <mat-select [(ngModel)]="spotifySettings.deviceName">
@@ -22,14 +22,16 @@
 
     <mat-divider></mat-divider>
 
-    <mat-form-field style="margin-top: 50px;">
-      <mat-label>ClientId</mat-label>
-      <input matInput [(ngModel)]="spotifySettings.clientId">
-    </mat-form-field>
-    <mat-form-field>
-      <mat-label>Client Secret</mat-label>
-      <input matInput [(ngModel)]="spotifySettings.clientSecret">
-    </mat-form-field>
-    <button mat-flat-button (click)="authorize()" [disabled]="isAuthorized()">Authorize</button>
+    <div style="margin-top: 50px; padding: 50px;" class="mat-elevation-z8">
+      <mat-form-field>
+        <mat-label>ClientId</mat-label>
+        <input matInput [(ngModel)]="spotifySettings.clientId">
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Client Secret</mat-label>
+        <input matInput [(ngModel)]="spotifySettings.clientSecret">
+      </mat-form-field>
+      <button mat-flat-button (click)="authorize()" [disabled]="isAuthorized()">Authorize</button>
+    </div>
   </div>
 }

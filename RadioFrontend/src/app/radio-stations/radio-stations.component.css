@@ -36,4 +36,22 @@
   .vertical-divider {
     height: 20px;
   }
+
+  .radio-stations-panel {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  .radio-stations-left-panel {
+    display: flex;
+    flex-grow: 3;
+  }
+  .radio-stations-right-panel {
+    display: flex;
+    flex-grow: 1;
+  }
 }

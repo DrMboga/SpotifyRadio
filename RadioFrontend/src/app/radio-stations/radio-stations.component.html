@@ -1,4 +1,4 @@
-<div class="top-row">
+<div class="top-row mat-elevation-z8">
   @if (buttons(); as buttonsList) {
     <div class="top-row-item">
       <label>SABA Buttons:</label>
@@ -32,3 +32,29 @@
     </div>
   }
 </div>
+@if(currentButtonRegion(); as currentButtonRegion) {
+  <div class="radio-stations-panel">
+    <div class="radio-stations-left-panel">
+      <table class="mat-elevation-z8" title="SABA channels">
+        <caption>SABA channels:</caption>
+        @for (stationFrequency of sabaStationsFrequenciesList(); track stationFrequency) {
+          <tr>
+            <td>{{stationFrequency}} MHz</td>
+            <td></td>
+          </tr>
+        }
+      </table>
+    </div>
+    <div class="radio-stations-right-panel">
+      <table class="mat-elevation-z8">
+        <caption>{{selectedRegion()}} stations:</caption>
+        @for (stationInfo of regionStationsList();track (stationInfo.name + stationInfo.frequency)) {
+          <tr>
+            <td>{{stationInfo.frequency}} MHz</td>
+            <td>{{stationInfo.name}}</td>
+          </tr>
+        }
+      </table>
+    </div>
+  </div>
+}
