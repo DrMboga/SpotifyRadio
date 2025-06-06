@@ -9,6 +9,6 @@ public class RadioStation
     public string Region { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public int SabaFrequency { get; set; }
-    public string StreamUrl { get; set; } = string.Empty;
+    public string? StreamUrl { get; set; } = string.Empty;
     public string? RadioLogoBase64 { get; set; }
 }

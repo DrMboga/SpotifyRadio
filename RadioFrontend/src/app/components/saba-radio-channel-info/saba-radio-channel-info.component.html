@@ -1,4 +1,13 @@
 @if (radioChannel(); as channel) {
-
+  <img [src]="channel.radioLogoBase64" [alt]="channel.name">
   <div>{{channel.name}}</div>
+  @if(channel.streamUrl) {
+    <a [href]="channel.streamUrl" target="_blank">Stream</a>
+  } @else {
+    <mat-form-field>
+      <mat-label>Stream</mat-label>
+      <input matInput [(ngModel)]="streamUrl">
+    </mat-form-field>
+    <button mat-flat-button (click)="save()">Save</button>
+  }
 }

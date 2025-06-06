@@ -10,7 +10,7 @@ using RadioApp.Persistence;
 namespace RadioApp.Persistence.Migrations
 {
     [DbContext(typeof(Persistence))]
-    [Migration("20250601145234_InitialCreate")]
+    [Migration("20250606123636_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -95,7 +95,6 @@ namespace RadioApp.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("StreamUrl")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

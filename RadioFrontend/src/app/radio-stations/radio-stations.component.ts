@@ -102,6 +102,10 @@ export class RadioStationsComponent {
     }
   }
 
+  saveRadioUrl(radioChannel: RadioChannel) {
+    this.radioStore.setSabaRadioChannel(radioChannel);
+  }
+
   private getSabaChannelByIndex(index: number) {
     if (this.sabaStationsFrequenciesList().length > index) {
       return this.sabaStationsFrequenciesList()[index];

@@ -34,7 +34,7 @@ namespace RadioApp.Persistence.Migrations
                     Region = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     SabaFrequency = table.Column<int>(type: "INTEGER", nullable: false),
-                    StreamUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    StreamUrl = table.Column<string>(type: "TEXT", nullable: true),
                     RadioLogoBase64 = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>

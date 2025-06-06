@@ -92,7 +92,6 @@ namespace RadioApp.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("StreamUrl")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

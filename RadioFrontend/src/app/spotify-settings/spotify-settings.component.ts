@@ -10,7 +10,6 @@ import { MatDividerModule } from '@angular/material/divider';
 @Component({
   selector: 'app-spotify-settings',
   imports: [
-    FormsModule,
     MatFormField,
     MatInput,
     MatLabel,
@@ -18,7 +17,7 @@ import { MatDividerModule } from '@angular/material/divider';
     MatButton,
     MatSelect,
     MatOption,
-    MatDividerModule
+    MatDividerModule,
   ],
   templateUrl: './spotify-settings.component.html',
   styleUrl: './spotify-settings.component.css',
@@ -35,7 +34,7 @@ export class SpotifySettingsComponent {
     if (this.isAuthorized()) {
       return this.spotifyStore.settings().authToken;
     }
-    return  undefined;
+    return undefined;
   });
 
   constructor() {

@@ -44,7 +44,7 @@
         @for (stationFrequency of sabaStationsFrequenciesList(); track stationFrequency) {
           <tr cdkDrag>
             <td style="width: 60px;">{{ stationFrequency }} MHz</td>
-            <td><app-saba-radio-channel-info [radioChannel]="stationFrequency | radioChannel: sabaRadioChannels()"></app-saba-radio-channel-info></td>
+            <td><app-saba-radio-channel-info [radioChannel]="stationFrequency | radioChannel: sabaRadioChannels()" (savedRadioChannel)="saveRadioUrl($event)"></app-saba-radio-channel-info></td>
           </tr>
         }
       </table>
@@ -58,6 +58,9 @@
             <td>{{ stationInfo.frequency }} MHz</td>
             <td>
               {{ stationInfo.name }}
+            </td>
+            <td>
+              <a [href]="stationInfo.stationUrl" target="_blank">Station info</a>
             </td>
           </tr>
         }
