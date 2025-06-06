@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { SpotifySettings } from '../model/spotify-settings';
 import { RadioButtonInfo } from '../model/radio-button-info';
@@ -57,5 +57,10 @@ export class BackendService {
   setSabaChannel(channel: RadioChannel): Observable<RadioChannel> {
     const url = `${this.baseUrl}/radio-stations-by-button`;
     return this.http.post<RadioChannel>(url, channel);
+  }
+
+  deleteSabaChannel(button: number, sabaFrequency: number): Observable<void> {
+    const url = `${this.baseUrl}/radio-stations-by-button?button=${button}&sabaFrequency=${sabaFrequency}`;
+    return this.http.delete(url).pipe(map(response => void 0));
   }
 }

@@ -139,5 +139,24 @@ export const RadioStore = signalStore(
         ),
       ),
     ),
+    deleteSabaRadioChannel: rxMethod<{ button: number; sabaFrequency: number }>(
+      pipe(
+        switchMap(({ button, sabaFrequency }) =>
+          backend.deleteSabaChannel(button, sabaFrequency).pipe(
+            tapResponse({
+              next: () =>
+                patchState(store, () => ({
+                  sabaRadioChannels: [
+                    ...store.sabaRadioChannels().filter(c => c.sabaFrequency !== sabaFrequency),
+                  ],
+                })),
+              error: err => {
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
   })),
 );

@@ -74,7 +74,6 @@ export class RadioStationsComponent {
       region: this.selectedRegion(),
     });
     this.regionChanged.set(false);
-    // TODO: Clean button radio stations (In backend)
   }
 
   radioStationDrop(event: CdkDragDrop<string>) {
@@ -82,7 +81,11 @@ export class RadioStationsComponent {
 
     if (!sameContainer) {
       const channel = this.getSabaChannelByIndex(event.previousIndex);
-      console.log(`Channel ${channel} has been dropped`);
+      // Moved station from SABA Channels to the stations list means that channel should be free
+      this.radioStore.deleteSabaRadioChannel({
+        button: this.selectedButton(),
+        sabaFrequency: channel,
+      });
     }
   }
 
@@ -91,14 +94,24 @@ export class RadioStationsComponent {
     if (!sameContainer) {
       const radioStation = event.item.data as RadioStationInfo;
       const channel = this.getSabaChannelByIndex(event.currentIndex);
+      // Attach a station to SABA channel
       this.attachRadioChannel(channel, radioStation);
     }
     if (sameContainer) {
+      // Reattach station from one SABA Channel to another (move a ro to other position)
       const previousChannel = this.getSabaChannelByIndex(event.previousIndex);
       const currentChannel = this.getSabaChannelByIndex(event.currentIndex);
-      console.log(
-        `Station ... has been moved from channel ${previousChannel} to channel ${currentChannel}`,
-      );
+      const station = this.sabaRadioChannels().find(b => b.sabaFrequency === previousChannel);
+      if (station) {
+        // Delete previous station
+        this.radioStore.deleteSabaRadioChannel({
+          button: this.selectedButton(),
+          sabaFrequency: previousChannel,
+        });
+        // Attach new channel
+        station.sabaFrequency = currentChannel;
+        this.radioStore.setSabaRadioChannel(station);
+      }
     }
   }
 
