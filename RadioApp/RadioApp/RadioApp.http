@@ -51,7 +51,7 @@ Content-Type: application/json
 ###
 # ------------
 ###
-@saba_button = 2
+@saba_button = 3
 GET {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}
 
 ###
@@ -66,3 +66,6 @@ Content-Type: application/json
   "streamUrl": "https://stream.radiogroup.de/cityradio-homburg/mp3-192",
   "radioLogoBase64": null
 }
+
+###
+DELETE {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}&sabaFrequency=87

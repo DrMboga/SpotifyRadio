@@ -58,6 +58,11 @@ public static class RadioStreamSettingsEndpoints
             return station;
         }).WithName("SavesStationInfo");
         
+        app.MapDelete("radio-stations-by-button", async (SabaRadioButtons button, int sabaFrequency, IMediator mediator) =>
+        {
+            await mediator.Publish(new DeleteRadioStationNotification(button, sabaFrequency));
+        }).WithName("DeleteStationInfo");
+        
         app.MapGet("radio-buttons", () =>
         {
             SabaRadioButtonInfo[] buttonsToMap =

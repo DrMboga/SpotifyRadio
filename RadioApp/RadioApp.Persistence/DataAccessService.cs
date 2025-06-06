@@ -14,7 +14,8 @@ public class DataAccessService:
     INotificationHandler<SaveRadioStationNotification>,
     IRequestHandler<GetSpotifySettingsRequest, SpotifySettings>,
     INotificationHandler<SetSpotifySettingsNotification>,
-    INotificationHandler<RemoveAllRadioStationsByButtonNotification>
+    INotificationHandler<RemoveAllRadioStationsByButtonNotification>,
+    INotificationHandler<DeleteRadioStationNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -117,6 +118,19 @@ public class DataAccessService:
         dbContext.RadioStation.RemoveRange(stations);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+    
+    public async Task Handle(DeleteRadioStationNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var station = await dbContext.RadioStation.Where(s => s.Button == notification.Button && s.SabaFrequency == notification.SabaFrequency)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (station is not null)
+        {
+            dbContext.RadioStation.Remove(station);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     
     private RadioStationEntity ConvertToStationEntity(RadioStation station)
     {
