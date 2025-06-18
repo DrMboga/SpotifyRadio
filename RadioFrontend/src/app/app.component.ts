@@ -9,6 +9,4 @@ import { MatToolbar } from '@angular/material/toolbar';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
-  title = 'RadioFrontend';
-}
+export class AppComponent {}
