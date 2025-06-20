@@ -1,35 +1,8 @@
 import { RadioInfoInUsePipe } from './radio-info-in-use.pipe';
-import { RadioChannel } from '../model/radio-channel';
 import { RadioStationInfo } from '../model/radio-station-info';
+import { MOCK_RADIO_CHANNELS_LIST } from '../mock/radio-mock';
 
 describe('RadioInfoInUsePipe', () => {
-  const channelsList: RadioChannel[] = [
-    {
-      button: 1,
-      region: 'Bayern',
-      name: 'Channel 1',
-      sabaFrequency: 88,
-    },
-    {
-      button: 1,
-      region: 'Bayern',
-      name: 'Channel 2',
-      sabaFrequency: 89,
-    },
-    {
-      button: 1,
-      region: 'Bayern',
-      name: 'Channel 3',
-      sabaFrequency: 90,
-    },
-    {
-      button: 1,
-      region: 'Bayern',
-      name: 'Channel 4',
-      sabaFrequency: 91,
-    },
-  ];
-
   it('create an instance', () => {
     const pipe = new RadioInfoInUsePipe();
     expect(pipe).toBeTruthy();
@@ -47,7 +20,7 @@ describe('RadioInfoInUsePipe', () => {
         stationUrl: '',
         stationImageUrl: '',
       };
-      const result = pipe.transform(radioInfo, channelsList);
+      const result = pipe.transform(radioInfo, MOCK_RADIO_CHANNELS_LIST);
 
       expect(result).toBeTruthy();
       expect(result?.name).toEqual(expectedChannelName);
