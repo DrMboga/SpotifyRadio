@@ -6,7 +6,12 @@ import { RadioChannel } from '../model/radio-channel';
   name: 'radioInfoInUse',
 })
 export class RadioInfoInUsePipe implements PipeTransform {
-  transform(radioInfo: RadioStationInfo, channelsList: RadioChannel[]): unknown {
+  /**
+   * Finds a channel in the list by channel name
+   * @param radioInfo
+   * @param channelsList
+   */
+  transform(radioInfo: RadioStationInfo, channelsList: RadioChannel[]): RadioChannel | undefined {
     return channelsList.find(channel => radioInfo.name === channel.name);
   }
 }
