@@ -1,28 +1,29 @@
 import { RadioChannel } from '../model/radio-channel';
 import { RadioButtonInfo } from '../model/radio-button-info';
+import { RadioButtonRegion } from '../model/radio-button-region';
 
 export const MOCK_RADIO_CHANNELS_LIST: RadioChannel[] = [
   {
     button: 1,
-    region: 'Bayern',
+    region: 'Bavaria',
     name: 'Channel 1',
     sabaFrequency: 88,
   },
   {
     button: 1,
-    region: 'Bayern',
+    region: 'Bavaria',
     name: 'Channel 2',
     sabaFrequency: 89,
   },
   {
     button: 1,
-    region: 'Bayern',
+    region: 'Bavaria',
     name: 'Channel 3',
     sabaFrequency: 90,
   },
   {
     button: 1,
-    region: 'Bayern',
+    region: 'Bavaria',
     name: 'Channel 4',
     sabaFrequency: 91,
   },
@@ -56,4 +57,15 @@ export const MOCK_RADIO_REGIONS_LIST: string[] = [
   'Bavaria',
   'Berlin',
   'Brandenburg',
+];
+
+export const MOCK_RADIO_BUTTON_REGIONS: RadioButtonRegion[] = [
+  {
+    sabaRadioButton: 2,
+    region: 'Saarland',
+  },
+  {
+    sabaRadioButton: 3,
+    region: 'Bavaria',
+  },
 ];
