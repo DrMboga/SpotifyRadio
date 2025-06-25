@@ -442,7 +442,6 @@ describe('RadioStationsComponent', () => {
     const radioStationPreviousIndex = 1;
     const channelFrequency = MOCK_SABA_CHANNELS_FREQUENCIES[radioStationPreviousIndex];
     const channel = MOCK_RADIO_CHANNELS.find(c => c.sabaFrequency === channelFrequency);
-    const radioStation = MOCK_SAARLAND_RADIO_STATIONS[radioStationPreviousIndex];
     const event = {
       previousIndex: radioStationPreviousIndex,
       currentIndex: radioChannelCurrentIndex,
