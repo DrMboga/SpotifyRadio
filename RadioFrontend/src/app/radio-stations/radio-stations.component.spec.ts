@@ -38,6 +38,10 @@ describe('RadioStationsComponent', () => {
     fixture.detectChanges();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -86,6 +90,11 @@ describe('RadioStationsComponent', () => {
 
     // Check if channels requested
     expect(radioStore.getSabaRadioChannels).toHaveBeenCalledWith(2);
+
+    // Check if SetRegion button is disabled
+    const button = fixture.nativeElement.querySelector('button');
+    expect(button).toBeTruthy();
+    expect(button?.disabled).toBe(true);
   });
 
   it('should request SABA radio channels list and change Region on radio Button click', async () => {
@@ -109,6 +118,11 @@ describe('RadioStationsComponent', () => {
 
     // Check if channels requested
     expect(radioStore.getSabaRadioChannels).toHaveBeenLastCalledWith(3);
+
+    // Check if SetRegion button is disabled
+    const button = fixture.nativeElement.querySelector('button');
+    expect(button).toBeTruthy();
+    expect(button?.disabled).toBe(true);
   });
 
   it('should set regions list to dropdown', async () => {
@@ -132,11 +146,55 @@ describe('RadioStationsComponent', () => {
     expect(refreshedMatSelect.getAttribute('ng-reflect-model')).toBe(
       MOCK_RADIO_BUTTON_REGIONS[0].region,
     );
+
+    // Check if radio stations panel is shown
+    const radioStationsPanel = fixture.nativeElement.querySelector('.radio-stations-panel');
+    expect(radioStationsPanel).toBeTruthy();
+
+    // Check if SetRegion button is disabled
+    const button = fixture.nativeElement.querySelector('button');
+    expect(button).toBeTruthy();
+    expect(button?.disabled).toBe(true);
   });
 
-  // should leave regions dropdown value empty and hide radio stations table if no region for button setup
+  it('should leave regions dropdown value empty and hide radio stations table if no region for button setup', async () => {
+    // Arrange
+    const matRadioButtons: NodeListOf<HTMLElement> =
+      fixture.nativeElement.querySelectorAll('mat-radio-button');
+    expect(matRadioButtons.length).toBe(MOCK_RADIO_BUTTONS_LIST.length);
 
-  // should set SaveRegion button disabled if no new region selected in dropdown
+    // Fourth radio button has no region in MOCK_RADIO_BUTTONS_LIST
+    const elementAsInput = matRadioButtons[3].querySelector(
+      'input[type="radio"]',
+    ) as HTMLInputElement;
+
+    // Act
+    elementAsInput.click();
+    fixture.detectChanges();
+
+    // Assert
+    expect(component.selectedButton()).toBe(4);
+    const currentButtonRegion = component.currentButtonRegion();
+    expect(currentButtonRegion).toBeFalsy();
+    expect(component.selectedRegion()).toBe('');
+
+    // Check if mat-select contains empty value
+    const matSelect: HTMLElement = fixture.nativeElement.querySelector('mat-select');
+    expect(matSelect).toBeTruthy();
+    matSelect.click();
+    fixture.detectChanges();
+    const refreshedMatSelect: HTMLElement = fixture.nativeElement.querySelector('mat-select');
+    expect(refreshedMatSelect.getAttribute('ng-reflect-model')).toBeFalsy();
+
+    // Check if no radio stations panel is shown
+    const radioStationsPanel = fixture.nativeElement.querySelector('.radio-stations-panel');
+    expect(radioStationsPanel).toBeFalsy();
+
+    // Check if SetRegion button is disabled
+    const button = fixture.nativeElement.querySelector('button');
+    expect(button).toBeTruthy();
+    expect(button?.disabled).toBe(true);
+  });
 
   // should set SaveRegion button enabled when new region for button selected
 
