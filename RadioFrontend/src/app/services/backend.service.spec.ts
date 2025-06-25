@@ -153,7 +153,6 @@ describe('BackendService', () => {
   });
 
   it('should set SABA channel', async () => {
-    const button = 2;
     const responsePromise = firstValueFrom(service.setSabaChannel(MOCK_RADIO_CHANNELS[0]));
     const pendingRequest = httpTesting.expectOne(`${baseUrl}/radio-stations-by-button`);
 
