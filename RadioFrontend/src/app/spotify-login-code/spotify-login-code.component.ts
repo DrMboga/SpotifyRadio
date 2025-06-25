@@ -18,7 +18,7 @@ export class SpotifyLoginCodeComponent {
   private readonly code$ = this.route.queryParams.pipe(map(params => params['code'] as string));
   code = toSignal(this.code$);
 
-  private authRequestParameters = computed(() => {
+  private readonly authRequestParameters = computed(() => {
     const code = this.code();
     const settings = this.spotifyStore.settings();
     const clientId = settings.clientId;
