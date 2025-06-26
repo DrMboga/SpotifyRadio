@@ -39,7 +39,7 @@ const initialState: SpotifyState = {
     playlistName: '',
   },
   devices: [],
-  playLists: []
+  playLists: [],
 };
 
 export const SpotifyStore = signalStore(
@@ -56,16 +56,11 @@ export const SpotifyStore = signalStore(
   withComputed(({ settings }) => ({
     isAuthorized: computed(() => {
       if (
-        !settings.clientId ||
-        !settings.clientId() ||
-        !settings.clientSecret ||
-        !settings.clientSecret() ||
-        !settings.redirectUrl ||
-        !settings.redirectUrl() ||
-        !settings.authToken ||
-        !settings.authToken() ||
-        !settings.authTokenExpiration ||
-        !settings.authTokenExpiration()
+        !settings.clientId?.() ||
+        !settings.clientSecret?.() ||
+        !settings.redirectUrl?.() ||
+        !settings.authToken?.() ||
+        !settings.authTokenExpiration?.()
       ) {
         return false;
       }
@@ -74,7 +69,7 @@ export const SpotifyStore = signalStore(
       return expiration >= now.getTime();
     }),
     spotifyLoginUrl: computed(() => {
-      if (!settings.clientId || !settings.clientId()) {
+      if (!settings.clientId?.()) {
         return '';
       }
       const redirectUri = `${location.origin}/spotify-login`;
@@ -154,25 +149,37 @@ export const SpotifyStore = signalStore(
         ),
       ),
 
-      readSpotifyDevices: rxMethod<string>(pipe(
-        switchMap(authToken => spotifyApi.getDevices(authToken).pipe(tapResponse({
-          next: devices => patchState(store, () => ({devices})),
-          error: err => {
-            patchState(store, () => ({devices: []}));
-            console.error(err);
-          }
-        }))),
-      )),
+      readSpotifyDevices: rxMethod<string>(
+        pipe(
+          switchMap(authToken =>
+            spotifyApi.getDevices(authToken).pipe(
+              tapResponse({
+                next: devices => patchState(store, () => ({ devices })),
+                error: err => {
+                  patchState(store, () => ({ devices: [] }));
+                  console.error(err);
+                },
+              }),
+            ),
+          ),
+        ),
+      ),
 
-      readPlayLists: rxMethod<string>(pipe(
-        switchMap(authToken => spotifyApi.getPlayLists(authToken).pipe(tapResponse({
-          next: playLists => patchState(store, () => ({playLists})),
-          error: err => {
-            patchState(store, () => ({playLists: []}));
-            console.error(err);
-          }
-        })))
-      ))
+      readPlayLists: rxMethod<string>(
+        pipe(
+          switchMap(authToken =>
+            spotifyApi.getPlayLists(authToken).pipe(
+              tapResponse({
+                next: playLists => patchState(store, () => ({ playLists })),
+                error: err => {
+                  patchState(store, () => ({ playLists: [] }));
+                  console.error(err);
+                },
+              }),
+            ),
+          ),
+        ),
+      ),
     }),
   ),
 );
