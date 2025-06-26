@@ -30,7 +30,7 @@ export class SpotifySettingsComponent {
   spotifyPlaylists = this.spotifyStore.playLists;
   isAuthorized = this.spotifyStore.isAuthorized;
 
-  private authToken = computed(() => {
+  private readonly authToken = computed(() => {
     if (this.isAuthorized()) {
       return this.spotifyStore.settings().authToken;
     }
