@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using RadioApp.Persistence;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
+using Serilog;
 
 const string allowCors = "AllowCorsPolicy";
 
@@ -28,6 +29,13 @@ if (builder.Environment.IsDevelopment())
 //https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-9.0&tabs=visual-studio%2Cvisual-studio-code
 // /openapi/v1.json
 builder.Services.AddOpenApi();
+
+// Configure Serilog
+builder.Logging.ClearProviders();
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(builder.Configuration)
+);
+
 
 // Data Access
 builder.Services.AddDbContextFactory<Persistence>();
