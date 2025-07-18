@@ -47,7 +47,7 @@ Built as voltage divider:
 
 | Function  |  Raspberry Pi Pico |
 |-----------|-----------------|
-| R1  |  GP16    |
-| R2  | GP17    |
+| R1 (charge - `1MΩ`)  |  GP16    |
+| R2 (discarge - `220Ω`) | GP17    |
 | Voltmeter |  A1       |
 | GND |  ADC GND       |
