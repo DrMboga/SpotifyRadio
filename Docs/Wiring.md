@@ -22,15 +22,24 @@
 | TX  | GPIO15 (RX)        | GP4 (TX)    |
 | RX  | GPIO14 (TX)        | GP5 (RX)    |
 | Interrupt | GPIO 26        | GP14 (OUT)       |
-| Get Buttons Status interrupt | | |
+| Get Buttons Status interrupt | GPIO 16 | GP22 |
 | Play/pause button | -        | GP15 (IN)       |
 
 ---
 
 ## Buttons (resistors ladder)
-| Function  |  Raspberry Pi Pico |
-|-----------|-----------------|
 
+Built as voltage divider:
+
+`+3.3V` --- `Button` --- `Resistor` --- `AO input` --- `10KΩ Resistor` --- `GND`
+
+| Button  |  Resistance Ω |
+|-----------|-----------------|
+| Phono | 220 |
+| L | 1K |
+| M | 2.2K |
+| K | 4.7K |
+| U | 10K |
 
 ---
 

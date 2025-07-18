@@ -89,9 +89,9 @@ Diagrams are stored in [`Docs/Img/`](Docs/Img) and created using [draw.io](https
 
 ## 🗂 Repository Structure
 
-/ (root)
-├── README.md
-├── RadioApp/ # .NET WebAPI and main worker service project
-├── RadioFrontend/ # Angular "admin" application for Spotify authentication and setup radio channels
-├── RadioIO/ # C firmware for Raspberry Pi Pico
-├── Docs/ # Markdown documentation & diagrams
+| Folder | Description |
+|--------|-------------|
+| RadioApp | .NET WebAPI and main worker service project |
+| RadioFrontend | Angular "admin" application for Spotify authentication and setup radio channels |
+| RadioIO | C firmware for Raspberry Pi Pico |
+| Docs | Markdown documentation & diagrams |
