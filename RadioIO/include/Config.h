@@ -13,3 +13,5 @@
 
 #define VOLTAGE_PIN 26 // GPIO26 (ADC0)
 #define VOLTAGE_PIN_ADC 0 // GP26->A0
+
+#define PLAY_PAUSE_BUTTON_PIN 15

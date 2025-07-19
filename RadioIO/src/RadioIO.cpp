@@ -5,6 +5,7 @@
 #include "HardwareManager.h"
 #include "UARTMessenger.h"
 #include "ToggleButtonState.h"
+#include "PlayButtonState.h"
 
 int main()
 {
@@ -13,9 +14,8 @@ int main()
     hardwareManager.init();
 
     ToggleButtonState toggleButtonsState;
+    PlayButtonState playButtonState;
     UARTMessenger uartMessenger;
-
-    uartMessenger.sendMessage("Hello, UART!\n");
 
     // Main loop
     while (true) {
@@ -25,6 +25,9 @@ int main()
         }
 
         // Check if Play/Pause button pressed
+        if(playButtonState.updateState()) {
+            uartMessenger.sendPlayPauseCommand(playButtonState.getPlayState());
+        }
 
         // Check if capacitance changed
 

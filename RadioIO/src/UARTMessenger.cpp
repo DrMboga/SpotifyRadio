@@ -13,9 +13,15 @@ void UARTMessenger::sendMessage (const std::string& message) {
     gpio_put(INTERRUPT_PIN, 1);
 }
 
-void UARTMessenger::sendPuttonPushedCommand(int buttonIndex)
-{
+void UARTMessenger::sendPuttonPushedCommand(int buttonIndex) {
     char message[64];
     sprintf(message, "{\"command\":\"ButtonPressed\",\"buttonIndex\":%d}", buttonIndex);
+    sendMessage(message);
+}
+
+void UARTMessenger::sendPlayPauseCommand(bool isPause) {
+    char message[64];
+    sprintf(message, "{\"command\":\"PlayPause\",\"isPause\":%u}", isPause);
+
     sendMessage(message);
 }
