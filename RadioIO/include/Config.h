@@ -20,3 +20,5 @@
 #define DISCHARGE_PIN 17          // Discharge pin used to discharge capacitor via resistor R2
 #define CAPACITANCE_VOLTAGE_PIN 27            // GPIO27 (ADC1)
 #define CAPACITANCE_VOLTAGE_PIN_ADC 1         // GP27->A1
+
+#define REQUEST_STATE_PIN 22    // If this pin becomes low, that means that master device requests the IO state

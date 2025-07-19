@@ -16,4 +16,7 @@ public:
     /// @brief Sends a frequency chane notification
     /// @param frequency New frequency
     void sendNewFrequencyCommand(int frequency);
+
+    /// @brief Sends all 3 states as one message
+    void sendWholeStateCommand(int buttonIndex, bool isPause, int frequency);
 };

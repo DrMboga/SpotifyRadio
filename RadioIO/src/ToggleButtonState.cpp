@@ -26,12 +26,11 @@ int ToggleButtonState::getCurrentButtonIndex() const {
 }
 
 ToggleButtonState::ToggleButtonState() {
+    _currentButtonIndex = -1;
     updateState();
 }
 
 bool ToggleButtonState::updateState() {
-    _currentButtonIndex = -1;
-
     // Measure the voltage in resistors ladder and define which button is pressed
     float voltage = readVoltage();
     if (voltageChanged(voltage)) {

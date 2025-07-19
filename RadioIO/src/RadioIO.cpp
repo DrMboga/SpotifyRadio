@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "hardware/gpio.h"
 
 #include "Config.h"
 #include "HardwareManager.h"
@@ -37,6 +38,13 @@ int main()
         }
 
         // Check if main unit requests device status
+        bool stateRequest = gpio_get(REQUEST_STATE_PIN);
+        if(!stateRequest) {
+            uartMessenger.sendWholeStateCommand(
+                toggleButtonsState.getCurrentButtonIndex(), 
+                playButtonState.getPlayState(), 
+                capacitanceState.getCurrentFrequency());
+        }
 
         sleep_ms(200);
     }
