@@ -4,6 +4,7 @@
 #include "Config.h"
 #include "HardwareManager.h"
 #include "UARTMessenger.h"
+#include "ToggleButtonState.h"
 
 int main()
 {
@@ -11,12 +12,24 @@ int main()
     HardwareManager hardwareManager;
     hardwareManager.init();
 
+    ToggleButtonState toggleButtonsState;
     UARTMessenger uartMessenger;
 
     uartMessenger.sendMessage("Hello, UART!\n");
 
+    // Main loop
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+        // Check if button from buttons ladder pressed
+        if(toggleButtonsState.updateState()) {
+            uartMessenger.sendPuttonPushedCommand(toggleButtonsState.getCurrentButtonIndex());
+        }
+
+        // Check if Play/Pause button pressed
+
+        // Check if capacitance changed
+
+        // Check if main unit requests device status
+
+        sleep_ms(200);
     }
 }

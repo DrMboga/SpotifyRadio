@@ -10,3 +10,6 @@
 #define UART_TX_PIN 4
 #define UART_RX_PIN 5
 #define INTERRUPT_PIN 14
+
+#define VOLTAGE_PIN 26 // GPIO26 (ADC0)
+#define VOLTAGE_PIN_ADC 0 // GP26->A0

@@ -35,7 +35,11 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(RadioIO src/RadioIO.cpp src/HardwareManager.cpp src/UARTMessenger.cpp )
+add_executable(RadioIO 
+    src/RadioIO.cpp
+    src/HardwareManager.cpp
+    src/UARTMessenger.cpp
+    src/ToggleButtonState.cpp )
 
 pico_set_program_name(RadioIO "RadioIO")
 pico_set_program_version(RadioIO "0.1")
@@ -46,7 +50,8 @@ pico_enable_stdio_usb(RadioIO 1)
 
 # Add the standard library to the build
 target_link_libraries(RadioIO
-        pico_stdlib)
+        pico_stdlib
+        hardware_adc)
 
 # Add the standard include files to the build
 target_include_directories(RadioIO PRIVATE

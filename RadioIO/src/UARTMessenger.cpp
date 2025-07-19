@@ -12,3 +12,10 @@ void UARTMessenger::sendMessage (const std::string& message) {
     sleep_ms(10);
     gpio_put(INTERRUPT_PIN, 1);
 }
+
+void UARTMessenger::sendPuttonPushedCommand(int buttonIndex)
+{
+    char message[64];
+    sprintf(message, "{\"command\":\"ButtonPressed\",\"buttonIndex\":%d}", buttonIndex);
+    sendMessage(message);
+}
