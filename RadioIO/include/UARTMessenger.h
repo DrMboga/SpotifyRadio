@@ -1,4 +1,5 @@
 #include <string>
+#pragma once
 
 class UARTMessenger {
 public:
@@ -11,4 +12,8 @@ public:
     /// @brief Sends a play/pause command
     /// @param isPause true -> pause | false -> play
     void sendPlayPauseCommand(bool isPause);
+
+    /// @brief Sends a frequency chane notification
+    /// @param frequency New frequency
+    void sendNewFrequencyCommand(int frequency);
 };

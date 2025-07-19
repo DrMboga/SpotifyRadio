@@ -6,6 +6,7 @@
 #include "UARTMessenger.h"
 #include "ToggleButtonState.h"
 #include "PlayButtonState.h"
+#include "CapacitanceState.h"
 
 int main()
 {
@@ -15,6 +16,7 @@ int main()
 
     ToggleButtonState toggleButtonsState;
     PlayButtonState playButtonState;
+    CapacitanceState capacitanceState;
     UARTMessenger uartMessenger;
 
     // Main loop
@@ -30,6 +32,9 @@ int main()
         }
 
         // Check if capacitance changed
+        if(capacitanceState.updateState()) {
+            uartMessenger.sendNewFrequencyCommand(capacitanceState.getCurrentFrequency());
+        }
 
         // Check if main unit requests device status
 

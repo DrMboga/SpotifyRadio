@@ -40,7 +40,8 @@ add_executable(RadioIO
     src/HardwareManager.cpp
     src/UARTMessenger.cpp
     src/ToggleButtonState.cpp
-    src/PlayButtonState.cpp )
+    src/PlayButtonState.cpp
+    src/CapacitanceState.cpp )
 
 pico_set_program_name(RadioIO "RadioIO")
 pico_set_program_version(RadioIO "0.1")

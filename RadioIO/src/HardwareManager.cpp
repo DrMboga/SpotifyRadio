@@ -27,4 +27,10 @@ void HardwareManager::init() {
     // ------------
     // Buttons ladder voltage pin
     adc_gpio_init(VOLTAGE_PIN);
+
+    // ------------
+    // Capacitance measurement init
+    adc_gpio_init(CAPACITANCE_VOLTAGE_PIN);
+    gpio_init(CHARGE_PIN);
+    gpio_init(DISCHARGE_PIN);
 }

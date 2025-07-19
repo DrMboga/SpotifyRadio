@@ -15,3 +15,8 @@
 #define VOLTAGE_PIN_ADC 0 // GP26->A0
 
 #define PLAY_PAUSE_BUTTON_PIN 15
+
+#define CHARGE_PIN 16             // Charge pin used to charge resistor R1
+#define DISCHARGE_PIN 17          // Discharge pin used to discharge capacitor via resistor R2
+#define CAPACITANCE_VOLTAGE_PIN 27            // GPIO27 (ADC1)
+#define CAPACITANCE_VOLTAGE_PIN_ADC 1         // GP27->A1

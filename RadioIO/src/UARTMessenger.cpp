@@ -25,3 +25,10 @@ void UARTMessenger::sendPlayPauseCommand(bool isPause) {
 
     sendMessage(message);
 }
+
+void UARTMessenger::sendNewFrequencyCommand(int frequency) {
+    char message[64];
+    sprintf(message, "{\"command\":\"NewFrequency\",\"frequency\":%d}", frequency);
+
+    sendMessage(message);
+}
