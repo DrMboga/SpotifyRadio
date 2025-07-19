@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(RadioIO RadioIO.cpp )
+add_executable(RadioIO src/RadioIO.cpp src/HardwareManager.cpp src/UARTMessenger.cpp )
 
 pico_set_program_name(RadioIO "RadioIO")
 pico_set_program_version(RadioIO "0.1")
@@ -50,7 +50,8 @@ target_link_libraries(RadioIO
 
 # Add the standard include files to the build
 target_include_directories(RadioIO PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/src
+        ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
 pico_add_extra_outputs(RadioIO)
