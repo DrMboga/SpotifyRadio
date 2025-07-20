@@ -23,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\RadioApp.Common\RadioApp.Common.csproj" />
+      <ProjectReference Include="..\RadioApp.Hardware\RadioApp.Hardware.csproj" />
       <ProjectReference Include="..\RadioApp.Persistence\RadioApp.Persistence.csproj" />
     </ItemGroup>
 

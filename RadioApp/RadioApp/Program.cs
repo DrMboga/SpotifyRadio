@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using RadioApp.Common.Hardware;
+using RadioApp.Hardware;
+using RadioApp.Hardware.Mock;
 using RadioApp.Persistence;
+using RadioApp.RadioController;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
 using Serilog;
@@ -42,6 +46,20 @@ builder.Services.AddDbContextFactory<Persistence>();
 
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(AppDomain.CurrentDomain.GetAssemblies()));
+
+// Hardware services
+var osPlatform = Environment.OSVersion.Platform;
+if (osPlatform == PlatformID.Unix)
+{
+    builder.Services.AddSingleton<IHardwareManager, HardwareManager>();
+}
+else
+{
+    builder.Services.AddSingleton<IHardwareManager, HardwareManagerMock>();
+}
+
+// Background worker with main radio logic
+builder.Services.AddHostedService<RadioControllerService>();
 
 var app = builder.Build();
 
