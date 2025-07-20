@@ -66,6 +66,9 @@ var app = builder.Build();
 // Create database
 if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")))
 {
+    var dataDirectory = Path.Combine(Directory.GetCurrentDirectory(), "data");
+    Directory.CreateDirectory(dataDirectory);
+    
     var dbContextFactory = app.Services.GetService<IDbContextFactory<Persistence>>();
     await using var dbContext = await dbContextFactory!.CreateDbContextAsync();
     dbContext.Database.EnsureCreated();
