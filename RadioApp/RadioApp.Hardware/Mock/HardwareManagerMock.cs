@@ -7,9 +7,12 @@ public class HardwareManagerMock: IHardwareManager
 {
     private readonly ILogger<HardwareManagerMock> _logger;
 
+    public int UartHandle { get; }
+    
     public HardwareManagerMock(ILogger<HardwareManagerMock> logger)
     {
         _logger = logger;
+        UartHandle = -1;
     }
 
     public void Init()

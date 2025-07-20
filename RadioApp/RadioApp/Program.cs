@@ -52,10 +52,12 @@ var osPlatform = Environment.OSVersion.Platform;
 if (osPlatform == PlatformID.Unix)
 {
     builder.Services.AddSingleton<IHardwareManager, HardwareManager>();
+    builder.Services.AddSingleton<IUartIoListener, UartIoListener>();
 }
 else
 {
     builder.Services.AddSingleton<IHardwareManager, HardwareManagerMock>();
+    builder.Services.AddSingleton<IUartIoListener, UartIoListenerMock>();
 }
 
 // Background worker with main radio logic

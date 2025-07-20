@@ -6,18 +6,21 @@ public class RadioControllerService: BackgroundService
 {
     private readonly ILogger<RadioControllerService> _logger;
     private readonly IHardwareManager _hardwareManager;
+    private readonly IUartIoListener _uartIoListener;
 
-    public RadioControllerService(ILogger<RadioControllerService> logger, IHardwareManager hardwareManager)
+    public RadioControllerService(ILogger<RadioControllerService> logger, IHardwareManager hardwareManager, IUartIoListener uartIoListener)
     {
         _logger = logger;
         _hardwareManager = hardwareManager;
+        _uartIoListener = uartIoListener;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("--== Starting Radio Controller ==--");
         _hardwareManager.Init();
-        
+        _uartIoListener.StartListenIoChannel();
+            
         return Task.CompletedTask;
     }
 
