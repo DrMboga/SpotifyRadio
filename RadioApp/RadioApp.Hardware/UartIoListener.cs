@@ -37,6 +37,7 @@ public class UartIoListener: IUartIoListener, IDisposable
     public void StartListenIoChannel()
     {
         GpioManager.InitInputPinAsPullUp(InterruptPin);
+        _logger.LogDebug("Pin {InterruptPin} set up as input and pull-up", InterruptPin);
         _interruptListenerThread.Start();
     }
 
