@@ -18,7 +18,9 @@ public class UartIoListener: IUartIoListener, IDisposable
     private const uint InterruptPin = 26;
     
     private readonly ILogger<UartIoListener> _logger;
-    private readonly IHardwareManager  _hardwareManager;
+    private readonly IHardwareManager _hardwareManager;
+    private readonly IGpioManager _gpioManager;
+    private readonly IUartManager _uartManager;
     private readonly IMediator _mediator;
     
     private readonly ManualResetEvent _interruptHandleDone = new ManualResetEvent(false);
@@ -26,17 +28,24 @@ public class UartIoListener: IUartIoListener, IDisposable
     
     private bool _disposed = false;
     
-    public UartIoListener(ILogger<UartIoListener> logger, IHardwareManager hardwareManager, IMediator mediator)
+    public UartIoListener(
+        ILogger<UartIoListener> logger, 
+        IHardwareManager hardwareManager, 
+        IGpioManager gpioManager,
+        IUartManager uartManager,
+        IMediator mediator)
     {
         _logger = logger;
         _mediator = mediator;
+        _uartManager = uartManager;
+        _gpioManager = gpioManager;
         _hardwareManager = hardwareManager;
         _interruptListenerThread = new Thread(ListenToInterruptPin);
     }
 
     public void StartListenIoChannel()
     {
-        GpioManager.InitInputPinAsPullUp(InterruptPin);
+        _gpioManager.InitInputPinAsPullUp(InterruptPin);
         _logger.LogDebug("Pin {InterruptPin} set up as input and pull-up", InterruptPin);
         _interruptListenerThread.Start();
     }
@@ -45,9 +54,9 @@ public class UartIoListener: IUartIoListener, IDisposable
     {
         while (!_disposed)
         {
-            GpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
+            _gpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
             _interruptHandleDone.WaitOne();
-            GpioManager.UnregisterPinCallbackFunction(InterruptPin);
+            _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
             _interruptHandleDone.Reset();
         }
     }
@@ -68,7 +77,7 @@ public class UartIoListener: IUartIoListener, IDisposable
         string? uartMessage = null;
         while (true)
         {
-            uartMessage = UartManager.ReadUartMessage(_hardwareManager.UartHandle);
+            uartMessage = _uartManager.ReadUartMessage(_hardwareManager.UartHandle);
             if (uartMessage != null)
             {
                 break;
@@ -92,7 +101,7 @@ public class UartIoListener: IUartIoListener, IDisposable
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
-        GpioManager.UnregisterPinCallbackFunction(InterruptPin);
+        _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
         _logger.LogInformation("UartIoListener terminated");
 
         Interlocked.Exchange(ref _disposed, true);

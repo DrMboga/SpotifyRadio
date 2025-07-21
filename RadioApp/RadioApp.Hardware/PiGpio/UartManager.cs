@@ -3,9 +3,9 @@ using System.Text;
 
 namespace RadioApp.Hardware.PiGpio;
 
-public static class UartManager
+public class UartManager: IUartManager
 {
-    public static string? ReadUartMessage(int uartHandle)
+    public string? ReadUartMessage(int uartHandle)
     {
         var messageArrived = false;
         const uint bufferSize = 256;

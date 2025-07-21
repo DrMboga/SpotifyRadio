@@ -3,6 +3,7 @@ using Microsoft.Extensions.FileProviders;
 using RadioApp.Common.Hardware;
 using RadioApp.Hardware;
 using RadioApp.Hardware.Mock;
+using RadioApp.Hardware.PiGpio;
 using RadioApp.Persistence;
 using RadioApp.RadioController;
 using RadioApp.RadioStreamSettings;
@@ -51,14 +52,17 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(AppDomain.
 var osPlatform = Environment.OSVersion.Platform;
 if (osPlatform == PlatformID.Unix)
 {
-    builder.Services.AddSingleton<IHardwareManager, HardwareManager>();
-    builder.Services.AddSingleton<IUartIoListener, UartIoListener>();
+    builder.Services.AddSingleton<IGpioManager, GpioManager>();
+    builder.Services.AddSingleton<IUartManager, UartManager>();
 }
 else
 {
-    builder.Services.AddSingleton<IHardwareManager, HardwareManagerMock>();
-    builder.Services.AddSingleton<IUartIoListener, UartIoListenerMock>();
+    builder.Services.AddSingleton<IGpioManager, GpioManagerMock>();
+    builder.Services.AddSingleton<IUartManager, UartManagerMock>();
 }
+
+builder.Services.AddTransient<IHardwareManager, HardwareManager>();
+builder.Services.AddTransient<IUartIoListener, UartIoListener>();
 
 // Background worker with main radio logic
 builder.Services.AddHostedService<RadioControllerService>();
