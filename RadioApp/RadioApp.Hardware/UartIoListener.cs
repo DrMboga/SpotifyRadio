@@ -25,7 +25,6 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
 
     private readonly CancellationTokenSource _cancellationTokenRef = new();
     private Task? _listenToPinInterruptTask;
-    private TaskCompletionSource? _interruptPinTriggered;
 
     public UartIoListener(
         ILogger<UartIoListener> logger,
@@ -57,23 +56,28 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                _interruptPinTriggered =
+                var interruptPinTriggered =
                     new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 // Register one-time callback
-                _gpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
-                _logger.LogDebug("--Callback registered");
+                _gpioManager.RegisterPinCallbackFunction(InterruptPin, (_, level, _) =>
+                {
+                    if ((GpioLevel)level == GpioLevel.Low)
+                    {
+                        // If interrupt pin is LOW, we are ready to read message from UART
+                        interruptPinTriggered.TrySetResult();
+                    }
+                });
 
                 // Wait for pin trigger via TaskCompletionSource
-                await _interruptPinTriggered.Task.WaitAsync(cancellationToken);
-                
+                await interruptPinTriggered.Task.WaitAsync(cancellationToken);
+
                 // Delay to ensure UART buffer fills
                 await Task.Delay(20, cancellationToken);
                 var message = await ReadUartMessage();
 
                 // Unregister one-time callback
                 _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
-                _logger.LogDebug("--Callback unregistered");
 
                 try
                 {
@@ -91,26 +95,6 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         catch (OperationCanceledException)
         {
             _logger.LogInformation("Message listening canceled.");
-        }
-    }
-
-    /// <summary>
-    /// Callback function triggers when the specified GPIO changes state
-    /// </summary>
-    private void GpioCallback(int gpio, int level, uint tick)
-    {
-        if ((GpioLevel)level == GpioLevel.Low && _interruptPinTriggered is { Task.IsCompleted: false } tcs)
-        {
-            // If interrupt pin is LOW, we are ready to read message from UART
-            try
-            {
-                _logger.LogDebug("tcs.TrySetResult()");
-                tcs.TrySetResult();
-            }
-            catch (Exception ex)
-            {
-                tcs.TrySetException(ex);
-            }
         }
     }
 
