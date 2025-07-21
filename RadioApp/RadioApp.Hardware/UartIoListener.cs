@@ -25,7 +25,7 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
 
     private readonly CancellationTokenSource _cancellationTokenRef = new();
     private Task? _listenToPinInterruptTask;
-    private TaskCompletionSource<string>? _interruptPinTriggered;
+    private TaskCompletionSource? _interruptPinTriggered;
 
     public UartIoListener(
         ILogger<UartIoListener> logger,
@@ -57,14 +57,19 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                _interruptPinTriggered = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _interruptPinTriggered =
+                    new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 // Register one-time callback
                 _gpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
                 _logger.LogDebug("--Callback registered");
 
                 // Wait for pin trigger via TaskCompletionSource
-                var message = await _interruptPinTriggered.Task.WaitAsync(cancellationToken);
+                await _interruptPinTriggered.Task.WaitAsync(cancellationToken);
+                
+                // Delay to ensure UART buffer fills
+                await Task.Delay(20, cancellationToken);
+                var message = await ReadUartMessage();
 
                 // Unregister one-time callback
                 _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
@@ -74,7 +79,7 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
                 {
                     // await _mediator.Publish(new NewMessage(message), cancellationToken);
                     _logger.LogDebug("Here we should call Mediator with message '{Message}'", message);
-                    _hardwareManager.SetStatusRequestPin(false);
+                    // _hardwareManager.SetStatusRequestPin(false);
                 }
                 catch (Exception ex)
                 {
@@ -96,19 +101,15 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         if ((GpioLevel)level == GpioLevel.Low && _interruptPinTriggered is { Task.IsCompleted: false } tcs)
         {
             // If interrupt pin is LOW, we are ready to read message from UART
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    var message = await ReadUartMessage();
-                    _logger.LogDebug("tcs.TrySetResult({Message})", message);
-                    tcs.TrySetResult(message);
-                }
-                catch (Exception ex)
-                {
-                    tcs.TrySetException(ex);
-                }
-            });
+                _logger.LogDebug("tcs.TrySetResult()");
+                tcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
         }
     }
 
