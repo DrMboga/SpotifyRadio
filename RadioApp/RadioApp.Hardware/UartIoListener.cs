@@ -37,7 +37,7 @@ public class UartIoListener: IUartIoListener, IDisposable
     public void StartListenIoChannel()
     {
         GpioManager.InitInputPinAsPullUp(InterruptPin);
-        _logger.LogDebug("Pin set up as input and pull-up");
+        _logger.LogDebug("Pin {InterruptPin} set up as input and pull-up", InterruptPin);
         _interruptListenerThread.Start();
     }
 
@@ -46,10 +46,8 @@ public class UartIoListener: IUartIoListener, IDisposable
         while (!_disposed)
         {
             GpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
-            _logger.LogDebug("Registered callback for {InterruptPin} pin", InterruptPin);
             _interruptHandleDone.WaitOne();
             GpioManager.UnregisterPinCallbackFunction(InterruptPin);
-            _logger.LogDebug("Unregistered callback for {InterruptPin} pin", InterruptPin);
             _interruptHandleDone.Reset();
         }
     }
@@ -59,7 +57,6 @@ public class UartIoListener: IUartIoListener, IDisposable
     /// </summary>
     private void GpioCallback(int gpio, int level, uint tick)
     {
-        _logger.LogDebug("Pin {gpio} changed its state to '{level}'", gpio, level);
         if ((GpioLevel)level == GpioLevel.Low)
         {
             ReadUartMessage();
@@ -79,11 +76,8 @@ public class UartIoListener: IUartIoListener, IDisposable
             Thread.Sleep(100);
         }
         _logger.LogDebug("UART Message read '{uartMessage}'", uartMessage);
-        // var command = _uart.LastReadCommand;
-        // if (command != null)
-        // {
-        //     _commandsListener.ProcessIoCommand(command);
-        // }
+
+        // TODO: call here: await _mediator.Send(new NewMessage(uartMessage));
 
         _interruptHandleDone.Set();
     }
@@ -97,23 +91,10 @@ public class UartIoListener: IUartIoListener, IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        // Check to see if Dispose has already been called.
         if (_disposed) return;
-        // If disposing equals true, dispose all managed
-        // and unmanaged resources.
-        if(disposing)
-        {
-            // Dispose managed resources.
-        }
-
-        // Call the appropriate methods to clean up
-        // unmanaged resources here.
-        // If disposing is false,
-        // only the following code is executed.
         GpioManager.UnregisterPinCallbackFunction(InterruptPin);
         _logger.LogInformation("UartIoListener terminated");
 
-        // Note disposing has been done.
         Interlocked.Exchange(ref _disposed, true);
         _interruptListenerThread.Interrupt();
     }
