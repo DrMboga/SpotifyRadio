@@ -38,6 +38,16 @@ public class GpioManagerMock: IGpioManager
         _logger.LogDebug("Mock InitInputPinAsPullUp. inputPin: {InputPin}", inputPin);
     }
 
+    public void SetPinMode(uint pin, GpioMode mode)
+    {
+        _logger.LogDebug("Mock SetPinMode. pin: {Pin}; mode: {Mode}", pin, mode);
+    }
+
+    public void SetPinValue(uint pin, GpioLevel level)
+    {
+        _logger.LogDebug("Mock SetPinValue. pin: {Pin}; mode: {Level}", pin, level);
+    }
+
     public void RegisterPinCallbackFunction(uint inputPin, PiGpioInterop.gpioAlertCallback? alertFunction)
     {
         _logger.LogDebug("Mock RegisterPinCallbackFunction. inputPin: {InputPin}", inputPin);

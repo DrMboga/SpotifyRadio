@@ -33,6 +33,16 @@ public interface IGpioManager
     /// </summary>
     void InitInputPinAsPullUp(uint inputPin);
 
+    /// <summary>
+    /// Sets pin as input or as output
+    /// </summary>
+    void SetPinMode(uint pin, GpioMode mode);
+
+    /// <summary>
+    /// Sets pin level. High or Low
+    /// </summary>
+    void SetPinValue(uint pin, GpioLevel level);
+
     void RegisterPinCallbackFunction(uint inputPin, PiGpioInterop.gpioAlertCallback? alertFunction);
     void UnregisterPinCallbackFunction(uint inputPin);
 }

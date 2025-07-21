@@ -72,7 +72,25 @@ public class GpioManager: IGpioManager
             throw new GpioException($"set PIN {inputPin} pull up error", result);
         }
     }
-    
+
+    public void SetPinMode(uint pin, GpioMode mode)
+    {
+        int result = PiGpioInterop.gpioSetMode(pin, (uint) mode);
+        if (result < 0)
+        {
+            throw new GpioException($"set PIN {pin} as {mode} error", result);
+        }
+    }
+
+    public void SetPinValue(uint pin, GpioLevel level)
+    {
+        int result = PiGpioInterop.gpioWrite(pin, (uint) level);
+        if (result < 0)
+        {
+            throw new GpioException($"write to PIN {pin} value {level} error", result);
+        }
+    }
+
     public void RegisterPinCallbackFunction(uint inputPin, PiGpioInterop.gpioAlertCallback? alertFunction)
     {
         // Register callback
