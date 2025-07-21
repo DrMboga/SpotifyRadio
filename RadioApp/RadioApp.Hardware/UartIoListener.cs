@@ -79,7 +79,8 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
                 {
                     // await _mediator.Publish(new NewMessage(message), cancellationToken);
                     _logger.LogDebug("Here we should call Mediator with message '{Message}'", message);
-                    // _hardwareManager.SetStatusRequestPin(false);
+                    // TODO: Set this only if Status message received
+                    _hardwareManager.SetStatusRequestPin(false);
                 }
                 catch (Exception ex)
                 {
