@@ -15,13 +15,11 @@ public class RadioControllerService: BackgroundService
         _uartIoListener = uartIoListener;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("--== Starting Radio Controller ==--");
         _hardwareManager.Init();
-        _uartIoListener.StartListenIoChannel();
-            
-        return Task.CompletedTask;
+        await _uartIoListener.StartListenIoChannel(stoppingToken);
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)

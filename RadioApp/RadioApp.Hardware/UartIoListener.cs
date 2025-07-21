@@ -13,24 +13,23 @@ namespace RadioApp.Hardware;
 /// When interrupt happens, thead wakes up and starts to read from UART
 /// When message read, the appropriate command is sent to the Mediator
 /// </summary>
-public class UartIoListener: IUartIoListener, IDisposable
+public class UartIoListener : IUartIoListener, IAsyncDisposable
 {
     private const uint InterruptPin = 26;
-    
+
     private readonly ILogger<UartIoListener> _logger;
     private readonly IHardwareManager _hardwareManager;
     private readonly IGpioManager _gpioManager;
     private readonly IUartManager _uartManager;
     private readonly IMediator _mediator;
-    
-    private readonly ManualResetEvent _interruptHandleDone = new ManualResetEvent(false);
-    private readonly Thread _interruptListenerThread;
-    
-    private bool _disposed = false;
-    
+
+    private readonly CancellationTokenSource _cancellationTokenRef = new();
+    private Task? _listenToPinInterruptTask;
+    private TaskCompletionSource<string>? _interruptPinTriggered;
+
     public UartIoListener(
-        ILogger<UartIoListener> logger, 
-        IHardwareManager hardwareManager, 
+        ILogger<UartIoListener> logger,
+        IHardwareManager hardwareManager,
         IGpioManager gpioManager,
         IUartManager uartManager,
         IMediator mediator)
@@ -40,77 +39,128 @@ public class UartIoListener: IUartIoListener, IDisposable
         _uartManager = uartManager;
         _gpioManager = gpioManager;
         _hardwareManager = hardwareManager;
-        _interruptListenerThread = new Thread(ListenToInterruptPin);
     }
 
-    public void StartListenIoChannel()
+    public Task StartListenIoChannel(CancellationToken cancellationToken)
     {
         _gpioManager.InitInputPinAsPullUp(InterruptPin);
         _logger.LogDebug("Pin {InterruptPin} set up as input and pull-up", InterruptPin);
-        _interruptListenerThread.Start();
+
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenRef.Token);
+        _listenToPinInterruptTask = Task.Run(() => ListenToInterruptPin(linkedCts.Token), linkedCts.Token);
+        return Task.CompletedTask;
     }
 
-    private void ListenToInterruptPin()
+    private async Task ListenToInterruptPin(CancellationToken cancellationToken)
     {
-        while (!_disposed)
+        try
         {
-            _gpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
-            _interruptHandleDone.WaitOne();
-            _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
-            _interruptHandleDone.Reset();
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                _interruptPinTriggered = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                // Register one-time callback
+                _gpioManager.RegisterPinCallbackFunction(InterruptPin, GpioCallback);
+                _logger.LogDebug("--Callback registered");
+
+                // Wait for pin trigger via TaskCompletionSource
+                var message = await _interruptPinTriggered.Task.WaitAsync(cancellationToken);
+
+                // Unregister one-time callback
+                _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
+                _logger.LogDebug("--Callback unregistered");
+
+                try
+                {
+                    // await _mediator.Publish(new NewMessage(message), cancellationToken);
+                    _logger.LogDebug("Here we should call Mediator with message '{Message}'", message);
+                    _hardwareManager.SetStatusRequestPin(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error while processing UART message.");
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Message listening canceled.");
         }
     }
-    
+
     /// <summary>
     /// Callback function triggers when the specified GPIO changes state
     /// </summary>
     private void GpioCallback(int gpio, int level, uint tick)
     {
-        if ((GpioLevel)level == GpioLevel.Low)
+        if ((GpioLevel)level == GpioLevel.Low && _interruptPinTriggered is { Task.IsCompleted: false } tcs)
         {
-            ReadUartMessage();
+            // If interrupt pin is LOW, we are ready to read message from UART
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var message = await ReadUartMessage();
+                    _logger.LogDebug("tcs.TrySetResult({Message})", message);
+                    tcs.TrySetResult(message);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            });
         }
     }
 
-    private void ReadUartMessage()
+    private async Task<string> ReadUartMessage()
     {
         string? uartMessage = null;
-        while (true)
+        while (uartMessage == null)
         {
             uartMessage = _uartManager.ReadUartMessage(_hardwareManager.UartHandle);
-            if (uartMessage != null)
+            if (uartMessage == null)
             {
-                break;
+                await Task.Delay(100);
             }
-            Thread.Sleep(100);
         }
+
         _logger.LogDebug("UART Message read '{uartMessage}'", uartMessage);
 
-        // TODO: call here: await _mediator.Send(new NewMessage(uartMessage));
-
-        _interruptHandleDone.Set();
+        return uartMessage;
     }
-    
+
     #region Dispose
-    public void Dispose()
-    {
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
-    }
 
-    protected virtual void Dispose(bool disposing)
+    private void ReleaseUnmanagedResources()
     {
-        if (_disposed) return;
         _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
         _logger.LogInformation("UartIoListener terminated");
+    }
 
-        Interlocked.Exchange(ref _disposed, true);
-        _interruptListenerThread.Interrupt();
+    public async ValueTask DisposeAsync()
+    {
+        await _cancellationTokenRef.CancelAsync();
+        ReleaseUnmanagedResources();
+        if (_listenToPinInterruptTask is not null)
+        {
+            try
+            {
+                await _listenToPinInterruptTask;
+            }
+            catch
+            {
+                /* Swallow on dispose */
+            }
+        }
+
+        GC.SuppressFinalize(this);
+        await Task.CompletedTask;
     }
 
     ~UartIoListener()
     {
-        Dispose(disposing: false);
+        ReleaseUnmanagedResources();
     }
+
     #endregion
 }

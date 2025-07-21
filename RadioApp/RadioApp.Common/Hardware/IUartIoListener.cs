@@ -9,5 +9,5 @@ public interface IUartIoListener
     /// Initializes the interrupt pin and starts to receive messages from UART protocol.
     /// When any message arrives, sends appropriate commands to Mediator
     /// </summary>
-    void StartListenIoChannel();
+    Task StartListenIoChannel(CancellationToken cancellationToken);
 }
