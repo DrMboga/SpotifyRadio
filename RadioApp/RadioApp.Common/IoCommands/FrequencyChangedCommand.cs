@@ -1,4 +1,4 @@
-namespace RadioApp.Hardware.IoCommands;
+namespace RadioApp.Common.IoCommands;
 
 public class FrequencyChangedCommand : ICommand
 {

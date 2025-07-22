@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using RadioApp.Common.Hardware;
+using RadioApp.Common.IoCommands;
+using RadioApp.Common.Messages.Hardware;
+using RadioApp.Hardware.Helpers;
 using RadioApp.Hardware.PiGpio;
 
 namespace RadioApp.Hardware;
@@ -81,10 +84,12 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
 
                 try
                 {
-                    // await _mediator.Publish(new NewMessage(message), cancellationToken);
-                    _logger.LogDebug("Here we should call Mediator with message '{Message}'", message);
-                    // TODO: Set this only if Status message received
-                    _hardwareManager.SetStatusRequestPin(false);
+                    var command = message.ParseCommand();
+                    if (command.Type == CommandType.StatusCommand)
+                    {
+                        _hardwareManager.SetStatusRequestPin(false);
+                    }
+                    await _mediator.Publish(new ProcessCommandNotification(command), cancellationToken);
                 }
                 catch (Exception ex)
                 {

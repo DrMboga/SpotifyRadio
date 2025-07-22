@@ -35,7 +35,7 @@ void UARTMessenger::sendNewFrequencyCommand(int frequency) {
 
 void UARTMessenger::sendWholeStateCommand(int buttonIndex, bool isPause, int frequency) {
     char message[64];
-    sprintf(message, "{\"buttonIndex\":%d,\"isPause\":%u,\"frequency\":%d}", buttonIndex, isPause, frequency);
+    sprintf(message, "{\"command\":\"State\",\"buttonIndex\":%d,\"isPause\":%u,\"frequency\":%d}", buttonIndex, isPause, frequency);
 
     sendMessage(message);
 }

@@ -1,4 +1,4 @@
-namespace RadioApp.Hardware.IoCommands;
+namespace RadioApp.Common.IoCommands;
 
 /// <summary>
 /// IO command sent by PICO IO device
