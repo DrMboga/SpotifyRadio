@@ -64,6 +64,8 @@ else
 builder.Services.AddTransient<IHardwareManager, HardwareManager>();
 builder.Services.AddTransient<IUartIoListener, UartIoListener>();
 
+builder.Services.AddSingleton<RadioStatus>();
+
 // Background worker with main radio logic
 builder.Services.AddHostedService<RadioControllerService>();
 
