@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using RadioApp.Common.Hardware;
+using RadioApp.Common.PlayerProcessor;
 using RadioApp.Hardware;
 using RadioApp.Hardware.Mock;
 using RadioApp.Hardware.PiGpio;
 using RadioApp.Persistence;
+using RadioApp.PlayerProcessors;
 using RadioApp.RadioController;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
@@ -64,10 +66,30 @@ else
 builder.Services.AddTransient<IHardwareManager, HardwareManager>();
 builder.Services.AddTransient<IUartIoListener, UartIoListener>();
 
+// Singleton instance of the Status synchronization service
 builder.Services.AddSingleton<RadioStatus>();
 
-// Background worker with main radio logic
+// Background worker with IO listening logic
 builder.Services.AddHostedService<RadioControllerService>();
+
+// Player processor factory
+builder.Services.AddTransient<IdlePlayerProcessor>();
+builder.Services.AddTransient<SpotifyPlayerProcessor>();
+builder.Services.AddTransient<InternetRadioPlayerProcessor>();
+// Register a delegate which returns IPlayerProcessor instance by PlayerType enum member
+builder.Services.AddTransient<PlayerProcessorFactory>(serviceProvider => playerType =>
+{
+    return playerType switch
+    {
+        PlayerType.Idle => serviceProvider.GetRequiredService<IdlePlayerProcessor>(),
+        PlayerType.Spotify => serviceProvider.GetRequiredService<SpotifyPlayerProcessor>(),
+        PlayerType.InternetRadio => serviceProvider.GetRequiredService<InternetRadioPlayerProcessor>(),
+        _ => throw new ArgumentOutOfRangeException(nameof(playerType), playerType, null)
+    };
+});
+
+// Background worker with media playback control
+builder.Services.AddHostedService<PlayerProcessorService>();
 
 var app = builder.Build();
 

@@ -11,8 +11,8 @@ public class RadioStatus
     /// <summary>
     /// Synchronisation context event. It is set each time the status is changed
     /// </summary>
-    public TaskCompletionSource StatusChanged { get; } =
-        new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<RadioStatusChangeResult> StatusChanged { get; } =
+        new TaskCompletionSource<RadioStatusChangeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// Current mode of the radio.
@@ -48,6 +48,7 @@ public class RadioStatus
     public Task HandleIoCommand(ICommand command)
     {
         var stateChanged = false;
+        var result = RadioStatusChangeResult.PlayStateChanged;
         switch (command.Type)
         {
             case CommandType.StatusCommand:
@@ -56,9 +57,24 @@ public class RadioStatus
                     _logger.LogDebug("StatusCommand {Button}, {IsPause}, {Frequency} handled",
                         statusCommand.ButtonIndex,
                         statusCommand.IsPause, statusCommand.Frequency);
-                    stateChanged = IfRadioButtonChanged(statusCommand.ButtonIndex) |
-                                   IfPlayPausePressed(statusCommand.IsPause) |
-                                   IfFrequencyChanged(statusCommand.Frequency);
+                    var frequencyWasChanged = IfFrequencyChanged(statusCommand.Frequency);
+                    var playPauseWasChanged = IfPlayPausePressed(statusCommand.IsPause);
+                    var buttonWasChanged = IfRadioButtonChanged(statusCommand.ButtonIndex);
+                    if (buttonWasChanged.StateChanged)
+                    {
+                        stateChanged = true;
+                        result = buttonWasChanged.StateChangeResult;
+                    }
+                    else if (playPauseWasChanged)
+                    {
+                        stateChanged = true;
+                        result = RadioStatusChangeResult.PlayStateChanged;
+                    }
+                    else if (frequencyWasChanged)
+                    {
+                        stateChanged = true;
+                        result = RadioStatusChangeResult.FrequencyChanged;
+                    }
                 }
 
                 break;
@@ -66,7 +82,11 @@ public class RadioStatus
                 if (command is ToggleButtonPressedCommand toggleButtonPressed)
                 {
                     _logger.LogDebug("ToggleButtonPressedCommand {Button} handled", toggleButtonPressed.ButtonIndex);
-                    stateChanged = IfRadioButtonChanged(toggleButtonPressed.ButtonIndex);
+                    var state = IfRadioButtonChanged(toggleButtonPressed.ButtonIndex);
+                    if (state.StateChanged)
+                    {
+                        result = state.StateChangeResult;
+                    }
                 }
 
                 break;
@@ -75,6 +95,10 @@ public class RadioStatus
                 {
                     _logger.LogDebug("PlayPauseButtonPressedCommand {Button} handled", playPauseButtonPressed.IsPause);
                     stateChanged = IfPlayPausePressed(playPauseButtonPressed.IsPause);
+                    if (stateChanged)
+                    {
+                        result = RadioStatusChangeResult.PlayStateChanged;
+                    }
                 }
 
                 break;
@@ -83,6 +107,10 @@ public class RadioStatus
                 {
                     _logger.LogDebug("FrequencyChangedCommand {Button} handled", frequencyChanged.Frequency);
                     stateChanged = IfFrequencyChanged(frequencyChanged.Frequency);
+                    if (stateChanged)
+                    {
+                        result = RadioStatusChangeResult.FrequencyChanged;
+                    }
                 }
 
                 break;
@@ -90,29 +118,30 @@ public class RadioStatus
 
         if (stateChanged)
         {
-            StatusChanged.TrySetResult();
+            _logger.LogDebug($"Radio State changed to {result}");
+            StatusChanged.TrySetResult(result);
         }
 
         return Task.CompletedTask;
     }
 
-    private bool IfRadioButtonChanged(int newButtonIndex)
+    private (bool StateChanged, RadioStatusChangeResult StateChangeResult) IfRadioButtonChanged(int newButtonIndex)
     {
-        if ((short)SabaRadioButton == (short)newButtonIndex) return false;
+        if ((short)SabaRadioButton == (short)newButtonIndex) return (false, RadioStatusChangeResult.PlayerProcessorChanged);
         if (newButtonIndex < 0)
         {
             // -1 if no button is pressed
             PlayerType = PlayerType.Idle;
             SabaRadioButton = SabaRadioButtons.M;
-            return true;
+            return (true, RadioStatusChangeResult.PlayerProcessorChanged);
         }
 
         SabaRadioButton = (SabaRadioButtons)((short)newButtonIndex);
-        PlayerType =
+        var newPlayerType =
             SabaRadioButton == SabaRadioButtons.L
                 ? PlayerType.Spotify
                 : PlayerType.InternetRadio; // L for spotify, M, K, U for internet radio
-        return true;
+        return PlayerType == newPlayerType ? (true, RadioStatusChangeResult.RadioRegionChanged) : (true, RadioStatusChangeResult.PlayerProcessorChanged);
     }
 
     private bool IfPlayPausePressed(bool newPlayPauseState)
