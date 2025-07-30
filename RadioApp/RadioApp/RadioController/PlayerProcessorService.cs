@@ -34,7 +34,8 @@ public class PlayerProcessorService : BackgroundService
         {
             // Waiting the sync event from IO input
             var newState = await _radioStatus.StatusChanged.Task.WaitAsync(stoppingToken);
-
+            _radioStatus.ResetStatusChangedTrigger();
+            
             // New state arrived
             _logger.LogDebug($"New state is {newState}");
             switch (newState)

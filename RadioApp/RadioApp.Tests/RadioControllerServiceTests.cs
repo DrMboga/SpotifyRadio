@@ -68,6 +68,8 @@ public class RadioControllerServiceTests
                 _hardwareFixture.UartIoListener);
         await radioControllerService.StartAsync(CancellationToken.None);
 
+        await Task.Delay(100);
+        
         _hardwareFixture.GpioManagerMock.Verify(
             m => m.RegisterPinCallbackFunction(It.IsAny<uint>(), It.IsAny<PiGpioInterop.gpioAlertCallback>()),
             Times.Once);

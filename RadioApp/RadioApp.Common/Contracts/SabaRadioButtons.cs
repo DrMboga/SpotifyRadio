@@ -6,9 +6,9 @@
 public enum SabaRadioButtons: short
 {
     /// <summary>
-    /// Play/Pause button which called Auto on a SABA panel
+    /// Phono button on SABA panel. Which is reserved for line input in the radio and will not be used in the scheme
     /// </summary>
-    PlayPause = 0,
+    Phono = 0,
 
     /// <summary>
     /// Long waves button which has a L sign on a SABA panel

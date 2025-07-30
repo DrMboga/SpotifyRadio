@@ -11,7 +11,7 @@ public class RadioStatus
     /// <summary>
     /// Synchronisation context event. It is set each time the status is changed
     /// </summary>
-    public TaskCompletionSource<RadioStatusChangeResult> StatusChanged { get; } =
+    public TaskCompletionSource<RadioStatusChangeResult> StatusChanged { get; private set; } =
         new TaskCompletionSource<RadioStatusChangeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
@@ -125,9 +125,20 @@ public class RadioStatus
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Resets <see cref="StatusChanged"/> property
+    /// </summary>
+    public void ResetStatusChangedTrigger()
+    {
+        if (StatusChanged.Task.IsCompleted)
+        {
+            StatusChanged =
+                new TaskCompletionSource<RadioStatusChangeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+    }
+
     private (bool StateChanged, RadioStatusChangeResult StateChangeResult) IfRadioButtonChanged(int newButtonIndex)
     {
-        if ((short)SabaRadioButton == (short)newButtonIndex) return (false, RadioStatusChangeResult.PlayerProcessorChanged);
         if (newButtonIndex < 0)
         {
             // -1 if no button is pressed
@@ -136,12 +147,22 @@ public class RadioStatus
             return (true, RadioStatusChangeResult.PlayerProcessorChanged);
         }
 
-        SabaRadioButton = (SabaRadioButtons)((short)newButtonIndex);
         var newPlayerType =
-            SabaRadioButton == SabaRadioButtons.L
+            (SabaRadioButtons)((short)newButtonIndex) == SabaRadioButtons.L
                 ? PlayerType.Spotify
                 : PlayerType.InternetRadio; // L for spotify, M, K, U for internet radio
-        return PlayerType == newPlayerType ? (true, RadioStatusChangeResult.RadioRegionChanged) : (true, RadioStatusChangeResult.PlayerProcessorChanged);
+        if (PlayerType != newPlayerType)
+        {
+            PlayerType = newPlayerType;
+            SabaRadioButton = (SabaRadioButtons)((short)newButtonIndex);
+            return (true, RadioStatusChangeResult.PlayerProcessorChanged);
+        }
+
+        if ((short)SabaRadioButton == (short)newButtonIndex)
+            return (false, RadioStatusChangeResult.RadioRegionChanged);
+
+        SabaRadioButton = (SabaRadioButtons)((short)newButtonIndex);
+        return (true, RadioStatusChangeResult.RadioRegionChanged);
     }
 
     private bool IfPlayPausePressed(bool newPlayPauseState)
