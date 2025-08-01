@@ -149,9 +149,9 @@ public class RadioStatus
 
     private (bool StateChanged, RadioStatusChangeResult StateChangeResult) IfRadioButtonChanged(int newButtonIndex)
     {
-        if (newButtonIndex < 0)
+        if (newButtonIndex <= 0)
         {
-            // -1 if no button is pressed
+            // -1 if no button is pressed. O if Phono button is press which is not used
             PlayerType = PlayerType.Idle;
             SabaRadioButton = SabaRadioButtons.M;
             return (true, RadioStatusChangeResult.PlayerProcessorChanged);
@@ -175,10 +175,11 @@ public class RadioStatus
         return (true, RadioStatusChangeResult.RadioRegionChanged);
     }
 
+    /// <param name="newPlayPauseState">true for pause, false for play</param>
     private bool IfPlayPausePressed(bool newPlayPauseState)
     {
-        if (PlayMode == PlayerMode.Play && newPlayPauseState) return false;
-        PlayMode = newPlayPauseState ? PlayerMode.Play : PlayerMode.Pause;
+        if (PlayMode == PlayerMode.Pause && newPlayPauseState) return false;
+        PlayMode = newPlayPauseState ? PlayerMode.Pause : PlayerMode.Play;
         return true;
     }
 
