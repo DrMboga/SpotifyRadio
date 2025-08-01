@@ -4,6 +4,7 @@ using Moq;
 using RadioApp.Common.Hardware;
 using RadioApp.Hardware;
 using RadioApp.Hardware.PiGpio;
+using Xunit.Abstractions;
 
 namespace RadioApp.Tests;
 
@@ -20,8 +21,11 @@ public class HardwareFixture : IDisposable
 
     public Mock<IMediator> MediatorMock { get; } = new Mock<IMediator>();
 
-    public HardwareFixture()
+    public HardwareFixture(ITestOutputHelper output)
     {
+        _loggerHardwareManagerMock.RegisterTestOutputHelper(output);
+        _loggerUartIoListenerMock.RegisterTestOutputHelper(output);
+        
         HardwareManager = new HardwareManager(_loggerHardwareManagerMock.Object, GpioManagerMock.Object);
         UartIoListener = new UartIoListener(_loggerUartIoListenerMock.Object, HardwareManager,
             GpioManagerMock.Object, UartManagerMock.Object, MediatorMock.Object);

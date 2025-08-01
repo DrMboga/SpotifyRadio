@@ -14,6 +14,8 @@ public class RadioStatus
     public TaskCompletionSource<RadioStatusChangeResult> StatusChanged { get; private set; } =
         new TaskCompletionSource<RadioStatusChangeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private object _triggerSync = new object();
+
     /// <summary>
     /// Current mode of the radio.
     /// L button is for Spotify,
@@ -85,6 +87,7 @@ public class RadioStatus
                     var state = IfRadioButtonChanged(toggleButtonPressed.ButtonIndex);
                     if (state.StateChanged)
                     {
+                        stateChanged = true;
                         result = state.StateChangeResult;
                     }
                 }
@@ -119,7 +122,10 @@ public class RadioStatus
         if (stateChanged)
         {
             _logger.LogDebug($"Radio State changed to {result}");
-            StatusChanged.TrySetResult(result);
+            lock (_triggerSync)
+            {
+                StatusChanged.TrySetResult(result);
+            }
         }
 
         return Task.CompletedTask;
@@ -132,8 +138,12 @@ public class RadioStatus
     {
         if (StatusChanged.Task.IsCompleted)
         {
-            StatusChanged =
-                new TaskCompletionSource<RadioStatusChangeResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_triggerSync)
+            {
+                StatusChanged =
+                    new TaskCompletionSource<RadioStatusChangeResult>(
+                        TaskCreationOptions.RunContinuationsAsynchronously);
+            }
         }
     }
 

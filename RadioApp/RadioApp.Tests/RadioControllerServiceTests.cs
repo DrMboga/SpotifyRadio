@@ -7,6 +7,7 @@ using RadioApp.Common.Messages.Hardware;
 using RadioApp.Hardware;
 using RadioApp.Hardware.PiGpio;
 using RadioApp.RadioController;
+using Xunit.Abstractions;
 
 namespace RadioApp.Tests;
 
@@ -22,10 +23,11 @@ public class RadioControllerServiceTests
 
     private PiGpioInterop.gpioAlertCallback? _gpioAlertCallback = null;
 
-    public RadioControllerServiceTests()
+    public RadioControllerServiceTests(ITestOutputHelper output)
     {
+        _loggerRadioControllerServiceMock.RegisterTestOutputHelper(output);
         // This does not keep the shared context and creates all mocks for each test as new
-        _hardwareFixture = new HardwareFixture();
+        _hardwareFixture = new HardwareFixture(output);
 
         _hardwareFixture.GpioManagerMock.Setup(g =>
                 g.RegisterPinCallbackFunction(It.IsAny<uint>(), It.IsAny<PiGpioInterop.gpioAlertCallback>()))
