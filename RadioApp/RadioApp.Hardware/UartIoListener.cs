@@ -124,8 +124,14 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
 
     private void ReleaseUnmanagedResources()
     {
-        _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
-        _logger.LogInformation("UartIoListener terminated");
+        try
+        {
+            _gpioManager.UnregisterPinCallbackFunction(InterruptPin);
+            _logger.LogInformation("UartIoListener terminated");
+        }
+        catch {
+            /* swallow exceptions */
+        }
     }
 
     public async ValueTask DisposeAsync()
