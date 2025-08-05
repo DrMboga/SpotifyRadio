@@ -45,4 +45,16 @@ public interface IGpioManager
 
     void RegisterPinCallbackFunction(uint inputPin, PiGpioInterop.gpioAlertCallback? alertFunction);
     void UnregisterPinCallbackFunction(uint inputPin);
+
+    /// <summary>
+    /// Opens SPI serial protocol
+    /// </summary>
+    /// <returns>Protocol session handler</returns>
+    int SpiInitialize(uint spiChannel, uint spiSpeed);
+
+    /// <summary>
+    /// Terminates the SPI serial protocol
+    /// </summary>
+    /// <param name="spiHandle">Protocol session handler</param>
+    void SpiTerminate(int spiHandle);
 }

@@ -57,4 +57,15 @@ public class GpioManagerMock: IGpioManager
     {
         _logger.LogDebug("Mock UnregisterPinCallbackFunction. inputPin: {InputPin}", inputPin);
     }
+
+    public int SpiInitialize(uint spiChannel, uint spiSpeed)
+    {
+        _logger.LogDebug("Mock SpiInitialize. spiChannel: {spiChannel}, spiSpeed: {spiSpeed}", spiChannel, spiSpeed);
+        return 48;
+    }
+
+    public void SpiTerminate(int spiHandle)
+    {
+        _logger.LogDebug("Mock SpiTerminate. spiHandle: {spiHandle}", spiHandle);
+    }
 }

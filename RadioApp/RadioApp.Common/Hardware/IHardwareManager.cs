@@ -5,7 +5,12 @@ public interface IHardwareManager
     /// <summary>
     /// Keeps the handle of UART channel
     /// </summary>
-    int UartHandle { get; }
+    int UartHandle { get; }    
+    
+    /// <summary>
+    /// Keeps the handle of SPI channel
+    /// </summary>
+    int SpiHandle { get; }
     
     /// <summary>
     /// Initializes all hardware interfaces like GPIO, UART and SPI

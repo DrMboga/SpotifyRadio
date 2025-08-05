@@ -1,6 +1,6 @@
 namespace RadioApp.Hardware.PiGpio;
 
-public class GpioManager: IGpioManager
+public class GpioManager : IGpioManager
 {
     /// <summary>
     /// Initialises the library.
@@ -34,6 +34,7 @@ public class GpioManager: IGpioManager
         {
             throw new GpioException($"UART open failed", uartHandle);
         }
+
         return uartHandle;
     }
 
@@ -59,12 +60,12 @@ public class GpioManager: IGpioManager
     public void InitInputPinAsPullUp(uint inputPin)
     {
         // Set input mode
-        int result = PiGpioInterop.gpioSetMode(inputPin, (uint) GpioMode.Input);
+        int result = PiGpioInterop.gpioSetMode(inputPin, (uint)GpioMode.Input);
         if (result < 0)
         {
             throw new GpioException($"set PIN {inputPin} as input error", result);
         }
-        
+
         // Set pull up resistor
         result = PiGpioInterop.gpioSetPullUpDown(inputPin, (uint)GpioPullMode.PullUp);
         if (result < 0)
@@ -75,7 +76,7 @@ public class GpioManager: IGpioManager
 
     public void SetPinMode(uint pin, GpioMode mode)
     {
-        int result = PiGpioInterop.gpioSetMode(pin, (uint) mode);
+        int result = PiGpioInterop.gpioSetMode(pin, (uint)mode);
         if (result < 0)
         {
             throw new GpioException($"set PIN {pin} as {mode} error", result);
@@ -84,7 +85,7 @@ public class GpioManager: IGpioManager
 
     public void SetPinValue(uint pin, GpioLevel level)
     {
-        int result = PiGpioInterop.gpioWrite(pin, (uint) level);
+        int result = PiGpioInterop.gpioWrite(pin, (uint)level);
         if (result < 0)
         {
             throw new GpioException($"write to PIN {pin} value {level} error", result);
@@ -108,6 +109,26 @@ public class GpioManager: IGpioManager
         if (result < 0)
         {
             throw new GpioException($"Unset PIN {inputPin} callback function error", result);
+        }
+    }
+
+    public int SpiInitialize(uint spiChannel, uint spiSpeed)
+    {
+        int spiHandle = PiGpioInterop.spiOpen(spiChannel, spiSpeed, 0);
+        if (spiHandle < 0)
+        {
+            throw new GpioException($"SPI open failed", spiHandle);
+        }
+
+        return spiHandle;
+    }
+
+    public void SpiTerminate(int spiHandle)
+    {
+        int spiClosed = PiGpioInterop.spiClose((uint)spiHandle);
+        if (spiClosed < 0)
+        {
+            throw new GpioException($"SPI close failed", spiClosed);
         }
     }
 }
