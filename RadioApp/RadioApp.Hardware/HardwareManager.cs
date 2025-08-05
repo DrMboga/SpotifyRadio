@@ -43,7 +43,7 @@ public class HardwareManager : IHardwareManager
         SpiHandle = _gpioManager.SpiInitialize(ScreenGpioParameters.SpiChannel, ScreenGpioParameters.SpiSpeed);
         _logger.LogInformation("--== SPI Initialized ==--");
         
-        // TODO: Make via MediatR messages in avery MediaPlayerProcessor
+        // TODO: Make via MediatR messages in avery MediaPlayerProcessor (ITftScreen interface -> Uses GPIO + mock)
         // InitDisplay();
         // ClearScreen();
     }
