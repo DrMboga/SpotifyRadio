@@ -57,4 +57,9 @@ public interface IGpioManager
     /// </summary>
     /// <param name="spiHandle">Protocol session handler</param>
     void SpiTerminate(int spiHandle);
+    
+    /// <summary>
+    /// Writes a value to the output GPIO pin
+    /// </summary>
+    void Write(uint pin, GpioLevel level);
 }

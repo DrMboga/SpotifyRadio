@@ -56,11 +56,13 @@ if (osPlatform == PlatformID.Unix)
 {
     builder.Services.AddSingleton<IGpioManager, GpioManager>();
     builder.Services.AddSingleton<IUartManager, UartManager>();
+    builder.Services.AddSingleton<ISpiManager, SpiManager>();
 }
 else
 {
     builder.Services.AddSingleton<IGpioManager, GpioManagerMock>();
     builder.Services.AddSingleton<IUartManager, UartManagerMock>();
+    builder.Services.AddSingleton<ISpiManager, SpiManagerMock>();
 }
 
 builder.Services.AddTransient<IHardwareManager, HardwareManager>();

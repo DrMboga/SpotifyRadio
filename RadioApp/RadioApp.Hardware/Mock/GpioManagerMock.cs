@@ -68,4 +68,9 @@ public class GpioManagerMock: IGpioManager
     {
         _logger.LogDebug("Mock SpiTerminate. spiHandle: {spiHandle}", spiHandle);
     }
+
+    public void Write(uint pin, GpioLevel level)
+    {
+        _logger.LogDebug("Mock Write. pin: {pin}; level: {Level}", pin, level);
+    }
 }

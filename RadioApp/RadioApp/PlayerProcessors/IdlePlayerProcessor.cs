@@ -1,15 +1,29 @@
-﻿using RadioApp.Common.Contracts;
+﻿using MediatR;
+using RadioApp.Common.Contracts;
+using RadioApp.Common.Messages.Hardware.Display;
 using RadioApp.Common.PlayerProcessor;
 
 namespace RadioApp.PlayerProcessors;
 
 public class IdlePlayerProcessor: IPlayerProcessor
 {
+    private readonly ILogger<IdlePlayerProcessor> _logger;
+    private readonly IMediator _mediator;
+
+    public IdlePlayerProcessor(ILogger<IdlePlayerProcessor> logger, IMediator mediator)
+    {
+        _logger = logger;
+        _mediator = mediator;
+    }
+
     public PlayerType Type => PlayerType.Idle;
     
-    public Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
+    public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
     {
-        return Task.CompletedTask;
+        _logger.LogInformation("Starting idle player processor");
+        await _mediator.Publish(new InitDisplayNotification());
+        await _mediator.Publish(new ClearScreenNotification());
+        // TODO: Send static bmp show command
     }
 
     public Task Stop()

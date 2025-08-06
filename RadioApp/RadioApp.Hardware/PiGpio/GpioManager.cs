@@ -131,4 +131,13 @@ public class GpioManager : IGpioManager
             throw new GpioException($"SPI close failed", spiClosed);
         }
     }
+
+    public void Write(uint pin, GpioLevel level)
+    {
+        int result = PiGpioInterop.gpioWrite(pin, (uint)level);
+        if (result < 0)
+        {
+            throw new GpioException($"Write to PIN {pin} level {level} failed", result);
+        }
+    }
 }
