@@ -1,15 +1,29 @@
-﻿using RadioApp.Common.Contracts;
+﻿using MediatR;
+using RadioApp.Common.Contracts;
+using RadioApp.Common.Messages.Hardware.Display;
 using RadioApp.Common.PlayerProcessor;
 
 namespace RadioApp.PlayerProcessors;
 
 public class SpotifyPlayerProcessor: IPlayerProcessor
 {
+    private readonly ILogger<SpotifyPlayerProcessor> _logger;
+    private readonly IMediator _mediator;
     public PlayerType Type => PlayerType.Spotify;
 
-    public Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
+    public SpotifyPlayerProcessor(ILogger<SpotifyPlayerProcessor> logger, IMediator mediator)
     {
-        return Task.CompletedTask;
+        _logger = logger;
+        _mediator = mediator;
+    }
+
+
+    public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
+    {
+        _logger.LogInformation("Starting Spotify player processor");
+        await _mediator.Publish(new InitDisplayNotification());
+        await _mediator.Publish(new ClearScreenNotification());
+        await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo2.bmp", 0));
     }
 
     public Task Stop()
