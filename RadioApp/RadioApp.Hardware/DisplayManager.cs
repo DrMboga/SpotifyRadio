@@ -92,9 +92,9 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
 
         try
         {
-            var bmp = await File.ReadAllBytesAsync(fileName);
+            var bmp = await File.ReadAllBytesAsync(fileName, cancellationToken);
             var imgAsRgb565 = bmp.ToRgb565();
-            DrawImage(imgAsRgb565);
+            DrawImage(imgAsRgb565, notification.TopMargin);
         }
         catch (Exception e)
         {
@@ -105,14 +105,14 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     /// <summary>
     /// Draws an image. Data should be converted to RGB 565 pixels array
     /// </summary>
-    private void DrawImage(BmpRgb565Data imageData)
+    private void DrawImage(BmpRgb565Data imageData, int topMargin)
     {
         if (imageData.Rgb565Pixels == null || imageData.Rgb565Pixels.Length == 0)
         {
             return;
         }
 
-        int y1 = 2; // Top margin
+        int y1 = topMargin; // Top margin
         int y2 = y1 + imageData.Height - 1;
         // Placing a picture in the middle of the screen
         int x1 = (ScreenGpioParameters.DisplayWidth - imageData.Width) / 2;

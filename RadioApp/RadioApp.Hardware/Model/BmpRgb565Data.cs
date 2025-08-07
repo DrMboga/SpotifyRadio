@@ -7,7 +7,7 @@ public class BmpRgb565Data
 {
     public int Width { get; set; }
     public int Height { get; set; }
-    public int BytesPerPixel { get; set; }
+    public int BitsPerPixel { get; set; }
     public int DataOffset { get; set; }
     public ushort[]? Rgb565Pixels { get; set; }
     public int RowSize { get; set; }

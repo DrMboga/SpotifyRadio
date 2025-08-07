@@ -2,6 +2,8 @@
 
 namespace RadioApp.Hardware.Helpers;
 
+internal record ColorArgb(byte Red, byte Green, byte Blue);
+
 public static class BmpHelper
 {
     /// <summary>
@@ -27,26 +29,33 @@ public static class BmpHelper
 
         // First 54 bytes contain metadata:
         // Pixel data offset: Stored at 0x0A (10 bytes from start)
-        rgbData.DataOffset = initialData[10];
+        // It stored as 4 bytes, that means it takes 10-14 elements. So, BitConverter.ToInt32 does the right trick to read whole number
+        rgbData.DataOffset = BitConverter.ToInt32(initialData, 10);
         // Width: Stored at offset 0x12 (18 bytes from start)
-        rgbData.Width = initialData[18];
+        rgbData.Width = BitConverter.ToInt32(initialData, 18); // 4 bytes
         // Height: Stored at offset 0x16 (22 bytes from start)
-        rgbData.Height = initialData[22];
+        rgbData.Height = BitConverter.ToInt32(initialData, 22); // 4 bytes
         // Bits per pixel (bpp): Stored at 0x1C (28 bytes from start)
-        rgbData.BytesPerPixel = initialData[28];
+        rgbData.BitsPerPixel = BitConverter.ToUInt16(initialData, 28); // 2 bytes
 
-        switch (rgbData.BytesPerPixel)
+        int bytesPerPixel = rgbData.BitsPerPixel / 8;
+        // In case of 3 bytes per pixel, each row is padded to a multiple of 4 bytes. In case of 1 byte per pixel, row size is equal to image width
+        rgbData.RowSize = ((rgbData.Width * bytesPerPixel + 3) / 4) * 4;
+
+        switch (rgbData.BitsPerPixel)
         {
             case 24:
-                // After offset of 54 elements, bitmap array contains bitmap information.
-                // Each pixel is stored as 3 sequential items - BGR (Blue, Green, Red).
-                // Each row is padded to a multiple of 4 bytes.
-                rgbData.RowSize = Convert.ToInt32(Math.Ceiling(Convert.ToDecimal(rgbData.Width) * 3 / 4)) * 4;
-                rgbData.Rgb565Pixels = Convert24BitBmpToRgb565(initialData, rgbData.DataOffset,  rgbData.Width, rgbData.Height, rgbData.RowSize);
+                // After offset, bitmap array contains bitmap information.
+                rgbData.Rgb565Pixels = Convert24BitBmpToRgb565(initialData, rgbData.DataOffset, rgbData.Width,
+                    rgbData.Height, rgbData.RowSize);
                 break;
             case 8:
-                // TODO Define
+                rgbData.Rgb565Pixels = Convert8BitBmpToRgb565(initialData, rgbData.DataOffset, rgbData.Width,
+                    rgbData.Height, rgbData.RowSize);
                 break;
+            default:
+                throw new NotImplementedException(
+                    $"BMP has {rgbData.BitsPerPixel} bits per pixel which is not supported yet.");
         }
 
         return rgbData;
@@ -55,14 +64,15 @@ public static class BmpHelper
     /// <summary>
     /// Algorithm expects 24-bit BMP = 3 bytes per pixel (BGR).
     /// </summary>
-    private static ushort[] Convert24BitBmpToRgb565(byte[] initialData, int dataOffset, int width, int height, int rowSize)
+    private static ushort[] Convert24BitBmpToRgb565(byte[] initialData, int dataOffset, int width, int height,
+        int rowSize)
     {
         var rgb565Pixels = new ushort[width * height];
 
         // Iterating over the initial bmp data.
-        // The array just contains a sequential set of pixels, but we know that every rgbData.RowSize begins a new row
+        // The array just contains a sequential set of pixels, but we know that every "rowSize" begins a new row
         // And these rows are bottom up.
-        // So, we should read the first rgbData.RowSize items from initial array, 
+        // So, we should read the first "rowSize" items from initial array, 
         // Convert them to set of rgb pixels,
         // and write this row to the end of destination array
         // Amount of rows in both arrays should match the Height of the image
@@ -79,6 +89,67 @@ public static class BmpHelper
 
                 // Converting
                 ushort rgbColor = ConvertToRgb565(blue, green, red);
+
+                var pixelIndex = (height - 1 - row) * width + col;
+                rgb565Pixels[pixelIndex] = rgbColor;
+            }
+        }
+
+        return rgb565Pixels;
+    }
+
+    /// <summary>
+    /// Algorithm expects 8-bit BMP = 1 byte per pixel (address of the color in the palette defined in the header).
+    /// In case of 8-bit, there is a color palette stored in the beginning of the file (limited by the dataOffset).
+    /// And the bitmap array itself contains only one byte - index to the color palette
+    /// </summary>
+    private static ushort[] Convert8BitBmpToRgb565(byte[] initialData, int dataOffset, int width, int height,
+        int rowSize)
+    {
+        var rgb565Pixels = new ushort[width * height];
+        
+        // Find the palette place in the bitmap array.
+        // Palette starts after the bmp header (first 14bytes) and DIB header (which size is defined in bytes 14–17)
+        int dibHeaderSize = BitConverter.ToInt32(initialData, 14); // bytes 14–17
+        int paletteStart = 14 + dibHeaderSize;
+        // And ends in the end of dataOffset
+        int paletteSize = dataOffset - paletteStart;
+        int paletteEntries = paletteSize / 4;
+        // Read palette.
+        var palette = new ColorArgb[paletteEntries];
+        for (int i = 0; i < paletteEntries; i++)
+        {
+            byte blue = initialData[paletteStart + i * 4];
+            byte green = initialData[paletteStart + i * 4 + 1];
+            byte red = initialData[paletteStart + i * 4 + 2];
+            palette[i] = new ColorArgb(red, green, blue);
+        }
+
+        // Iterating over the initial bmp data.
+        // The array just contains a sequential set of pixels, but we know that every "rowSize" begins a new row
+        // And these rows are bottom up.
+        // So, we should read the first "rowSize" items from initial array, 
+        // Convert them to set of rgb pixels,
+        // and write this row to the end of destination array
+        // Amount of rows in both arrays should match the Height of the image
+        // But in this case, each pixel in BMP is an INDEX to the colors palette
+        for (int row = 0; row < height; row++)
+        {
+            var rowOffset = row * rowSize;
+            for (int col = 0; col < width; col++)
+            {
+                int bmpIndex = col + rowOffset + dataOffset;
+                int paletteIndex = initialData[bmpIndex];
+                if (paletteIndex >= paletteEntries)
+                {
+                    throw new IndexOutOfRangeException(
+                        $"Palette index {paletteIndex} is greater than palette entries {paletteEntries}. Bmp row {row}, column {col}. Bmp index {bmpIndex}");
+                }
+
+                var color = palette[paletteIndex];
+
+                // Converting
+                ushort rgbColor = ConvertToRgb565(color.Blue, color.Green, color.Red);
 
                 var pixelIndex = (height - 1 - row) * width + col;
                 rgb565Pixels[pixelIndex] = rgbColor;
