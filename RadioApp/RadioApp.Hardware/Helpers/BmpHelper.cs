@@ -9,16 +9,25 @@ public static class BmpHelper
     /// <summary>
     /// Method converts bitmap data to the matrix of pixels in RGB565 format
     /// </summary>
-    /// <param name="initialData"> Represents a bitmap file. It should contain:
+    /// <param name="initialData"> Represents a bitmap file.
+    /// BMP has several different formats of storing pixels.
+    /// The format depends on `BitsPerPixel` parameter which is stored in the 28-th index of BMP byte array
+    /// In case of 24 bits per pixel:
     /// <ul>
     ///     <li> First 54 bytes contain metadata </li>
     ///     <li> Each pixel is stored as BGR (Blue, Green, Red) </li>
     ///     <li> Rows are stored bottom-up (last row in file = first row on display) </li>
     ///     <li> Each row is padded to a multiple of 4 bytes </li>
     /// </ul>
+    /// In case of 8 bits per pixel:
+    /// <ul>
+    ///     <li> First 54 bytes contain metadata (14 bytes header and 40 bytes DIB header) </li>
+    ///     <li> From 54-th byte and until `Data Offset` - the color palette. Which is representation of all colors used in the BMP. It is padded to a multiple of 4 bytes</li>
+    ///     <li> After `Data Offset` index are the pixels. Each pixel is one byte which is the index referenced to the color palette. </li>
+    ///     <li> Rows are stored bottom-up (last row in file = first row on display) </li>
+    /// </ul>
     /// </param>
     /// <returns>Data structure contains an array of pixels in direct order. Each pixel represents an RGB code for pixel color</returns>
-    /// <exception cref="ApplicationException">Throws an exception in case of wrong incoming bmp format</exception>
     public static BmpRgb565Data ToRgb565(this byte[] initialData)
     {
         var rgbData = new BmpRgb565Data();
@@ -54,7 +63,7 @@ public static class BmpHelper
                     rgbData.Height, rgbData.RowSize);
                 break;
             default:
-                throw new NotImplementedException(
+                throw new NotSupportedException(
                     $"BMP has {rgbData.BitsPerPixel} bits per pixel which is not supported yet.");
         }
 
