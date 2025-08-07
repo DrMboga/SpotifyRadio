@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using RadioApp.Common.Hardware;
 using RadioApp.Common.Messages.Hardware.Display;
+using RadioApp.Hardware.Helpers;
+using RadioApp.Hardware.Model;
 using RadioApp.Hardware.PiGpio;
 
 namespace RadioApp.Hardware;
@@ -10,7 +12,8 @@ namespace RadioApp.Hardware;
 /// Represents TFT 160x128 SPI display interaction
 /// </summary>
 public class DisplayManager : INotificationHandler<InitDisplayNotification>,
-    INotificationHandler<ClearScreenNotification>
+    INotificationHandler<ClearScreenNotification>,
+    INotificationHandler<ShowStaticImageNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
@@ -72,6 +75,81 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Loads a bmp file from Assets folder and shows it on the display
+    /// </summary>
+    public async Task Handle(ShowStaticImageNotification notification, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug($"Show static image '{notification.AssetName}'");
+        var fileName = Path.Combine(Environment.CurrentDirectory, "Assets", notification.AssetName);
+
+        if (!File.Exists(fileName))
+        {
+            _logger.LogError("Static image '{fileName}' not found");
+        }
+
+        try
+        {
+            var bmp = await File.ReadAllBytesAsync(fileName);
+            var imgAsRgb565 = bmp.ToRgb565();
+            DrawImage(imgAsRgb565);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("Error showing static image '{fileName}'", e);
+        }
+    }
+
+    /// <summary>
+    /// Draws an image. Data should be converted to RGB 565 pixels array
+    /// </summary>
+    private void DrawImage(BmpRgb565Data imageData)
+    {
+        if (imageData.Rgb565Pixels == null || imageData.Rgb565Pixels.Length == 0)
+        {
+            return;
+        }
+
+        int y1 = 2; // Top margin
+        int y2 = y1 + imageData.Height - 1;
+        // Placing a picture in the middle of the screen
+        int x1 = (ScreenGpioParameters.DisplayWidth - imageData.Width) / 2;
+        int x2 = x1 + imageData.Width - 1;
+
+        InitDrawArea(x1, y1, x2, y2);
+
+        for (int i = 0; i < imageData.Rgb565Pixels.Length; i++)
+        {
+            DrawPixel(imageData.Rgb565Pixels[i]);
+        }
+    }
+
+    /// <summary>
+    /// Sends to display memory a rectangle on the screen which should be filled 
+    /// consequently pixel by pixel from left to right from top to bottom
+    /// </summary>
+    private void InitDrawArea(int x0, int y0, int x1, int y1)
+    {
+        SendCommand(0x2A); // Column address set
+        SendData(0x00); SendData(Convert.ToByte(x0)); // X start
+        SendData(0x00); SendData(Convert.ToByte(x1)); // X end
+
+        SendCommand(0x2B); // Row address set
+        SendData(0x00); SendData(Convert.ToByte(y0)); // Y start
+        SendData(0x00); SendData(Convert.ToByte(y1)); // Y end
+
+        SendCommand(0x2C);
+    }
+
+    /// <summary>
+    /// Draws a pixel
+    /// </summary>
+    private void DrawPixel(ushort color)
+    {
+        SendData(Convert.ToByte(color >> 8));
+        SendData(Convert.ToByte(color & 0xFF));
     }
 
     private void SendCommand(byte command)

@@ -23,7 +23,8 @@ public class IdlePlayerProcessor: IPlayerProcessor
         _logger.LogInformation("Starting idle player processor");
         await _mediator.Publish(new InitDisplayNotification());
         await _mediator.Publish(new ClearScreenNotification());
-        // TODO: Send static bmp show command
+        // await _mediator.Publish(new ShowStaticImageNotification("SabaLogo1.bmp"));
+        // await _mediator.Publish(new ShowStaticImageNotification("lightning.bmp"));
     }
 
     public Task Stop()
