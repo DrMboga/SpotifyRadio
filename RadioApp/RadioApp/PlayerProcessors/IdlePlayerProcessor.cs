@@ -24,7 +24,7 @@ public class IdlePlayerProcessor: IPlayerProcessor
         await _mediator.Publish(new InitDisplayNotification());
         await _mediator.Publish(new ClearScreenNotification());
         // await _mediator.Publish(new ShowStaticImageNotification("SabaLogo1.bmp", 0));
-        // await _mediator.Publish(new ShowStaticImageNotification("lightning.bmp", 2));
+        await _mediator.Publish(new ShowStaticImageNotification("lightning.bmp", 2));
     }
 
     public Task Stop()
