@@ -154,12 +154,18 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
 
     private void SendCommand(byte command)
     {
-        _spiManager.SendCommand(_hardwareManager.SpiHandle, ScreenGpioParameters.RsPin, command);
+        lock (_gpioManager)
+        {
+            _spiManager.SendCommand(_hardwareManager.SpiHandle, ScreenGpioParameters.RsPin, command);
+        }
     }
 
     private void SendData(byte data)
     {
-        _spiManager.SendData(_hardwareManager.SpiHandle, ScreenGpioParameters.RsPin, data);
+        lock (_gpioManager)
+        {
+            _spiManager.SendData(_hardwareManager.SpiHandle, ScreenGpioParameters.RsPin, data);
+        }
     }
 
     /// <summary>
@@ -167,11 +173,20 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     /// </summary>
     private async Task DisplayHardReset()
     {
-        _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.High);
+        lock (_gpioManager)
+        {
+            _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.High);
+        }
         await Task.Delay(50);
-        _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.Low);
+        lock (_gpioManager)
+        {
+            _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.Low);
+        }
         await Task.Delay(50);
-        _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.High);
+        lock (_gpioManager)
+        {
+            _gpioManager.Write(ScreenGpioParameters.ResPin, GpioLevel.High);
+        }
         await Task.Delay(50);
     }
 }
