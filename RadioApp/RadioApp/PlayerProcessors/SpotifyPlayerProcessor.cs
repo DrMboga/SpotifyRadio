@@ -23,7 +23,7 @@ public class SpotifyPlayerProcessor: IPlayerProcessor
         _logger.LogInformation("Starting Spotify player processor");
         await _mediator.Publish(new InitDisplayNotification());
         await _mediator.Publish(new ClearScreenNotification());
-        await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo2.bmp", 0));
+        await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0));
     }
 
     public Task Stop()
