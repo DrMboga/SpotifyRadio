@@ -40,8 +40,8 @@ public class HardwareManager : IHardwareManager
             _logger.LogInformation("--== Pin {Pin} set in output mode and LOW level ==--", RequestStatusInterruptPin);
 
             // Initialize SPI channel for screen communication
-            // _gpioManager.SetPinMode(ScreenGpioParameters.RsPin, GpioMode.Output);
-            // _gpioManager.SetPinMode(ScreenGpioParameters.ResPin, GpioMode.Output);
+            _gpioManager.SetPinMode(ScreenGpioParameters.RsPin, GpioMode.Output);
+            _gpioManager.SetPinMode(ScreenGpioParameters.ResPin, GpioMode.Output);
             // SpiHandle = _gpioManager.SpiInitialize(ScreenGpioParameters.SpiChannel, ScreenGpioParameters.SpiSpeed);
         }
         _logger.LogInformation("--== SPI Initialized ==--");
