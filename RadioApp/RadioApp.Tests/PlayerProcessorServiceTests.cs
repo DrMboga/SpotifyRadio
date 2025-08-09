@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using Moq;
 using RadioApp.Common.Contracts;
 using RadioApp.Common.IoCommands;
@@ -20,6 +21,8 @@ public class PlayerProcessorServiceTests
 
     private readonly Mock<IPlayerProcessor> _internetRadioPlayerProcessorMock =
         new Mock<IPlayerProcessor>();
+    
+    public Mock<IMediator> MediatorMock { get; } = new Mock<IMediator>();
 
     private readonly PlayerProcessorFactory _getPlayerProcessor;
 
@@ -48,7 +51,7 @@ public class PlayerProcessorServiceTests
     public async Task ShouldSetIdleProcessorByDefault()
     {
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
 
@@ -72,7 +75,7 @@ public class PlayerProcessorServiceTests
     public async Task ShouldChangePlayerProcessorToSpotifyOnStatusCommand()
     {
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
 
@@ -108,7 +111,7 @@ public class PlayerProcessorServiceTests
     public async Task ShouldChangePlayerProcessorToInternetRadioOnStatusCommand()
     {
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
 
@@ -149,7 +152,7 @@ public class PlayerProcessorServiceTests
     {
         // Initially set up the Spotify player mode
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);
@@ -191,7 +194,7 @@ public class PlayerProcessorServiceTests
     {
         // Initially set up the Radio player mode
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);
@@ -230,7 +233,7 @@ public class PlayerProcessorServiceTests
     {
         // Initially set up the Radio player mode
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);
@@ -272,7 +275,7 @@ public class PlayerProcessorServiceTests
     public async Task ShouldPlayAndPauseOnCommandPlayOrPause(int initialButtonIndex)
     {
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);
@@ -371,7 +374,7 @@ public class PlayerProcessorServiceTests
     {
         // Initially set up the Radio player mode
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);
@@ -428,7 +431,7 @@ public class PlayerProcessorServiceTests
     public async Task ShouldSetIdleProcessOnMinusOneOrZeroButtonSelect(int initialButtonIndex, int buttonIndex)
     {
         var playerProcessorService = new PlayerProcessorService(
-            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor);
+            _playerProcessorLoggerMock.Object, _radioStatus, _getPlayerProcessor, MediatorMock.Object);
 
         await playerProcessorService.StartAsync(CancellationToken.None);
         await Task.Delay(10);

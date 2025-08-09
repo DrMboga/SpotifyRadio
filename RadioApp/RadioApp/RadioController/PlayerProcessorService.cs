@@ -1,4 +1,6 @@
-﻿using RadioApp.Common.PlayerProcessor;
+﻿using MediatR;
+using RadioApp.Common.Messages.Hardware.Display;
+using RadioApp.Common.PlayerProcessor;
 
 namespace RadioApp.RadioController;
 
@@ -11,16 +13,18 @@ public class PlayerProcessorService : BackgroundService
     private readonly ILogger<PlayerProcessorService> _logger;
     private readonly RadioStatus _radioStatus;
     private readonly PlayerProcessorFactory _getPlayerProcessor;
+    private readonly IMediator _mediator;
 
     private IPlayerProcessor _currentPlayerProcessor;
 
 
     public PlayerProcessorService(ILogger<PlayerProcessorService> logger, RadioStatus radioStatus,
-        PlayerProcessorFactory getPlayerProcessor)
+        PlayerProcessorFactory getPlayerProcessor, IMediator mediator)
     {
         _logger = logger;
         _radioStatus = radioStatus;
         _getPlayerProcessor = getPlayerProcessor;
+        _mediator = mediator;
 
         _currentPlayerProcessor = _getPlayerProcessor(PlayerType.Idle);
     }
@@ -28,6 +32,7 @@ public class PlayerProcessorService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("--== Starting Player Processor ==--");
+        await _mediator.Publish(new InitDisplayNotification());
         await _currentPlayerProcessor.Start(_radioStatus.SabaRadioButton, _radioStatus.PlayMode,
             _radioStatus.CurrentFrequency);
         while (!stoppingToken.IsCancellationRequested)
@@ -35,7 +40,7 @@ public class PlayerProcessorService : BackgroundService
             // Waiting the sync event from IO input
             var newState = await _radioStatus.StatusChanged.Task.WaitAsync(stoppingToken);
             _radioStatus.ResetStatusChangedTrigger();
-            
+
             // New state arrived
             _logger.LogDebug($"New state is {newState}");
             switch (newState)
@@ -59,6 +64,7 @@ public class PlayerProcessorService : BackgroundService
                     {
                         await _currentPlayerProcessor.Pause();
                     }
+
                     break;
                 case RadioStatusChangeResult.FrequencyChanged:
                     await _currentPlayerProcessor.FrequencyChanged(_radioStatus.CurrentFrequency);
