@@ -21,9 +21,9 @@ public class IdlePlayerProcessor: IPlayerProcessor
     public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
     {
         _logger.LogInformation("Starting idle player processor");
-        // await _mediator.Publish(new InitDisplayNotification());
-        // await _mediator.Publish(new ClearScreenNotification());
-        // await _mediator.Publish(new ShowStaticImageNotification("SabaLogo.bmp", 0));
+        await _mediator.Publish(new InitDisplayNotification());
+        await _mediator.Publish(new ClearScreenNotification());
+        await _mediator.Publish(new ShowStaticImageNotification("SabaLogo.bmp", 0));
     }
 
     public Task Stop()

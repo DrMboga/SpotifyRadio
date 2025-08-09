@@ -33,7 +33,7 @@ public class HardwareManager : IHardwareManager
             // Initialize SPI channel for screen communication
             _gpioManager.SetPinMode(ScreenGpioParameters.RsPin, GpioMode.Output);
             _gpioManager.SetPinMode(ScreenGpioParameters.ResPin, GpioMode.Output);
-            // SpiHandle = _gpioManager.SpiInitialize(ScreenGpioParameters.SpiChannel, ScreenGpioParameters.SpiSpeed);
+            SpiHandle = _gpioManager.SpiInitialize(ScreenGpioParameters.SpiChannel, ScreenGpioParameters.SpiSpeed);
             
             _gpioManager.SetPinMode(RequestStatusInterruptPin, GpioMode.Output);
             // On start, we need to know the current radio status. Which buttons are pushed and frequency selected
