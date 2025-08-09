@@ -21,8 +21,8 @@ public class InternetRadioPlayerProcessor: IPlayerProcessor
     public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
     {
         _logger.LogInformation("Starting Internet radio player processor");
-        await _mediator.Publish(new InitDisplayNotification());
-        await _mediator.Publish(new ClearScreenNotification());
+        // await _mediator.Publish(new InitDisplayNotification());
+        // await _mediator.Publish(new ClearScreenNotification());
     }
 
     public Task Stop()
