@@ -6,6 +6,8 @@ namespace RadioApp.Hardware.PiGpio;
 
 public static partial class PiGpioInterop
 {
+    public const uint PI_CFG_NOSIGHANDLER = 1u << 10; // 1024
+    
     /// <summary>
     /// Input GPIO Alert callback function delegate
     /// </summary>
@@ -17,6 +19,18 @@ public static partial class PiGpioInterop
     /// <returns>pigpio version number if OK, otherwise <see cref="GpioErrorCode"/></returns>
     [LibraryImport("pigpio")]
     public static partial int gpioInitialise();
+    
+    /// <summary>
+    /// This function returns the current library internal configuration settings.
+    /// </summary>
+    [LibraryImport("pigpio")]
+    public static partial uint gpioCfgGetInternals();
+    
+    /// <summary>
+    /// This function sets the current library internal configuration settings.
+    /// </summary>
+    [LibraryImport("pigpio")]
+    public static partial int gpioCfgSetInternals(uint cfgVal);
 
     /// <summary>
     /// Sets the GPIO mode, typically input or output.

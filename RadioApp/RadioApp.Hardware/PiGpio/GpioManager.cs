@@ -8,6 +8,11 @@ public class GpioManager : IGpioManager
     /// <exception cref="GpioException"></exception>
     public void GpioInitialize()
     {
+        // Turn off the internal signal handling
+        var cfg = PiGpioInterop.gpioCfgGetInternals();
+        cfg = cfg | PiGpioInterop.PI_CFG_NOSIGHANDLER;
+        PiGpioInterop.gpioCfgSetInternals(cfg);
+        // Initialize
         int initialized = PiGpioInterop.gpioInitialise();
         if (initialized < 0)
         {
