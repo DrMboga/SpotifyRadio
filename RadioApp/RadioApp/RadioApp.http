@@ -69,3 +69,10 @@ Content-Type: application/json
 
 ###
 DELETE {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}&sabaFrequency=87
+
+
+###
+# ------------
+# Temporary Spotify API endpoints
+###
+POST  {{RadioApp_HostAddress}}/spotify-api-refresh-token-if-needed

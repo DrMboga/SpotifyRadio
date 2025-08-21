@@ -148,4 +148,6 @@ app.UseHttpsRedirection();
 app.MapSpotifySettingsEndpoints();
 app.MapRadioStreamSettingsEndpoints();
 
+app.MapSpotifyApiEndpoints();
+
 app.Run();
