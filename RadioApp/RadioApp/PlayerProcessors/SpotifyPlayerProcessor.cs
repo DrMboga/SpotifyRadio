@@ -62,13 +62,32 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
     public async Task Play()
     {
+        await RefreshTokenIfNeeded();
         if (!_canPlay)
         {
             return;
         }
+        var deviceId = await GetCurrentDeviceId();
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            return;
+        }
 
-        await RefreshTokenIfNeeded();
-        // TODO: Send API Stop command
+        var playlistId = await GetCurrentPlaylistId();
+        if (string.IsNullOrEmpty(playlistId))
+        {
+            return;
+        }
+        _logger.LogDebug($"Playing '{playlistId}' playlist on '{deviceId}' device");
+        var success =
+            await _mediator.Send(new StartPlaybackRequest(_spotifySettings!.AuthToken!, deviceId, playlistId));
+        if (!success)
+        {
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+            _canPlay = false;
+            return;
+        }
+        await _mediator.Publish(new ToggleShuffleNotification(_spotifySettings!.AuthToken!, deviceId));
     }
 
     public async Task Pause()
@@ -124,10 +143,9 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         var refreshedToken = await _mediator.Send(new RefreshSpotifyAuthTokenRequest(_spotifySettings));
         _logger.LogDebug($"Refreshed Token: {JsonSerializer.Serialize(refreshedToken)}");
 
-        if (string.IsNullOrEmpty(refreshedToken?.AccessToken) ||
-            string.IsNullOrEmpty(refreshedToken?.RefreshToken))
+        if (string.IsNullOrEmpty(refreshedToken?.AccessToken))
         {
-            _logger.LogWarning("Refreshed Token is empty");
+            _logger.LogWarning("AccessToken is empty");
             await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
             _canPlay = false;
             return;
@@ -135,9 +153,56 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
         // Save refreshed token
         _spotifySettings.AuthToken = refreshedToken.AccessToken;
-        _spotifySettings.RefreshToken = refreshedToken.RefreshToken;
+        // Sometimes API returns an empty refresh token. That means that the old one is still valid
+        if (!string.IsNullOrEmpty(refreshedToken.RefreshToken))
+        {
+            // Save new refresh token if API returns it
+            _spotifySettings.RefreshToken = refreshedToken.RefreshToken;
+        }
         _spotifySettings.AuthTokenExpiration = now + refreshedToken.ExpiresIn * 1000;
 
         await _mediator.Publish(new SetSpotifySettingsNotification(_spotifySettings));
+    }
+
+    private async Task<string?> GetCurrentDeviceId()
+    {
+        if (string.IsNullOrEmpty(_spotifySettings?.AuthToken))
+        {
+            _canPlay = false;
+            return null;
+        }
+
+        var devices = await _mediator.Send(new GetAvailableDevicesRequest(_spotifySettings.AuthToken));
+        var currentDevice = devices.FirstOrDefault(d => d.Name == _spotifySettings.DeviceName);
+        if (currentDevice == null)
+        {
+            _logger.LogWarning($"No available devices found for {_spotifySettings.DeviceName}");
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+            _canPlay = false;
+            return null;
+        }
+
+        return currentDevice.Id;
+    }
+
+    private async Task<string?> GetCurrentPlaylistId()
+    {
+        if (string.IsNullOrEmpty(_spotifySettings?.AuthToken))
+        {
+            _canPlay = false;
+            return null;
+        }
+
+        var playlists = await _mediator.Send(new GetSpotifyPlaylistsRequest(_spotifySettings.AuthToken));
+        var currentPlaylist = playlists.FirstOrDefault(p => p.Name == _spotifySettings.PlaylistName);
+        if (currentPlaylist == null)
+        {
+            _logger.LogWarning($"No playlist found for {_spotifySettings.PlaylistName}");
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+            _canPlay = false;
+            return null;
+        }
+
+        return currentPlaylist.Id;
     }
 }

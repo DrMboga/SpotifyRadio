@@ -1,14 +1,18 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using MediatR;
 using RadioApp.Common.Messages.Spotify;
 using RadioApp.Common.Spotify;
 
 namespace RadioApp.SpotifySettings;
 
-public class SpotifyApi : 
+public class SpotifyApi :
     IRequestHandler<RefreshSpotifyAuthTokenRequest, RefreshTokenResponse>,
-    IRequestHandler<GetAvailableDevicesRequest, AvailableDevicesResponse[]>
+    IRequestHandler<GetAvailableDevicesRequest, AvailableDevicesResponse[]>,
+    IRequestHandler<GetSpotifyPlaylistsRequest, PlaylistItem[]>,
+    IRequestHandler<StartPlaybackRequest, bool>,
+    INotificationHandler<ToggleShuffleNotification>
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SpotifyApi> _logger;
@@ -24,13 +28,14 @@ public class SpotifyApi :
     {
         // API Call example: https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens
         _logger.LogDebug("Refreshing Spotify Token");
-        var url = "https://accounts.spotify.com/api/token";
+        const string url = "https://accounts.spotify.com/api/token";
 
         if (string.IsNullOrEmpty(request.SpotifySettings?.ClientId) ||
             string.IsNullOrEmpty(request.SpotifySettings?.ClientSecret) ||
             string.IsNullOrEmpty(request.SpotifySettings?.RefreshToken))
         {
-            _logger.LogWarning("Unable to refresh Spotify Token, invalid settings");
+            _logger.LogWarning(
+                $"Unable to refresh Spotify Token, invalid settings '{JsonSerializer.Serialize(request.SpotifySettings)}'");
             return new RefreshTokenResponse();
         }
 
@@ -55,7 +60,7 @@ public class SpotifyApi :
 
             using var client = _httpClientFactory.CreateClient();
 
-            var response = await client.SendAsync(httpRequest, cancellationToken);
+            using var response = await client.SendAsync(httpRequest, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var refreshTokenResponse =
@@ -70,20 +75,23 @@ public class SpotifyApi :
         return new RefreshTokenResponse();
     }
 
-    public async Task<AvailableDevicesResponse[]> Handle(GetAvailableDevicesRequest request, CancellationToken cancellationToken)
+    public async Task<AvailableDevicesResponse[]> Handle(GetAvailableDevicesRequest request,
+        CancellationToken cancellationToken)
     {
         // API Call example https://developer.spotify.com/documentation/web-api/reference/get-a-users-available-devices
-        var url = "https://api.spotify.com/v1/me/player/devices";
+        const string url = "https://api.spotify.com/v1/me/player/devices";
 
         try
         {
             using var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.AuthToken);
 
-            var response = await client.GetAsync(url, cancellationToken);
+            using var response = await client.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
-            
-            var result = await response.Content.ReadFromJsonAsync<AvailableDevicesApiResponse>(cancellationToken: cancellationToken);
+
+            var result =
+                await response.Content.ReadFromJsonAsync<AvailableDevicesApiResponse>(
+                    cancellationToken: cancellationToken);
             return result?.Devices ?? [];
         }
         catch (Exception e)
@@ -92,5 +100,82 @@ public class SpotifyApi :
         }
 
         return [];
+    }
+
+    public async Task<PlaylistItem[]> Handle(GetSpotifyPlaylistsRequest request, CancellationToken cancellationToken)
+    {
+        // API Call example https://developer.spotify.com/documentation/web-api/reference/get-a-list-of-current-users-playlists
+        const string url = "https://api.spotify.com/v1/me/playlists";
+
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.AuthToken);
+
+            using var response = await client.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var result =
+                await response.Content.ReadFromJsonAsync<PlaylistResponse>(cancellationToken: cancellationToken);
+            return result?.Items ?? [];
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while getting playlists");
+        }
+
+        return [];
+    }
+
+    public async Task<bool> Handle(StartPlaybackRequest request, CancellationToken cancellationToken)
+    {
+        // API call example https://developer.spotify.com/documentation/web-api/reference/start-a-users-playback
+        const string url = "https://api.spotify.com/v1/me/player/play";
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", request.AuthToken);
+
+            using StringContent jsonContent = new(
+                JsonSerializer.Serialize(new
+                {
+                    context_uri = $"spotify:playlist:{request.PlaylistId}",
+                    position_ms = 0
+                }),
+                Encoding.UTF8,
+                "application/json");
+            using var response = await client.PutAsync(
+                $"{url}?device_id={request.DeviceId}",
+                jsonContent, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error starting playback");
+        }
+
+        return false;
+    }
+
+    public async Task Handle(ToggleShuffleNotification notification, CancellationToken cancellationToken)
+    {
+        // API call example https://developer.spotify.com/documentation/web-api/reference/toggle-shuffle-for-users-playback
+        const string url = "https://api.spotify.com/v1/me/player/shuffle?state=true";
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", notification.AuthToken);
+
+            using var response = await client.PutAsync($"{url}&device_id={notification.DeviceId}",
+                new StringContent(string.Empty), cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error toggle shuffle");
+        }
     }
 }

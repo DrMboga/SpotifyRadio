@@ -78,4 +78,10 @@ DELETE {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}&
 POST  {{RadioApp_HostAddress}}/spotify-api-refresh-token-if-needed
 
 ###
-GET {{RadioApp_HostAddress}}//spotify-api-available-devices
+GET {{RadioApp_HostAddress}}/spotify-api-available-devices
+    
+###
+GET {{RadioApp_HostAddress}}/spotify-api-playlists
+    
+###
+PUT {{RadioApp_HostAddress}}/spotify-api-start-playback?device=d35b198cd5652b21df709cf3a980ba07a9da5a46&playlist=1c6WzXu5hX4Z1oUd3KdSzP

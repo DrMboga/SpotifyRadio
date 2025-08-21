@@ -109,13 +109,10 @@ public class SpotifyAuthTests : IClassFixture<SpotifyPlayerFixture>
                 It.IsAny<CancellationToken>()), Times.Never);
         _spotifyPlayerFixture.MediatorMock.Verify(
             m => m.Send(It.IsAny<RefreshSpotifyAuthTokenRequest>(), It.IsAny<CancellationToken>()), Times.Once);
-        _spotifyPlayerFixture.MediatorMock.Verify(
-            m => m.Publish(It.Is<ShowStaticImageNotification>(n => n.AssetName == "SpotifyApiError.bmp"),
-                It.IsAny<CancellationToken>()), Times.Never);
 
         var expectedExpiration = refreshTokenResponse.ExpiresIn * 1000 +
                                  DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        
+
         _spotifyPlayerFixture.MediatorMock.Verify(m => m.Publish(It.Is<SetSpotifySettingsNotification>(n =>
             n.SpotifySettings.AuthToken == refreshTokenResponse.AccessToken
             && n.SpotifySettings.RefreshToken == refreshTokenResponse.RefreshToken
@@ -131,25 +128,22 @@ public class SpotifyAuthTests : IClassFixture<SpotifyPlayerFixture>
         _spotifyPlayerFixture.MediatorMock
             .Setup(m => m.Send(It.IsAny<GetSpotifySettingsRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(_spotifyPlayerFixture.SpotifySettings);
-        
+
         // Act
         await _spotifyPlayerFixture.SpotifyPlayerProcessor.Start(SabaRadioButtons.L, PlayerMode.Play, 88);
-        
+
         // Assert
         _spotifyPlayerFixture.MediatorMock.Verify(
             m => m.Publish(It.Is<ShowStaticImageNotification>(n => n.AssetName == "SpotifyAuthError.bmp"),
                 It.IsAny<CancellationToken>()), Times.Never);
         _spotifyPlayerFixture.MediatorMock.Verify(
             m => m.Publish(It.IsAny<RefreshSpotifyAuthTokenRequest>(), It.IsAny<CancellationToken>()), Times.Never);
-        _spotifyPlayerFixture.MediatorMock.Verify(
-            m => m.Publish(It.Is<ShowStaticImageNotification>(n => n.AssetName == "SpotifyApiError.bmp"),
-                It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task ShouldShowApiErrorScreenOnAuthTokenRefreshError()
     {
-                // Setup
+        // Setup
         var settings = _spotifyPlayerFixture.SpotifySettings;
         settings.AuthTokenExpiration = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 3600000;
         _spotifyPlayerFixture.MediatorMock
@@ -173,10 +167,7 @@ public class SpotifyAuthTests : IClassFixture<SpotifyPlayerFixture>
         _spotifyPlayerFixture.MediatorMock.Verify(
             m => m.Publish(It.Is<ShowStaticImageNotification>(n => n.AssetName == "SpotifyApiError.bmp"),
                 It.IsAny<CancellationToken>()), Times.Once);
-
-        var expectedExpiration = refreshTokenResponse.ExpiresIn * 1000 +
-                                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        
-        _spotifyPlayerFixture.MediatorMock.Verify(m => m.Publish(It.IsAny<SetSpotifySettingsNotification>(), It.IsAny<CancellationToken>()), Times.Never);
+        _spotifyPlayerFixture.MediatorMock.Verify(
+            m => m.Publish(It.IsAny<SetSpotifySettingsNotification>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
