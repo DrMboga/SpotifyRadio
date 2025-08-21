@@ -98,14 +98,11 @@ builder.Services.AddHostedService<PlayerProcessorService>();
 var app = builder.Build();
 
 // Create database
-if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")))
+if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Data", "RadioSettings.db")))
 {
-    var logger = app.Services.GetService<ILogger<Program>>();
-    logger?.LogDebug($"File not exist: '{Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")}'");
-    var dataDirectory = Path.Combine(Directory.GetCurrentDirectory(), "data");
+    var dataDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Data");
     if (!Directory.Exists(dataDirectory))
     {
-        logger?.LogDebug($"Directory not exist: '{dataDirectory}'");
         Directory.CreateDirectory(dataDirectory);
     }
     
