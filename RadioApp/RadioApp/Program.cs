@@ -100,8 +100,14 @@ var app = builder.Build();
 // Create database
 if (!File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")))
 {
+    var logger = app.Services.GetService<ILogger<Program>>();
+    logger?.LogDebug($"File not exist: '{Path.Combine(Directory.GetCurrentDirectory(), "data", "RadioSettings.db")}'");
     var dataDirectory = Path.Combine(Directory.GetCurrentDirectory(), "data");
-    Directory.CreateDirectory(dataDirectory);
+    if (!Directory.Exists(dataDirectory))
+    {
+        logger?.LogDebug($"Directory not exist: '{dataDirectory}'");
+        Directory.CreateDirectory(dataDirectory);
+    }
     
     var dbContextFactory = app.Services.GetService<IDbContextFactory<Persistence>>();
     await using var dbContext = await dbContextFactory!.CreateDbContextAsync();
