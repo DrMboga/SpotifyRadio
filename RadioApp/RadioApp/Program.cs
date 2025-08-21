@@ -43,6 +43,8 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(builder.Configuration)
 );
 
+// Http client for SpotifyApi
+builder.Services.AddHttpClient();
 
 // Data Access
 builder.Services.AddDbContextFactory<Persistence>();

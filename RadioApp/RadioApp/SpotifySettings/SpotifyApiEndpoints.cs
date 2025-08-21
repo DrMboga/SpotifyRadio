@@ -28,10 +28,34 @@ public static class SpotifyApiEndpoints
                     {
                         return Results.Ok("No need to prolong, token is still valid");
                     }
+                    
+                    var refreshedToken = await mediator.Send(new RefreshSpotifyAuthTokenRequest(spotifySettings));
+                    logger.LogDebug($"Refreshed Token: {JsonSerializer.Serialize(refreshedToken)}");
 
-                    return Results.Ok();
+                    if (string.IsNullOrEmpty(refreshedToken.AccessToken) ||
+                        string.IsNullOrEmpty(refreshedToken.RefreshToken))
+                    {
+                        return Results.BadRequest("Something went wrong...");
+                    }
+                    
+                    spotifySettings.AuthToken = refreshedToken.AccessToken;
+                    spotifySettings.RefreshToken = refreshedToken.RefreshToken;
+                    spotifySettings.AuthTokenExpiration = now + refreshedToken.ExpiresIn*1000;
+                    
+                    await mediator.Publish(new SetSpotifySettingsNotification(spotifySettings));
+
+                    return Results.Ok("New Auth token saved");
                 })
             .WithName("Spotify API Refresh Token if needed")
             .WithDescription("Temporary method to check refresh token logic");
+
+        app.MapGet("/spotify-api-available-devices", async (IMediator mediator, ILogger<Program> logger) =>
+        {
+            var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
+            var devices = await mediator.Send(new GetAvailableDevicesRequest(spotifySettings.AuthToken));
+            return devices;
+        })
+        .WithName("Spotify API get devices request")
+        .WithDescription("Temporary method to get available devices list");
     }
 }

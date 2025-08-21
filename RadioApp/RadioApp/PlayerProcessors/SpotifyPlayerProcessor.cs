@@ -28,7 +28,8 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
     public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
     {
-        _logger.LogInformation($"Starting Spotify player processor. Mode: {currentPlayerMode}; Frequency: {currentFrequency}");
+        _logger.LogInformation(
+            $"Starting Spotify player processor. Mode: {currentPlayerMode}; Frequency: {currentFrequency}");
         _frequencyValue = currentFrequency;
         await _mediator.Publish(new ClearScreenNotification());
         await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0));
@@ -105,6 +106,38 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
     private async Task RefreshTokenIfNeeded()
     {
-        // TODO: Create temporary Spotify Api endpoint with `RefreshToken`, `StartPlayShuffle`, `Stop`, `Next`, `Previous`, `GetSongInfo` and `GetSongBmp` methods which will send appropriate MediatR messages
+        if (_spotifySettings == null)
+        {
+            _canPlay = false;
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var tokenExpired = now > _spotifySettings.AuthTokenExpiration;
+        if (!tokenExpired)
+        {
+            // No need to refresh, token is valid
+            return;
+        }
+
+        // Call Spotify API to refresh token
+        var refreshedToken = await _mediator.Send(new RefreshSpotifyAuthTokenRequest(_spotifySettings));
+        _logger.LogDebug($"Refreshed Token: {JsonSerializer.Serialize(refreshedToken)}");
+
+        if (string.IsNullOrEmpty(refreshedToken?.AccessToken) ||
+            string.IsNullOrEmpty(refreshedToken?.RefreshToken))
+        {
+            _logger.LogWarning("Refreshed Token is empty");
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+            _canPlay = false;
+            return;
+        }
+
+        // Save refreshed token
+        _spotifySettings.AuthToken = refreshedToken.AccessToken;
+        _spotifySettings.RefreshToken = refreshedToken.RefreshToken;
+        _spotifySettings.AuthTokenExpiration = now + refreshedToken.ExpiresIn * 1000;
+
+        await _mediator.Publish(new SetSpotifySettingsNotification(_spotifySettings));
     }
 }

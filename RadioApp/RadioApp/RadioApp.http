@@ -76,3 +76,6 @@ DELETE {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}&
 # Temporary Spotify API endpoints
 ###
 POST  {{RadioApp_HostAddress}}/spotify-api-refresh-token-if-needed
+
+###
+GET {{RadioApp_HostAddress}}//spotify-api-available-devices
