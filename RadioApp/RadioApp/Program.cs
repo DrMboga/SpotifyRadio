@@ -116,16 +116,30 @@ if (app.Environment.IsDevelopment())
 if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "browser", "index.html")))
 {
     // If Angular app is compiled, adding the default redirect to it
+    var browserRootFileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "browser"));
     app.UseDefaultFiles(new DefaultFilesOptions
     {
-        FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "browser")),
-        RequestPath = ""
+        FileProvider = browserRootFileProvider,
     });
 
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "browser")),
-        RequestPath = ""
+        FileProvider = browserRootFileProvider,
+    });
+    
+    // Fallback for Angular App roots
+    app.MapFallback(async context =>
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+
+        if (path is "/" or "/spotify" or "/spotify-login" or "/radio")
+        {
+            context.Response.ContentType = "text/html; charset=utf-8";
+            await context.Response.SendFileAsync(browserRootFileProvider.GetFileInfo("index.html"));
+            return;
+        }
+        
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
     });
 }
 
