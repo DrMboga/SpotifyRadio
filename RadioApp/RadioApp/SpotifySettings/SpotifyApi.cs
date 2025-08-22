@@ -13,7 +13,8 @@ public class SpotifyApi :
     IRequestHandler<GetSpotifyPlaylistsRequest, PlaylistItem[]>,
     IRequestHandler<StartPlaybackRequest, bool>,
     INotificationHandler<ToggleShuffleNotification>,
-    IRequestHandler<PausePlaybackRequest, bool>
+    IRequestHandler<PausePlaybackRequest, bool>,
+    IRequestHandler<SkipSongRequest, bool>
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SpotifyApi> _logger;
@@ -202,6 +203,32 @@ public class SpotifyApi :
             _logger.LogError(e, "Error pause playback");
         }
 
+        return false;
+    }
+
+    public async Task<bool> Handle(SkipSongRequest request, CancellationToken cancellationToken)
+    {
+        // API call examples: https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-next-track
+        // https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-previous-track
+        const string url = "https://api.spotify.com/v1/me/player/";
+
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", request.AuthToken);
+
+            using var response = await client.PostAsync($"{url}{(request.SkipToNext ? "next" : "previous")}?device_id={request.DeviceId}",
+                new StringContent(string.Empty), cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return true;
+
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error skip song");
+        }
+        
         return false;
     }
 }

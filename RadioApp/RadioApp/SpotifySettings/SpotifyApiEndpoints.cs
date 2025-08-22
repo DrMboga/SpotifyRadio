@@ -88,15 +88,27 @@ public static class SpotifyApiEndpoints
             })
             .WithName("Spotify API starts playback")
             .WithDescription("Temporary method to start playback");
-        
-        app.MapPut("/spotify-api-pause-playback", async (IMediator mediator, ILogger<Program> logger, [FromQuery] string device) =>
-            {
-                var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
-                logger.LogDebug($"Pause on '{device}' device");
-                var success = await mediator.Send(new PausePlaybackRequest(spotifySettings.AuthToken,device));
-                return success ? Results.Ok("Playback paused") : Results.BadRequest("Failed to pause playback");
-            })
+
+        app.MapPut("/spotify-api-pause-playback",
+                async (IMediator mediator, ILogger<Program> logger, [FromQuery] string device) =>
+                {
+                    var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
+                    logger.LogDebug($"Pause on '{device}' device");
+                    var success = await mediator.Send(new PausePlaybackRequest(spotifySettings.AuthToken, device));
+                    return success ? Results.Ok("Playback paused") : Results.BadRequest("Failed to pause playback");
+                })
             .WithName("Spotify API pauses playback")
             .WithDescription("Temporary method to pause playback");
+
+        app.MapPost("/spotify-api-skip-to",
+                async (IMediator mediator, ILogger<Program> logger, [FromQuery] string device, [FromQuery] bool next) =>
+                {
+                    var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
+                    logger.LogDebug($"Skip to {(next ? "next" : "previous")} on '{device}' device");
+                    var success = await mediator.Send(new SkipSongRequest(spotifySettings.AuthToken, device, next));
+                    return success ? Results.Ok("Song skipped") : Results.BadRequest("Failed to skip song");
+                })
+            .WithName("Spotify API skip to playback")
+            .WithDescription("Temporary method to skip playback");
     }
 }

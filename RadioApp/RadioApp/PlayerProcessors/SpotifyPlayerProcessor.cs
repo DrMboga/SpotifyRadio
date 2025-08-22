@@ -9,12 +9,19 @@ namespace RadioApp.PlayerProcessors;
 
 public class SpotifyPlayerProcessor : IPlayerProcessor
 {
+    // Debounce frequency change 
+    private const int FrequencyChangeThresholdMilliseconds = 500;
+
     private readonly ILogger<SpotifyPlayerProcessor> _logger;
     private readonly IMediator _mediator;
 
     private bool _canPlay = false;
+    private bool _isPlaying = false;
     private Common.Contracts.SpotifySettings? _spotifySettings = null;
     private int _frequencyValue;
+    private int _temporaryFrequencyValue;
+    private long _lastFrequencyChangeTime = 0;
+    private readonly Lock _frequencyLock = new Lock();
 
     private bool _newStart = true;
     private string _deviceId = string.Empty;
@@ -34,7 +41,9 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         _logger.LogInformation(
             $"Starting Spotify player processor. Mode: {currentPlayerMode}; Frequency: {currentFrequency}");
         _frequencyValue = currentFrequency;
+        _temporaryFrequencyValue = currentFrequency;
         _newStart = true;
+        
         await _mediator.Publish(new ClearScreenNotification());
         await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0));
 
@@ -55,10 +64,12 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
     public async Task Stop()
     {
-        if (!_canPlay)
+        if (!_canPlay || !_isPlaying)
         {
             return;
         }
+
+        _isPlaying = false;
 
         await RefreshTokenIfNeeded();
         var deviceId = await GetCurrentDeviceId();
@@ -66,6 +77,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             return;
         }
+
         var success =
             await _mediator.Send(new PausePlaybackRequest(_spotifySettings!.AuthToken!, deviceId));
         if (!success)
@@ -82,6 +94,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             return;
         }
+
         var deviceId = await GetCurrentDeviceId();
         if (string.IsNullOrEmpty(deviceId))
         {
@@ -93,9 +106,11 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             return;
         }
+
         _logger.LogDebug($"{(_newStart ? "Playing" : "Resuming")} '{playlistId}' playlist on '{deviceId}' device");
         var success =
-            await _mediator.Send(new StartPlaybackRequest(_spotifySettings!.AuthToken!, deviceId, playlistId, !_newStart));
+            await _mediator.Send(new StartPlaybackRequest(_spotifySettings!.AuthToken!, deviceId, playlistId,
+                !_newStart));
         if (!success)
         {
             await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
@@ -108,6 +123,8 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             await _mediator.Publish(new ToggleShuffleNotification(_spotifySettings!.AuthToken!, deviceId));
             _newStart = false;
         }
+
+        _isPlaying = true;
     }
 
     public Task Pause()
@@ -120,10 +137,61 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         return Task.CompletedTask;
     }
 
-    public Task FrequencyChanged(int frequency)
+    /// <summary>
+    /// To skip a track we are going to use the radio wave tuning knob
+    /// But there is a limit on the tuning scale.
+    /// To make the skipping process infinite, there is a trick.
+    /// To skip to a next track, we should turn a knob to the right and return it back where it was. Only after returning, the song will be skipped
+    /// The same for skipping back, but turning knob to the left for one position and back 
+    /// </summary>
+    public async Task FrequencyChanged(int frequency)
     {
-        // TODO: check _canPlay flag
-        return Task.CompletedTask;
+        lock (_frequencyLock)
+        {
+            // The capacitance measurement is not precise. So if the knob is somewhere on frequency measurement borders, it can send new frequency values very often.
+            // So, we are debouncing this buzz here
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            if (now - _lastFrequencyChangeTime < FrequencyChangeThresholdMilliseconds)
+            {
+                return;
+            }
+
+            _lastFrequencyChangeTime = now;
+        }
+
+        if (!_canPlay || !_isPlaying)
+        {
+            return;
+        }
+
+        if (_frequencyValue == _temporaryFrequencyValue)
+        {
+            // First move of the knob
+            _temporaryFrequencyValue = frequency;
+            _logger.LogDebug($"First move of the knob from {_frequencyValue} to {_temporaryFrequencyValue}");
+        }
+        else if (_frequencyValue == frequency)
+        {
+            // Second move, knob returned to original position
+            bool skipNext = _temporaryFrequencyValue > frequency;
+            _logger.LogDebug(
+                $"Knob returned from {_temporaryFrequencyValue} to {_frequencyValue}. Skip song to {(skipNext ? "next" : "previous")}");
+            _temporaryFrequencyValue = _frequencyValue;
+            // Call API
+            await RefreshTokenIfNeeded();
+            var deviceId = await GetCurrentDeviceId();
+            if (string.IsNullOrEmpty(deviceId))
+            {
+                return;
+            }
+
+            var success = await _mediator.Send(new SkipSongRequest(_spotifySettings.AuthToken, deviceId, skipNext));
+            if (!success)
+            {
+                await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+                _canPlay = false;
+            }
+        }
     }
 
     private static bool CheckSpotifySettings(Common.Contracts.SpotifySettings spotifySettings)
@@ -173,6 +241,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             // Save new refresh token if API returns it
             _spotifySettings.RefreshToken = refreshedToken.RefreshToken;
         }
+
         _spotifySettings.AuthTokenExpiration = now + refreshedToken.ExpiresIn * 1000;
 
         await _mediator.Publish(new SetSpotifySettingsNotification(_spotifySettings));
@@ -201,7 +270,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             return null;
         }
 
-        _deviceId =  currentDevice.Id;
+        _deviceId = currentDevice.Id;
         return currentDevice.Id;
     }
 
