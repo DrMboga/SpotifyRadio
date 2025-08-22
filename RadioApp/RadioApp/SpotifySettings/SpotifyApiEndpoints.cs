@@ -110,5 +110,19 @@ public static class SpotifyApiEndpoints
                 })
             .WithName("Spotify API skip to playback")
             .WithDescription("Temporary method to skip playback");
+
+        app.MapGet("/spotify-api-get-song-info", async (IMediator mediator, ILogger<Program> logger) =>
+            {
+                var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
+                var songInfo = await mediator.Send(new GetCurrentlyPlayingInfoRequest(spotifySettings.AuthToken));
+                if (songInfo == null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(songInfo);
+            })
+            .WithName("Spotify API get song info")
+            .WithDescription("Temporary method to get song info");
     }
 }

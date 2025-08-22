@@ -14,7 +14,8 @@ public class SpotifyApi :
     IRequestHandler<StartPlaybackRequest, bool>,
     INotificationHandler<ToggleShuffleNotification>,
     IRequestHandler<PausePlaybackRequest, bool>,
-    IRequestHandler<SkipSongRequest, bool>
+    IRequestHandler<SkipSongRequest, bool>,
+    IRequestHandler<GetCurrentlyPlayingInfoRequest, SongInfoResponse?>
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SpotifyApi> _logger;
@@ -148,7 +149,7 @@ public class SpotifyApi :
                 "application/json");
             using var response = await client.PutAsync(
                 $"{url}?device_id={request.DeviceId}",
-                request.Resume ? new StringContent(string.Empty) :  jsonContent,
+                request.Resume ? new StringContent(string.Empty) : jsonContent,
                 cancellationToken);
             response.EnsureSuccessStatusCode();
 
@@ -218,17 +219,48 @@ public class SpotifyApi :
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", request.AuthToken);
 
-            using var response = await client.PostAsync($"{url}{(request.SkipToNext ? "next" : "previous")}?device_id={request.DeviceId}",
+            using var response = await client.PostAsync(
+                $"{url}{(request.SkipToNext ? "next" : "previous")}?device_id={request.DeviceId}",
                 new StringContent(string.Empty), cancellationToken);
             response.EnsureSuccessStatusCode();
             return true;
-
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error skip song");
         }
-        
+
         return false;
+    }
+
+    public async Task<SongInfoResponse?> Handle(GetCurrentlyPlayingInfoRequest request,
+        CancellationToken cancellationToken)
+    {
+        // API call example: https://developer.spotify.com/documentation/web-api/reference/get-the-users-currently-playing-track
+        const string url = "https://api.spotify.com/v1/me/player/currently-playing";
+
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", request.AuthToken);
+            using var response = await client.GetAsync($"{url}?market={request.Market}", cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+
+            var result = JsonSerializer.Deserialize<SongInfoResponse>(content, JsonSerializerOptions.Web);
+            return result;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error getting current playing info");
+        }
+
+        return null;
     }
 }

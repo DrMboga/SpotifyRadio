@@ -94,3 +94,7 @@ PUT {{RadioApp_HostAddress}}/spotify-api-pause-playback?device={{device}}
     
 ###
 POST {{RadioApp_HostAddress}}/spotify-api-skip-to?device={{device}}&next=true
+
+###
+GET {{RadioApp_HostAddress}}/spotify-api-get-song-info
+
