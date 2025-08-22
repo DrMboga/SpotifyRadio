@@ -12,7 +12,8 @@ public class SpotifyApi :
     IRequestHandler<GetAvailableDevicesRequest, AvailableDevicesResponse[]>,
     IRequestHandler<GetSpotifyPlaylistsRequest, PlaylistItem[]>,
     IRequestHandler<StartPlaybackRequest, bool>,
-    INotificationHandler<ToggleShuffleNotification>
+    INotificationHandler<ToggleShuffleNotification>,
+    IRequestHandler<PausePlaybackRequest, bool>
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SpotifyApi> _logger;
@@ -146,7 +147,8 @@ public class SpotifyApi :
                 "application/json");
             using var response = await client.PutAsync(
                 $"{url}?device_id={request.DeviceId}",
-                jsonContent, cancellationToken);
+                request.Resume ? new StringContent(string.Empty) :  jsonContent,
+                cancellationToken);
             response.EnsureSuccessStatusCode();
 
             return true;
@@ -177,5 +179,29 @@ public class SpotifyApi :
         {
             _logger.LogError(e, "Error toggle shuffle");
         }
+    }
+
+    public async Task<bool> Handle(PausePlaybackRequest request, CancellationToken cancellationToken)
+    {
+        // API call example https://developer.spotify.com/documentation/web-api/reference/pause-a-users-playback
+        const string url = "https://api.spotify.com/v1/me/player/pause";
+
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", request.AuthToken);
+
+            using var response = await client.PutAsync($"{url}?device_id={request.DeviceId}",
+                new StringContent(string.Empty), cancellationToken);
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error pause playback");
+        }
+
+        return false;
     }
 }

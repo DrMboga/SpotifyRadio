@@ -16,6 +16,9 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
     private Common.Contracts.SpotifySettings? _spotifySettings = null;
     private int _frequencyValue;
 
+    private bool _newStart = true;
+    private string _deviceId = string.Empty;
+    private string _playlistId = string.Empty;
 
     public PlayerType Type => PlayerType.Spotify;
 
@@ -31,6 +34,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         _logger.LogInformation(
             $"Starting Spotify player processor. Mode: {currentPlayerMode}; Frequency: {currentFrequency}");
         _frequencyValue = currentFrequency;
+        _newStart = true;
         await _mediator.Publish(new ClearScreenNotification());
         await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0));
 
@@ -57,7 +61,18 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         }
 
         await RefreshTokenIfNeeded();
-        // TODO: Send API Stop command
+        var deviceId = await GetCurrentDeviceId();
+        if (!_canPlay || string.IsNullOrEmpty(deviceId))
+        {
+            return;
+        }
+        var success =
+            await _mediator.Send(new PausePlaybackRequest(_spotifySettings!.AuthToken!, deviceId));
+        if (!success)
+        {
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
+            _canPlay = false;
+        }
     }
 
     public async Task Play()
@@ -78,27 +93,26 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             return;
         }
-        _logger.LogDebug($"Playing '{playlistId}' playlist on '{deviceId}' device");
+        _logger.LogDebug($"{(_newStart ? "Playing" : "Resuming")} '{playlistId}' playlist on '{deviceId}' device");
         var success =
-            await _mediator.Send(new StartPlaybackRequest(_spotifySettings!.AuthToken!, deviceId, playlistId));
+            await _mediator.Send(new StartPlaybackRequest(_spotifySettings!.AuthToken!, deviceId, playlistId, !_newStart));
         if (!success)
         {
             await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0));
             _canPlay = false;
             return;
         }
-        await _mediator.Publish(new ToggleShuffleNotification(_spotifySettings!.AuthToken!, deviceId));
+
+        if (_newStart)
+        {
+            await _mediator.Publish(new ToggleShuffleNotification(_spotifySettings!.AuthToken!, deviceId));
+            _newStart = false;
+        }
     }
 
-    public async Task Pause()
+    public Task Pause()
     {
-        if (!_canPlay)
-        {
-            return;
-        }
-
-        await RefreshTokenIfNeeded();
-        // TODO: Send API Stop command
+        return Stop();
     }
 
     public Task ToggleButtonChanged(SabaRadioButtons button)
@@ -172,6 +186,11 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             return null;
         }
 
+        if (!string.IsNullOrEmpty(_deviceId))
+        {
+            return _deviceId;
+        }
+
         var devices = await _mediator.Send(new GetAvailableDevicesRequest(_spotifySettings.AuthToken));
         var currentDevice = devices.FirstOrDefault(d => d.Name == _spotifySettings.DeviceName);
         if (currentDevice == null)
@@ -182,6 +201,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             return null;
         }
 
+        _deviceId =  currentDevice.Id;
         return currentDevice.Id;
     }
 
@@ -191,6 +211,11 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             _canPlay = false;
             return null;
+        }
+
+        if (!string.IsNullOrEmpty(_playlistId))
+        {
+            return _playlistId;
         }
 
         var playlists = await _mediator.Send(new GetSpotifyPlaylistsRequest(_spotifySettings.AuthToken));
@@ -203,6 +228,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
             return null;
         }
 
+        _playlistId = currentPlaylist.Id;
         return currentPlaylist.Id;
     }
 }

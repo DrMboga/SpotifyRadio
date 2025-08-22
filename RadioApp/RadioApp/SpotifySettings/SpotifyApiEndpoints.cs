@@ -73,16 +73,30 @@ public static class SpotifyApiEndpoints
             .WithDescription("Temporary method to get playlists");
 
         app.MapPut("/spotify-api-start-playback", async (IMediator mediator, ILogger<Program> logger,
-                [FromQuery] string device, [FromQuery] string playlist) =>
+                [FromQuery] string device, [FromQuery] string playlist, [FromQuery] bool resume) =>
             {
                 var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
                 logger.LogDebug($"Playing '{playlist}' playlist on '{device}' device");
                 var success =
-                    await mediator.Send(new StartPlaybackRequest(spotifySettings.AuthToken, device, playlist));
-                await mediator.Publish(new ToggleShuffleNotification(spotifySettings.AuthToken, device));
+                    await mediator.Send(new StartPlaybackRequest(spotifySettings.AuthToken, device, playlist, resume));
+                if (!resume)
+                {
+                    await mediator.Publish(new ToggleShuffleNotification(spotifySettings.AuthToken, device));
+                }
+
                 return success ? Results.Ok("Playback started") : Results.BadRequest("Failed to start playback");
             })
             .WithName("Spotify API starts playback")
             .WithDescription("Temporary method to start playback");
+        
+        app.MapPut("/spotify-api-pause-playback", async (IMediator mediator, ILogger<Program> logger, [FromQuery] string device) =>
+            {
+                var spotifySettings = await mediator.Send(new GetSpotifySettingsRequest());
+                logger.LogDebug($"Pause on '{device}' device");
+                var success = await mediator.Send(new PausePlaybackRequest(spotifySettings.AuthToken,device));
+                return success ? Results.Ok("Playback paused") : Results.BadRequest("Failed to pause playback");
+            })
+            .WithName("Spotify API pauses playback")
+            .WithDescription("Temporary method to pause playback");
     }
 }

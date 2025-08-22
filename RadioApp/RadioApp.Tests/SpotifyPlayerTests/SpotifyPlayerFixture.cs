@@ -11,14 +11,9 @@ public class SpotifyPlayerFixture
     private readonly Mock<ILogger<SpotifyPlayerProcessor>> _spotifyPlayerProcessorLoggerMock = new();
 
     public Mock<IMediator> MediatorMock { get; } = new();
-    public SpotifyPlayerProcessor SpotifyPlayerProcessor { get; }
+    public SpotifyPlayerProcessor SpotifyPlayerProcessor { get; private set; }
 
     public Common.Contracts.SpotifySettings SpotifySettings { get; private set; }
-
-    public SpotifyPlayerFixture()
-    {
-        SpotifyPlayerProcessor = new SpotifyPlayerProcessor(_spotifyPlayerProcessorLoggerMock.Object, MediatorMock.Object);
-    }
 
     public void ResetFixture(ITestOutputHelper output)
     {
@@ -35,6 +30,7 @@ public class SpotifyPlayerFixture
             PlaylistName = "Fake playlist name",
         };
         MediatorMock.Invocations.Clear();
+        SpotifyPlayerProcessor = new SpotifyPlayerProcessor(_spotifyPlayerProcessorLoggerMock.Object, MediatorMock.Object);
     }
 
 }

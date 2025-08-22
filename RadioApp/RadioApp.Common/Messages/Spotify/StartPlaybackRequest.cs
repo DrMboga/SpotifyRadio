@@ -2,4 +2,4 @@
 
 namespace RadioApp.Common.Messages.Spotify;
 
-public record StartPlaybackRequest(string AuthToken, string DeviceId, string PlaylistId) : IRequest<bool>;
+public record StartPlaybackRequest(string AuthToken, string DeviceId, string PlaylistId, bool Resume) : IRequest<bool>;
