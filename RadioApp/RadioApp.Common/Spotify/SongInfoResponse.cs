@@ -6,6 +6,8 @@ public class SongInfoResponse
 {
     [JsonPropertyName("progress_ms")]
     public int Progress { get; set;}
+    [JsonPropertyName("is_playing")]
+    public bool IsPlaying { get; set;}
     public SongItem? Item { get; set; }
 }
 
@@ -16,6 +18,8 @@ public class SongItem
     [JsonPropertyName("duration_ms")]
     public int Duration { get; set; }
     public string? Name { get; set; }
+    public string? Id { get; set; }
+    public string? Uri { get; set; }
 }
 
 public class AlbumInfo

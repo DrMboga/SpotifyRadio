@@ -4,6 +4,7 @@ using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.Hardware.Display;
 using RadioApp.Common.Messages.Spotify;
 using RadioApp.Common.PlayerProcessor;
+using RadioApp.Common.Spotify;
 
 namespace RadioApp.PlayerProcessors;
 
@@ -29,10 +30,15 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
     public PlayerType Type => PlayerType.Spotify;
 
+    private static readonly TimeSpan UpdateSongInterval = TimeSpan.FromSeconds(2);
+    private readonly PlayerProcessorTimerService _updateSongTimer;
+    private string? _lastSongId = null;
+
     public SpotifyPlayerProcessor(ILogger<SpotifyPlayerProcessor> logger, IMediator mediator)
     {
         _logger = logger;
         _mediator = mediator;
+        _updateSongTimer = new PlayerProcessorTimerService(UpdateSongInterval, UpdateSongInfoIfNeeded);
     }
 
 
@@ -43,7 +49,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         _frequencyValue = currentFrequency;
         _temporaryFrequencyValue = currentFrequency;
         _newStart = true;
-        
+
         await _mediator.Publish(new ClearScreenNotification());
         await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0));
 
@@ -70,6 +76,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         }
 
         _isPlaying = false;
+        await _updateSongTimer.Stop();
 
         await RefreshTokenIfNeeded();
         var deviceId = await GetCurrentDeviceId();
@@ -125,6 +132,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         }
 
         _isPlaying = true;
+        await _updateSongTimer.Start();
     }
 
     public Task Pause()
@@ -299,5 +307,65 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
         _playlistId = currentPlaylist.Id;
         return currentPlaylist.Id;
+    }
+
+    /// <summary>
+    /// This method runs every interval to get song info and show it on TFT
+    /// </summary>
+    private async Task UpdateSongInfoIfNeeded(CancellationToken cancellationToken)
+    {
+        var songIno = await GetCurrentSongInfo();
+        if (songIno?.Item?.Id == null || songIno?.Item?.Name == null)
+        {
+            // Show logo if there are no song info
+            await _mediator.Publish(new ShowStaticImageNotification("SpotifySabaLogo.bmp", 0), cancellationToken);
+            _lastSongId = null;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_lastSongId) || songIno.Item.Id != _lastSongId)
+        {
+            _lastSongId = songIno.Item.Id;
+
+            var image300By300Url = songIno.Item.Album?.Images?.FirstOrDefault(i => i.Height == 300);
+            byte[]? albumCoverJpeg = null;
+            if (!string.IsNullOrEmpty(image300By300Url?.Url))
+            {
+                albumCoverJpeg = await _mediator.Send(new GetJpegImageRequest(image300By300Url.Url), cancellationToken);
+            }
+
+            // Update picture and song
+            var success = await _mediator.Send(new ShowSongInfoRequest(songIno.Item.Name,
+                songIno.Item.Artists?.FirstOrDefault()?.Name, albumCoverJpeg));
+            if (!success)
+            {
+                await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0), cancellationToken);
+                return;
+            }
+        }
+
+        int percentage = 0;
+        if (songIno.Progress != 0 && songIno.Item.Duration != 0)
+        {
+            percentage = 100 * songIno.Progress / songIno.Item.Duration;
+        }
+        // Update position
+        await _mediator.Publish(new ShowProgressNotification(percentage), cancellationToken);
+        
+        // TODO: Implement ShowSongInfoRequest and ShowProgressNotification in the "DisplayManager". Example: https://github.com/DrMboga/radio/blob/main/dotnetbmpconverter/DotnetBmpConverter/IoCommandsListener.cs
+        // TODO: Write tests for this particular logic with timeout 4.01 seconds - to check the ShowSongInfoRequest for 2 different song infos and not calling ShowSongInfoRequest for 2 similar songs. And test ShowProgressNotification call
+    }
+
+    private async Task<SongInfoResponse?> GetCurrentSongInfo()
+    {
+        await RefreshTokenIfNeeded();
+        if (string.IsNullOrEmpty(_spotifySettings?.AuthToken))
+        {
+            _canPlay = false;
+            return null;
+        }
+
+        var songInfo = await _mediator.Send(new GetCurrentlyPlayingInfoRequest(_spotifySettings.AuthToken));
+        return songInfo;
     }
 }

@@ -15,7 +15,8 @@ public class SpotifyApi :
     INotificationHandler<ToggleShuffleNotification>,
     IRequestHandler<PausePlaybackRequest, bool>,
     IRequestHandler<SkipSongRequest, bool>,
-    IRequestHandler<GetCurrentlyPlayingInfoRequest, SongInfoResponse?>
+    IRequestHandler<GetCurrentlyPlayingInfoRequest, SongInfoResponse?>,
+    IRequestHandler<GetJpegImageRequest, byte[]?>
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SpotifyApi> _logger;
@@ -261,6 +262,27 @@ public class SpotifyApi :
             _logger.LogError(e, "Error getting current playing info");
         }
 
+        return null;
+    }
+
+    public async Task<byte[]?> Handle(GetJpegImageRequest request, CancellationToken cancellationToken)
+    {
+
+        try
+        {
+            using var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Add("User-Agent", ".NET Spotify radio");
+            
+            var response = await client.GetAsync(request.ImageUrl, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            var image = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+            return image;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Error getting image '{request.ImageUrl}'");
+        }
         return null;
     }
 }
