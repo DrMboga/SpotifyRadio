@@ -336,7 +336,7 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
 
             // Update picture and song
             var success = await _mediator.Send(new ShowSongInfoRequest(songIno.Item.Name,
-                songIno.Item.Artists?.FirstOrDefault()?.Name, albumCoverJpeg));
+                songIno.Item.Artists?.FirstOrDefault()?.Name, albumCoverJpeg), cancellationToken);
             if (!success)
             {
                 await _mediator.Publish(new ShowStaticImageNotification("SpotifyApiError.bmp", 0), cancellationToken);
@@ -349,9 +349,10 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
         {
             percentage = 100 * songIno.Progress / songIno.Item.Duration;
         }
+
         // Update position
         await _mediator.Publish(new ShowProgressNotification(percentage), cancellationToken);
-        
+
         // TODO: Implement ShowSongInfoRequest and ShowProgressNotification in the "DisplayManager". Example: https://github.com/DrMboga/radio/blob/main/dotnetbmpconverter/DotnetBmpConverter/IoCommandsListener.cs
         // TODO: Write tests for this particular logic with timeout 4.01 seconds - to check the ShowSongInfoRequest for 2 different song infos and not calling ShowSongInfoRequest for 2 similar songs. And test ShowProgressNotification call
     }
