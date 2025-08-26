@@ -36,4 +36,14 @@ public static class ScreenGpioParameters
     /// Black
     /// </summary>
     public const ushort BackgroundColor = 0x0000;
+    
+    public const int AlbumCoverSizeInPixels = 96;
+    public const ushort SongNameColor = 0x8DF7;
+    public const ushort AlbumNameColor = 0x29A8;
+    
+    public const ushort ProgressColor = 0x8DF7;
+    public const ushort ProgressBackgroundColor = 0x29A8;
+
+    public const int ProgressBarTopPosition = 100;
+    public const int ProgressBarHeight = 4;
 }

@@ -13,12 +13,15 @@ namespace RadioApp.Hardware;
 /// </summary>
 public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     INotificationHandler<ClearScreenNotification>,
-    INotificationHandler<ShowStaticImageNotification>
+    INotificationHandler<ShowStaticImageNotification>,
+    IRequestHandler<ShowSongInfoRequest, bool>,
+    INotificationHandler<ShowProgressNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
     private readonly IGpioManager _gpioManager;
     private readonly ISpiManager _spiManager;
+    private readonly Dictionary<char, byte[]> _font;
 
     public DisplayManager(
         ILogger<DisplayManager> logger,
@@ -30,6 +33,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         _hardwareManager = hardwareManager;
         _gpioManager = gpioManager;
         _spiManager = spiManager;
+        _font = Font5x7.GetFont();
     }
 
     /// <summary>
@@ -87,7 +91,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
 
         if (!File.Exists(fileName))
         {
-            _logger.LogError("Static image '{fileName}' not found");
+            _logger.LogError($"Static image '{fileName}' not found");
         }
 
         try
@@ -98,7 +102,138 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         }
         catch (Exception e)
         {
-            _logger.LogError("Error showing static image '{fileName}'", e);
+            _logger.LogError(e, $"Error showing static image '{fileName}'");
+        }
+    }
+    
+    /// <summary>
+    /// Shows Album cover and song name
+    /// </summary>
+    public async Task<bool> Handle(ShowSongInfoRequest request, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug($"Show song info: '{request.SongName}' by '{(request.ArtistName ?? "null")}'. Album cover is {(request.AlbumCoverJpeg == null ? "absent" : "present")}");
+        try
+        {
+            // Clear screen
+            await Handle(new ClearScreenNotification(),  cancellationToken);
+            
+            // Convert and show image
+            if (request.AlbumCoverJpeg != null)
+            {
+                var albumCoverBmp = await request.AlbumCoverJpeg.GetBmpFromJpeg(ScreenGpioParameters.AlbumCoverSizeInPixels);
+                var albumCoverRgb565 = albumCoverBmp.ToRgb565();
+                DrawImage(albumCoverRgb565, 2);
+            }
+            
+            DrawText(3, 107, request.SongName, ScreenGpioParameters.SongNameColor);
+            if (!string.IsNullOrEmpty(request.ArtistName))
+            {
+                DrawText(3, 117, request.ArtistName, ScreenGpioParameters.AlbumNameColor);
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,"Error showing song info");
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Handles Progress bar state notification
+    /// </summary>
+    public Task Handle(ShowProgressNotification notification, CancellationToken cancellationToken)
+    {
+        DrawProgress(
+            notification.PercentComplete, 
+            ScreenGpioParameters.ProgressBarTopPosition, 
+            ScreenGpioParameters.ProgressBarHeight, 
+            ScreenGpioParameters.ProgressColor,
+            ScreenGpioParameters.ProgressBackgroundColor);
+        return Task.CompletedTask;
+    }
+    
+    /// <summary>
+    /// Draws a text by coordinates
+    /// </summary>
+    /// <param name="x">Coordinate X</param>
+    /// <param name="y">Coordinate Y</param>
+    /// <param name="text">TextToDraw</param>
+    /// <param name="color">Color to draw</param>
+    private void DrawText(int x, int y, string text, ushort color)
+    {
+        foreach (var symbol in text)
+        {
+            DrawChar(x, y, symbol, color);
+            x += 6; // Pixels distance between characters
+        }
+    }
+    
+    /// <summary>
+    /// Draws one text character
+    /// </summary>
+    private void DrawChar(int x, int y, char symbol, ushort color) 
+    {
+        SendCommand(0x2A);  // Set column
+        SendData(Convert.ToByte(0x00)); SendData(Convert.ToByte(x));
+        SendData(Convert.ToByte(0x00)); SendData(Convert.ToByte(x + 4));
+
+        SendCommand(0x2B);  // Set row
+        SendData(Convert.ToByte(0x00)); SendData(Convert.ToByte(y));
+        SendData(Convert.ToByte(0x00)); SendData(Convert.ToByte(y + 6));
+
+        SendCommand(0x2C);  // Write pixels
+
+        byte[] bitmapChar = _font.ContainsKey(symbol) ? _font[symbol] : _font['?'];
+
+        for (int line = 0; line < bitmapChar.Length; line++)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                var pixel = bitmapChar[line] & (1 << i);
+                if (pixel == 0) {
+                    SendData(Convert.ToByte(ScreenGpioParameters.BackgroundColor >> 8));
+                    SendData(Convert.ToByte(ScreenGpioParameters.BackgroundColor & 0xFF));
+                } else {
+                    SendData(Convert.ToByte(color >> 8));
+                    SendData(Convert.ToByte(color & 0xFF));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws a progress line
+    /// </summary>
+    /// <param name="progress">Progress in percent</param>
+    /// <param name="y">Top coordinate to draw</param>
+    /// <param name="height">Height of the progress bar</param>
+    /// <param name="progressColor">Color of the progress bar</param>
+    /// <param name="progressBackgroundColor">Background color of the progress bar</param>
+    private void DrawProgress(int progress, int y, int height, ushort progressColor, ushort progressBackgroundColor)
+    {
+        int margin = 3;
+        int x1 = margin;
+        int x2 = ScreenGpioParameters.DisplayWidth - margin;
+
+        int progressX2 = (progress * (ScreenGpioParameters.DisplayWidth - 2 * margin)) / 100;
+
+        // Progress:
+        if (progressX2 > margin)
+        {
+            InitDrawArea(x1, y, progressX2 - 1, y + height - 1);
+            for (int i = 0; i < height * progressX2; i++)
+            {
+                DrawPixel(progressColor);
+            }
+        }
+
+        // Background:
+        InitDrawArea(Math.Max(progressX2, margin), y, x2 - 1, y + height - 1);
+        for (int i = 0; i < height * (x2 - progressX2); i++)
+        {
+            DrawPixel(progressBackgroundColor);
         }
     }
 
