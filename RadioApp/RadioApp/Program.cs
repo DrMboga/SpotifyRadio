@@ -153,6 +153,10 @@ app.UseHttpsRedirection();
 app.MapSpotifySettingsEndpoints();
 app.MapRadioStreamSettingsEndpoints();
 
-app.MapSpotifyApiEndpoints();
+// app.MapSpotifyApiEndpoints();
+
+// Log file endpoint
+app.MapGet("/logs", (IHostEnvironment env) => Results.File(Path.Combine(env.ContentRootPath, "radioService.log"), "text/plain"))
+    .WithDescription("Log file");
 
 app.Run();
