@@ -1,23 +1,19 @@
 :host {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 30px;
-  gap: 5px;
+  flex-direction: row;
+  margin: 10px;
+  gap: 20px;
 
   .top-row {
     display: flex;
     flex-direction: row;
     justify-content: center;
-    width: 100%;
-    gap: 25px;
   }
 
   .top-row-item {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
   }
 
   .radio-buttons {
@@ -33,25 +29,14 @@
     margin: 5px;
   }
 
-  .vertical-divider {
-    height: 20px;
-  }
-
-  .radio-stations-panel {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    gap: 10px;
-    margin-top: 10px;
-    margin-bottom: 10px;
-  }
-
   .radio-stations-left-panel {
     display: flex;
-    flex-grow: 3;
+    flex-direction: column;
+    flex-grow: 1;
   }
   .radio-stations-right-panel {
     display: flex;
+    flex-direction: column;
     flex-grow: 1;
   }
 }
