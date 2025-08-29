@@ -26,32 +26,14 @@ Content-Type: application/json
 
 # Radio settings
 # ------------
-GET {{RadioApp_HostAddress}}/radio-regions
-
-###
-@region=Saarland
-GET {{RadioApp_HostAddress}}/radio-stations-by-region?region={{region}}
 
 ###
 GET {{RadioApp_HostAddress}}/radio-buttons
 
-# ------------
-###
-GET {{RadioApp_HostAddress}}/radio-button-region
-
-###
-POST {{RadioApp_HostAddress}}/radio-button-region
-Content-Type: application/json
-
-{
-    "sabaRadioButton": 2,
-    "region": "{{region}}"
-}
-
 ###
 # ------------
 ###
-@saba_button = 3
+@saba_button = 2
 GET {{RadioApp_HostAddress}}/radio-stations-by-button?button={{saba_button}}
 
 ###

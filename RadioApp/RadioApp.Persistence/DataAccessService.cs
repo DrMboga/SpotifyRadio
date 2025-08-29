@@ -8,13 +8,10 @@ using RadioApp.Persistence.Model;
 namespace RadioApp.Persistence;
 
 public class DataAccessService: 
-    IRequestHandler<GetButtonsRegionsRequest, RadioRegion[]>,
-    INotificationHandler<SetButtonRegionNotification>,
     IRequestHandler<GetRadioStationsByButtonRequest, RadioStation[]>,
     INotificationHandler<SaveRadioStationNotification>,
     IRequestHandler<GetSpotifySettingsRequest, SpotifySettings>,
     INotificationHandler<SetSpotifySettingsNotification>,
-    INotificationHandler<RemoveAllRadioStationsByButtonNotification>,
     INotificationHandler<DeleteRadioStationNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
@@ -22,34 +19,6 @@ public class DataAccessService:
     public DataAccessService(IDbContextFactory<Persistence> dbContextFactory)
     {
         _dbContextFactory = dbContextFactory;
-    }
-
-    public async Task<RadioRegion[]> Handle(GetButtonsRegionsRequest request, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var stations = await dbContext.RadioRegion.AsNoTracking().ToArrayAsync(cancellationToken);
-        return stations.ToArray<RadioRegion>();
-    }
-
-    public async Task Handle(SetButtonRegionNotification notification, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var existingRegion = await dbContext.RadioRegion
-            .Where(r => r.SabaRadioButton == notification.RadioButtonRegion.SabaRadioButton)
-            .FirstOrDefaultAsync(cancellationToken: cancellationToken);
-        if (existingRegion is null)
-        {
-            await dbContext.RadioRegion.AddAsync(new()
-            {
-                SabaRadioButton = notification.RadioButtonRegion.SabaRadioButton,
-                Region = notification.RadioButtonRegion.Region,
-            } ,cancellationToken);
-        }
-        else
-        {
-            existingRegion.Region = notification.RadioButtonRegion.Region;
-        }
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<RadioStation[]> Handle(GetRadioStationsByButtonRequest request, CancellationToken cancellationToken)
@@ -108,14 +77,6 @@ public class DataAccessService:
             settings.DeviceName = notification.SpotifySettings.DeviceName;
             settings.PlaylistName = notification.SpotifySettings.PlaylistName;
         }
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-    
-    public async Task Handle(RemoveAllRadioStationsByButtonNotification notification, CancellationToken cancellationToken)
-    {
-        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var stations = await dbContext.RadioStation.Where(s => s.Button == notification.Button).ToArrayAsync(cancellationToken);
-        dbContext.RadioStation.RemoveRange(stations);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
     

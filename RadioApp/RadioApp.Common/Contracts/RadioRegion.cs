@@ -3,6 +3,7 @@
 /// <summary>
 /// Maps a region from MyTuner databases with a button on a radio panel
 /// </summary>
+[Obsolete("Delete this entity when restructure database")]
 public class RadioRegion
 {
     /// <summary>

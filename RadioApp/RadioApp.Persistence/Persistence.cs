@@ -10,6 +10,7 @@ public class Persistence: DbContext
 {
     private static string DbPath => "RadioSettings.db";
 
+    [Obsolete("Delete this entity when restructure database")]
     public DbSet<RadioRegionEntity> RadioRegion { get; set; }
     public DbSet<RadioStationEntity> RadioStation { get; set; }
     public DbSet<SpotifySettings> SpotifySettings { get; set; }
