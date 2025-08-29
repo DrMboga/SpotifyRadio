@@ -1,6 +1,5 @@
 import { RadioChannel } from '../model/radio-channel';
 import { RadioButtonInfo } from '../model/radio-button-info';
-import { RadioStationInfo } from '../model/radio-station-info';
 
 export const MOCK_RADIO_CHANNELS_LIST: RadioChannel[] = [
   {
