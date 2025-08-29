@@ -10,21 +10,21 @@ public class RadioStationInfo
     /// </summary>
     public string Name { get; set; } = string.Empty;
     /// <summary>
-    /// RadioStation frequency
-    /// </summary>
-    public decimal Frequency { get; set; }
-    /// <summary>
     /// Radio station MyTuner page URL
     /// </summary>
     public string DetailsUrl { get; set; } = string.Empty;
     /// <summary>
-    /// Radio station region
+    /// Radio station region and frequency info
     /// </summary>
-    public string Region { get; set; } = string.Empty;
+    public string? RegionInfo { get; set; }
+    /// <summary>
+    /// Station rating - sum of likes and dislikes
+    /// </summary>
+    public int Rating { get; set; }
     /// <summary>
     /// Station URL
     /// </summary>
-    public string? StationUrl { get; set; }
+    public string? StationWebPage { get; set; }
     /// <summary>
     /// Station logo URL
     /// </summary>

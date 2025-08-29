@@ -12,3 +12,5 @@ public class RadioStation
     public string? StreamUrl { get; set; } = string.Empty;
     public string? RadioLogoBase64 { get; set; }
 }
+
+// ToDo: Add Country and CountryFlagBase64

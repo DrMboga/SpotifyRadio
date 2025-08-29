@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.RadioStream;
 
@@ -14,6 +15,13 @@ public static class RadioStreamSettingsEndpoints
             return countries;
         }).WithName("List of countries from MyTuner");
 
+        app.MapGet("radio-stations-by-country",
+                async (IMediator mediator, [FromBody] MyTunerStationsRequest country) =>
+                {
+                    var stations = await mediator.Send(new GetMyTunerStationsRequest(country));
+                    return stations;
+                })
+            .WithName("List of stations by country sorted by rating");
 
         app.MapGet("radio-stations-by-button", async (SabaRadioButtons button, IMediator mediator) =>
         {

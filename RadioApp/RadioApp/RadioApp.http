@@ -32,6 +32,16 @@ Content-Type: application/json
 GET {{RadioApp_HostAddress}}/radio-countries-list
 
 ###
+GET {{RadioApp_HostAddress}}/radio-stations-by-country
+Accept: application/json
+Content-Type: application/json
+
+{
+    "country": "Germany",
+    "url": "https://mytuner-radio.com/radio/country/germany-stations/frequency/fm"
+}
+
+###
 GET {{RadioApp_HostAddress}}/radio-buttons
 
 ###
