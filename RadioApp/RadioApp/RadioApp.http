@@ -28,6 +28,10 @@ Content-Type: application/json
 # ------------
 
 ###
+
+GET {{RadioApp_HostAddress}}/radio-countries-list
+
+###
 GET {{RadioApp_HostAddress}}/radio-buttons
 
 ###

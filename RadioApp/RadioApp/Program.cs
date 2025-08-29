@@ -8,6 +8,7 @@ using RadioApp.Hardware.PiGpio;
 using RadioApp.Persistence;
 using RadioApp.PlayerProcessors;
 using RadioApp.RadioController;
+using RadioApp.RadioStreaming;
 using RadioApp.RadioStreamSettings;
 using RadioApp.SpotifySettings;
 using Serilog;
@@ -48,6 +49,8 @@ builder.Services.AddHttpClient();
 
 // Data Access
 builder.Services.AddDbContextFactory<Persistence>();
+
+RadioStreamingDiSetup.Setup(builder.Services);
 
 // MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(AppDomain.CurrentDomain.GetAssemblies()));

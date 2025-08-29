@@ -8,6 +8,13 @@ public static class RadioStreamSettingsEndpoints
 {
     public static void MapRadioStreamSettingsEndpoints(this WebApplication app)
     {
+        app.MapGet("radio-countries-list", async (IMediator mediator) =>
+        {
+            var countries = await mediator.Send(new GetMyTunerCountriesListRequest());
+            return countries;
+        }).WithName("List of countries from MyTuner");
+
+
         app.MapGet("radio-stations-by-button", async (SabaRadioButtons button, IMediator mediator) =>
         {
             var stationsList = await mediator.Send(new GetRadioStationsByButtonRequest(button));
@@ -28,15 +35,17 @@ public static class RadioStreamSettingsEndpoints
                 //     station.RadioLogoBase64 = $"data:image/{extension};base64,{imageBase64}";
                 // }
             }
+
             await mediator.Publish(new SaveRadioStationNotification(station));
             return station;
         }).WithName("SavesStationInfo");
-        
-        app.MapDelete("radio-stations-by-button", async (SabaRadioButtons button, int sabaFrequency, IMediator mediator) =>
-        {
-            await mediator.Publish(new DeleteRadioStationNotification(button, sabaFrequency));
-        }).WithName("DeleteStationInfo");
-        
+
+        app.MapDelete("radio-stations-by-button",
+            async (SabaRadioButtons button, int sabaFrequency, IMediator mediator) =>
+            {
+                await mediator.Publish(new DeleteRadioStationNotification(button, sabaFrequency));
+            }).WithName("DeleteStationInfo");
+
         app.MapGet("radio-buttons", () =>
         {
             SabaRadioButtonInfo[] buttonsToMap =

@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp.Hardware", "RadioA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp.Tests", "RadioApp.Tests\RadioApp.Tests.csproj", "{33C76B80-5658-41A2-A2D3-3FFAD711A21C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RadioApp.RadioStreaming", "RadioApp.RadioStreaming\RadioApp.RadioStreaming.csproj", "{228FDAD8-AEB8-4E88-A609-F55EC974DC0D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{33C76B80-5658-41A2-A2D3-3FFAD711A21C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{33C76B80-5658-41A2-A2D3-3FFAD711A21C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{33C76B80-5658-41A2-A2D3-3FFAD711A21C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{228FDAD8-AEB8-4E88-A609-F55EC974DC0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{228FDAD8-AEB8-4E88-A609-F55EC974DC0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{228FDAD8-AEB8-4E88-A609-F55EC974DC0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{228FDAD8-AEB8-4E88-A609-F55EC974DC0D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
