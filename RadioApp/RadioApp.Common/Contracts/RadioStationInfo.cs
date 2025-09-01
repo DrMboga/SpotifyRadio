@@ -14,6 +14,10 @@ public class RadioStationInfo
     /// </summary>
     public string DetailsUrl { get; set; } = string.Empty;
     /// <summary>
+    /// Radio station country
+    /// </summary>
+    public string Country { get; set; } = string.Empty;
+    /// <summary>
     /// Radio station region and frequency info
     /// </summary>
     public string? RegionInfo { get; set; }
