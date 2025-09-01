@@ -1,19 +1,26 @@
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using RadioApp.Common.Contracts;
+using RadioApp.Common.Messages.RadioStream;
 
 namespace RadioApp.RadioStreaming.WebScraper;
 
 public class MyTunerStationsScraper : MyTunerScraperBase
 {
     private readonly ILogger<MyTunerStationsScraper> _logger;
+    private readonly IMediator _mediator;
 
-    public MyTunerStationsScraper(ILogger<MyTunerStationsScraper> logger)
+    public MyTunerStationsScraper(ILogger<MyTunerStationsScraper> logger, IMediator mediator)
     {
         _logger = logger;
+        _mediator = mediator;
     }
 
-    public async Task<RadioStationInfo[]> GetStations(string country, string countryUrl)
+    /// <summary>
+    /// Gets a list of stations from MyTuner by country and saves the full list to the DB with empty station info
+    /// </summary>
+    public async Task StartCachingStations(string country, string countryUrl)
     {
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
@@ -24,24 +31,130 @@ public class MyTunerStationsScraper : MyTunerScraperBase
         {
             var stationsCatalog = await GetStationsList(country, countryUrl, page);
 
-            foreach (var station in stationsCatalog)
-            {
-                // Small, jittered delay to avoid hammering the site
-                await Task.Delay(Random.Shared.Next(600, 1200));
-                await ParseOneStationInfo(station, page);
-            }
-            // await ParseOneStationInfo(stationsCatalog[0], page);
-
-            return stationsCatalog;
+            _logger.LogDebug($"{stationsCatalog.Length} stations found");
+            await _mediator.Publish(new SaveStationsInfosNotification(stationsCatalog));
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Failed to get radio station list");
         }
-
-        return [];
     }
 
+    /// <summary>
+    /// Parses one station details (For background processing) 
+    /// </summary>
+    /// <param name="stationInfo"></param>
+    public async Task ParseOneStationInfo(RadioStationInfo stationInfo)
+    {
+        var stationInfoUrl = NormalizeUrl(stationInfo.DetailsUrl, "https://mytuner-radio.com");
+        
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        var browserContext = await GenerateBrowserContext(browser);
+        var page = await browserContext.NewPageAsync();
+
+        var foundStreamUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        EventHandler<IResponse> responseHandler = async (_, resp) =>
+        {
+            if (resp.LooksLikeAudio())
+            {
+                lock (foundStreamUrls) foundStreamUrls.Add(resp.Url);
+            }
+
+            await Task.CompletedTask;
+        };
+
+        // Page can start to play audio stream on load
+        page.Response += responseHandler;
+
+        try
+        {
+            // Navigate to page
+            await page.GotoAsync(stationInfoUrl,
+                new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
+            _logger.LogDebug($"Navigation start: '{stationInfoUrl}'");
+
+            // Parse page
+            var radioImageElement = await page.QuerySelectorAsync(".radio-image");
+            if (radioImageElement != null)
+            {
+                stationInfo.StationImageUrl = await radioImageElement.GetAttributeAsync("src") ??
+                                              await radioImageElement.GetAttributeAsync("data-src");
+            }
+
+            // Play
+            var stationPlayButton = await page.QuerySelectorAsync("#play-button");
+            if (stationPlayButton != null)
+            {
+                var playButtonStyle = await stationPlayButton.GetAttributeAsync("style");
+                // If style is "display: none;" then, pause button is shown that means that stream is already playing
+                if (playButtonStyle != null && !playButtonStyle.Contains("display: none;"))
+                {
+                    try
+                    {
+                        // Click to play, then stream URL should be caught in the Response handler
+                        await stationPlayButton.ClickAsync();
+                    }
+                    catch (TimeoutException exception)
+                    {
+                        _logger.LogError(exception, $"Failed to click play button '{stationInfoUrl}'");
+                    }
+                }
+            }
+
+            // Like/dislike
+            var likeButton = await page.QuerySelectorAsync("#like_button");
+            var dislikeButton = await page.QuerySelectorAsync("#dislike_button");
+            stationInfo.Likes = await GetSpanTextAsInt(likeButton);
+            stationInfo.Dislikes = await GetSpanTextAsInt(dislikeButton);
+
+            // Description
+            var descriptionElement = await page.QuerySelectorAsync(".description");
+            if (descriptionElement != null)
+            {
+                var pElement = await descriptionElement.QuerySelectorAsync("p");
+                if (pElement != null)
+                {
+                    stationInfo.StationDescription = await pElement.InnerTextAsync();
+                }
+            }
+
+            // Rating
+            var ratingElement = await page.QuerySelectorAsync("#yellow_stars");
+            stationInfo.Rating = await GetRatingInPercent(ratingElement);
+
+            // Station web page
+            var contactsElement = await page.QuerySelectorAsync(".contacts");
+            if (contactsElement != null)
+            {
+                var anchor = await contactsElement.QuerySelectorAsync("a");
+                if (anchor != null)
+                {
+                    stationInfo.StationWebPage = await anchor.GetAttributeAsync("href");
+                }
+            }
+
+
+            // Wait for network requests to grab an audio stream if page starts to play radio on load
+            await page.WaitForTimeoutAsync(7000);
+            stationInfo.StationStreamUrl = await foundStreamUrls.PickPreferredStreamUrl();
+            
+            // TODO: Save one station info to DB With StationProcessed status = true
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Failed to get radio station info: '{stationInfoUrl}'");
+        }
+        finally
+        {
+            page.Response -= responseHandler;
+        }
+    }
+
+    /// <summary>
+    /// Parses a stations list by country
+    /// </summary>
     private async Task<RadioStationInfo[]> GetStationsList(string country, string countryUrl,
         IPage page)
     {
@@ -116,86 +229,6 @@ public class MyTunerStationsScraper : MyTunerScraperBase
         }
 
         return stationsCatalog.Values.ToArray();
-    }
-
-    private async Task ParseOneStationInfo(RadioStationInfo stationInfo, IPage page)
-    {
-        var stationInfoUrl = NormalizeUrl(stationInfo.DetailsUrl, "https://mytuner-radio.com");
-        
-        var foundStreamUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        
-        EventHandler<IResponse> responseHandler = async (_, resp) =>
-        {
-            if (resp.LooksLikeAudio())
-            {
-                lock (foundStreamUrls) foundStreamUrls.Add(resp.Url);
-            }
-
-            await Task.CompletedTask;
-        };
-
-        // Page can start to play audio stream on load
-        page.Response += responseHandler;
-
-        // Navigate to page
-        await page.GotoAsync(stationInfoUrl,
-            new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
-        _logger.LogDebug($"Navigation start: '{stationInfoUrl}'");
-
-        // Parse page
-        var radioImageElement = await page.QuerySelectorAsync(".radio-image");
-        if (radioImageElement != null)
-        {
-            stationInfo.StationImageUrl = await radioImageElement.GetAttributeAsync("src") ??
-                                          await radioImageElement.GetAttributeAsync("data-src");
-        }
-
-        // Play
-        var stationPlayButton = await page.QuerySelectorAsync("#play-button");
-        if (stationPlayButton != null)
-        {
-            // Click to play, then stream URL should be caught in the Response handler
-            await stationPlayButton.ClickAsync();
-        }
-
-        // Like/dislike
-        var likeButton = await page.QuerySelectorAsync("#like_button");
-        var dislikeButton = await page.QuerySelectorAsync("#dislike_button");
-        stationInfo.Likes = await GetSpanTextAsInt(likeButton);
-        stationInfo.Dislikes = await GetSpanTextAsInt(dislikeButton);
-
-        // Description
-        var descriptionElement = await page.QuerySelectorAsync(".description");
-        if (descriptionElement != null)
-        {
-            var pElement = await descriptionElement.QuerySelectorAsync("p");
-            if (pElement != null)
-            {
-                stationInfo.StationDescription = await pElement.InnerTextAsync();
-            }
-        }
-
-        // Rating
-        var ratingElement = await page.QuerySelectorAsync("#yellow_stars");
-        stationInfo.Rating = await GetRatingInPercent(ratingElement);
-
-        // Station web page
-        var contactsElement = await page.QuerySelectorAsync(".contacts");
-        if (contactsElement != null)
-        {
-            var anchor = await contactsElement.QuerySelectorAsync("a");
-            if (anchor != null)
-            {
-                stationInfo.StationWebPage = await anchor.GetAttributeAsync("href");
-            }
-        }
-
-
-        // Wait for network requests to grab an audio stream if page starts to play radio on load
-        await page.WaitForTimeoutAsync(7000);
-        stationInfo.StationStreamUrl = await foundStreamUrls.PickPreferredStreamUrl();
-
-        page.Response -= responseHandler;
     }
 
     private static string NormalizeUrl(string url, string baseUrl)

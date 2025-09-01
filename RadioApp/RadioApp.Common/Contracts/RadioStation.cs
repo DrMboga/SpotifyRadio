@@ -6,11 +6,11 @@
 public class RadioStation
 {
     public SabaRadioButtons Button { get; set; }
-    public string Region { get; set; } = string.Empty;
+    public string StationDetailsUrl { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public int SabaFrequency { get; set; }
     public string? StreamUrl { get; set; } = string.Empty;
     public string? RadioLogoBase64 { get; set; }
+    public string? Country { get; set; }
+    public string? CountryFlagBase64 { get; set; }
 }
-
-// ToDo: Add Country and CountryFlagBase64

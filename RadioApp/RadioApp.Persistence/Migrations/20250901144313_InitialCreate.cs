@@ -11,17 +11,16 @@ namespace RadioApp.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "RadioRegion",
+                name: "Countries",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    SabaRadioButton = table.Column<short>(type: "INTEGER", nullable: false),
-                    Region = table.Column<string>(type: "TEXT", nullable: false)
+                    Country = table.Column<string>(type: "TEXT", nullable: false),
+                    FlagImageUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    DetailsUrl = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RadioRegion", x => x.Id);
+                    table.PrimaryKey("PK_Countries", x => x.Country);
                 });
 
             migrationBuilder.CreateTable(
@@ -31,15 +30,39 @@ namespace RadioApp.Persistence.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Button = table.Column<short>(type: "INTEGER", nullable: false),
-                    Region = table.Column<string>(type: "TEXT", nullable: false),
+                    StationDetailsUrl = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     SabaFrequency = table.Column<int>(type: "INTEGER", nullable: false),
                     StreamUrl = table.Column<string>(type: "TEXT", nullable: true),
-                    RadioLogoBase64 = table.Column<string>(type: "TEXT", nullable: true)
+                    RadioLogoBase64 = table.Column<string>(type: "TEXT", nullable: true),
+                    Country = table.Column<string>(type: "TEXT", nullable: true),
+                    CountryFlagBase64 = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RadioStation", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RadioStationInfos",
+                columns: table => new
+                {
+                    DetailsUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Country = table.Column<string>(type: "TEXT", nullable: false),
+                    RegionInfo = table.Column<string>(type: "TEXT", nullable: true),
+                    Rating = table.Column<int>(type: "INTEGER", nullable: false),
+                    Likes = table.Column<int>(type: "INTEGER", nullable: false),
+                    Dislikes = table.Column<int>(type: "INTEGER", nullable: false),
+                    StationDescription = table.Column<string>(type: "TEXT", nullable: false),
+                    StationWebPage = table.Column<string>(type: "TEXT", nullable: true),
+                    StationImageUrl = table.Column<string>(type: "TEXT", nullable: true),
+                    StationStreamUrl = table.Column<string>(type: "TEXT", nullable: true),
+                    StationProcessed = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RadioStationInfos", x => x.DetailsUrl);
                 });
 
             migrationBuilder.CreateTable(
@@ -61,25 +84,27 @@ namespace RadioApp.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_RadioRegion_Region",
-                table: "RadioRegion",
-                column: "Region",
-                unique: true);
+                name: "IX_RadioStation_StationDetailsUrl",
+                table: "RadioStation",
+                column: "StationDetailsUrl");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RadioStation_Region",
-                table: "RadioStation",
-                column: "Region");
+                name: "IX_RadioStationInfos_Country",
+                table: "RadioStationInfos",
+                column: "Country");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "RadioRegion");
+                name: "Countries");
 
             migrationBuilder.DropTable(
                 name: "RadioStation");
+
+            migrationBuilder.DropTable(
+                name: "RadioStationInfos");
 
             migrationBuilder.DropTable(
                 name: "SpotifySettings");

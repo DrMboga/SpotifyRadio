@@ -10,8 +10,9 @@ public class Persistence: DbContext
 {
     private static string DbPath => "RadioSettings.db";
 
-    [Obsolete("Delete this entity when restructure database")]
-    public DbSet<RadioRegionEntity> RadioRegion { get; set; }
+
+    public DbSet<MyTunerCountryInfo> Countries { get; set; }
+    public DbSet<RadioStationInfo> RadioStationInfos { get; set; }
     public DbSet<RadioStationEntity> RadioStation { get; set; }
     public DbSet<SpotifySettings> SpotifySettings { get; set; }
 
@@ -25,13 +26,13 @@ public class Persistence: DbContext
         modelBuilder.Entity<SpotifySettings>()
             .HasKey(s => s.ClientId);
         
-        modelBuilder.Entity<RadioRegionEntity>()
-            .Property(r => r.Id)
-            .ValueGeneratedOnAdd();
-        modelBuilder.Entity<RadioRegionEntity>()
-            .HasKey(r => r.Id);
-        modelBuilder.Entity<RadioRegionEntity>()
-            .HasIndex(r => r.Region).IsUnique();
+        modelBuilder.Entity<MyTunerCountryInfo>()
+            .HasKey(r => r.Country);
+        
+        modelBuilder.Entity<RadioStationInfo>()
+            .HasKey(r => r.DetailsUrl);
+        modelBuilder.Entity<RadioStationInfo>()
+            .HasIndex(r => r.Country);
 
         modelBuilder.Entity<RadioStationEntity>()
             .Property(s => s.Id)
@@ -39,7 +40,7 @@ public class Persistence: DbContext
         modelBuilder.Entity<RadioStationEntity>()
             .HasKey(s => s.Id);
         modelBuilder.Entity<RadioStationEntity>()
-            .HasIndex(s => s.Region).IsUnique(false);
+            .HasIndex(s => s.StationDetailsUrl).IsUnique(false);
     }
 }
 

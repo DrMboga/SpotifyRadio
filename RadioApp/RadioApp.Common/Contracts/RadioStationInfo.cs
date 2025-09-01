@@ -59,4 +59,9 @@ public class RadioStationInfo
     /// Music stream URL
     /// </summary>
     public string? StationStreamUrl { get; set; }
+
+    /// <summary>
+    /// Flag for background job
+    /// </summary>
+    public bool StationProcessed { get; set; }
 }

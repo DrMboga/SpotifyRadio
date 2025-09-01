@@ -7,12 +7,17 @@ using RadioApp.Persistence.Model;
 
 namespace RadioApp.Persistence;
 
-public class DataAccessService: 
+public class DataAccessService :
     IRequestHandler<GetRadioStationsByButtonRequest, RadioStation[]>,
     INotificationHandler<SaveRadioStationNotification>,
     IRequestHandler<GetSpotifySettingsRequest, SpotifySettings>,
     INotificationHandler<SetSpotifySettingsNotification>,
-    INotificationHandler<DeleteRadioStationNotification>
+    INotificationHandler<DeleteRadioStationNotification>,
+    IRequestHandler<GetCountriesListRequest, MyTunerCountryInfo[]>,
+    INotificationHandler<SaveCountriesNotification>,
+    IRequestHandler<GetStationsInfosRequest, RadioStationInfo[]>,
+    INotificationHandler<SaveStationsInfosNotification>,
+    INotificationHandler<CleanUpMuTunerCacheNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -21,10 +26,12 @@ public class DataAccessService:
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<RadioStation[]> Handle(GetRadioStationsByButtonRequest request, CancellationToken cancellationToken)
+    public async Task<RadioStation[]> Handle(GetRadioStationsByButtonRequest request,
+        CancellationToken cancellationToken)
     {
         await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var stations = await dbContext.RadioStation.AsNoTracking().Where(s => s.Button == request.Button).ToArrayAsync(cancellationToken);
+        var stations = await dbContext.RadioStation.AsNoTracking().Where(s => s.Button == request.Button)
+            .ToArrayAsync(cancellationToken);
         return stations.ToArray<RadioStation>();
     }
 
@@ -41,13 +48,16 @@ public class DataAccessService:
         }
         else
         {
-            existingStation.Region = notification.Station.Region;
+            existingStation.StationDetailsUrl = notification.Station.StationDetailsUrl;
+            existingStation.Country = notification.Station.Country;
+            existingStation.CountryFlagBase64 = notification.Station.CountryFlagBase64;
             existingStation.SabaFrequency = notification.Station.SabaFrequency;
             existingStation.Button = notification.Station.Button;
             existingStation.Name = notification.Station.Name;
             existingStation.RadioLogoBase64 = notification.Station.RadioLogoBase64;
             existingStation.StreamUrl = notification.Station.StreamUrl;
         }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -77,13 +87,15 @@ public class DataAccessService:
             settings.DeviceName = notification.SpotifySettings.DeviceName;
             settings.PlaylistName = notification.SpotifySettings.PlaylistName;
         }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
-    
+
     public async Task Handle(DeleteRadioStationNotification notification, CancellationToken cancellationToken)
     {
         await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
-        var station = await dbContext.RadioStation.Where(s => s.Button == notification.Button && s.SabaFrequency == notification.SabaFrequency)
+        var station = await dbContext.RadioStation.Where(s =>
+                s.Button == notification.Button && s.SabaFrequency == notification.SabaFrequency)
             .FirstOrDefaultAsync(cancellationToken);
         if (station is not null)
         {
@@ -92,7 +104,62 @@ public class DataAccessService:
         }
     }
 
-    
+    public async Task<MyTunerCountryInfo[]> Handle(GetCountriesListRequest request, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        var countries = dbContext.Countries.AsNoTracking().ToArray();
+        return countries ?? [];
+    }
+
+    public async Task Handle(SaveCountriesNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        dbContext.Countries.RemoveRange(dbContext.Countries);
+
+        await dbContext.Countries.AddRangeAsync(notification.Countries);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<RadioStationInfo[]> Handle(GetStationsInfosRequest request, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        var stations = await dbContext.RadioStationInfos.AsNoTracking()
+            .Where(s => s.Country == request.Country && s.StationProcessed).ToArrayAsync(cancellationToken);
+        return stations ?? [];
+    }
+
+    public async Task Handle(SaveStationsInfosNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var country = notification.Stations.FirstOrDefault()?.Country;
+        if (country == null)
+        {
+            return;
+        }
+
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"DELETE FROM RadioStationInfos WHERE Country = {country}", cancellationToken: cancellationToken);
+
+        await dbContext.RadioStationInfos.AddRangeAsync(notification.Stations, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+
+    public async Task Handle(CleanUpMuTunerCacheNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        dbContext.Countries.RemoveRange(dbContext.Countries);
+        dbContext.RadioStationInfos.RemoveRange(dbContext.RadioStationInfos);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+
     private RadioStationEntity ConvertToStationEntity(RadioStation station)
     {
         // TODO: Use AutoMapper
@@ -100,10 +167,12 @@ public class DataAccessService:
         {
             Button = station.Button,
             SabaFrequency = station.SabaFrequency,
-            Region = station.Region,
+            StationDetailsUrl = station.StationDetailsUrl,
             Name = station.Name,
             RadioLogoBase64 = station.RadioLogoBase64,
-            StreamUrl = station.StreamUrl
+            StreamUrl = station.StreamUrl,
+            Country = station.Country,
+            CountryFlagBase64 = station.CountryFlagBase64,
         };
     }
 }

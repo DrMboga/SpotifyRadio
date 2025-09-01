@@ -11,17 +11,44 @@ public static class RadioStreamSettingsEndpoints
     {
         app.MapGet("radio-countries-list", async (IMediator mediator) =>
         {
+            var cachedCountries = await mediator.Send(new GetCountriesListRequest());
+
+            if (cachedCountries.Length > 0)
+            {
+                return cachedCountries;
+            }
+
             var countries = await mediator.Send(new GetMyTunerCountriesListRequest());
+
+            await mediator.Publish(new SaveCountriesNotification(countries));
             return countries;
         }).WithName("List of countries from MyTuner");
 
         app.MapGet("radio-stations-by-country",
-                async (IMediator mediator, [FromBody] MyTunerStationsRequest country) =>
+                async (IMediator mediator, [FromQuery] string country) =>
                 {
-                    var stations = await mediator.Send(new GetMyTunerStationsRequest(country));
-                    return stations;
+                    var cachedStations = await mediator.Send(new GetStationsInfosRequest(country));
+                    return cachedStations;
                 })
             .WithName("List of stations by country sorted by rating");
+
+        app.MapPost("radio-stations-cache-by-country",
+                async (IMediator mediator, [FromBody] MyTunerStationsRequest country) =>
+                {
+                    await mediator.Publish(new StartCacheMyTunerStationsByCountryNotification(country));
+                })
+            .WithName("Starts caching all stations by country from MyTuner to the local DB");
+
+        app.MapGet("radio-stations-by-country-status",
+                async (IMediator mediator, [FromQuery] string country) =>
+                {
+                    return new MyTunerCachingStatus { TotalStations = 429, ProcessedCount = 12 };
+                })
+            .WithName("Returns status of cashing");
+
+        app.MapDelete("radio-stations-cache",
+                async (IMediator mediator) => { await mediator.Publish(new CleanUpMuTunerCacheNotification()); })
+            .WithName("Delete MyTuner Cache");
 
         app.MapGet("radio-stations-by-button", async (SabaRadioButtons button, IMediator mediator) =>
         {
