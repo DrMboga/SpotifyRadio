@@ -39,10 +39,11 @@ public static class RadioStreamSettingsEndpoints
                 })
             .WithName("Starts caching all stations by country from MyTuner to the local DB");
 
-        app.MapGet("radio-stations-by-country-status",
+        app.MapGet("radio-stations-cache-by-country-status",
                 async (IMediator mediator, [FromQuery] string country) =>
                 {
-                    return new MyTunerCachingStatus { TotalStations = 429, ProcessedCount = 12 };
+                    var status = await mediator.Send(new GetRadioStationsCachingStatusRequest(country));
+                    return status;
                 })
             .WithName("Returns status of cashing");
 

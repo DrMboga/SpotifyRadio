@@ -45,7 +45,7 @@ Content-Type: application/json
 }
 
 ###
-GET {{RadioApp_HostAddress}}/radio-stations-by-country-status?country=Germany
+GET {{RadioApp_HostAddress}}/radio-stations-cache-by-country-status?country=Germany
 
 ###
 DELETE {{RadioApp_HostAddress}}/radio-stations-cache

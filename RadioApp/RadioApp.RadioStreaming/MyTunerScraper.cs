@@ -8,7 +8,8 @@ namespace RadioApp.RadioStreaming;
 
 public class MyTunerScraper: 
     IRequestHandler<GetMyTunerCountriesListRequest, MyTunerCountryInfo[]>,
-    INotificationHandler<StartCacheMyTunerStationsByCountryNotification>
+    INotificationHandler<StartCacheMyTunerStationsByCountryNotification>,
+    IRequestHandler<ParseRadioStationRequest, RadioStationInfo>
 {
     private readonly ILogger<MyTunerScraper> _logger;
     private readonly MyTunerCountriesScrapper  _myTunerCountriesScrapper;
@@ -30,5 +31,11 @@ public class MyTunerScraper:
     {
         _logger.LogDebug($"Radio station caching for '{notification.CountryInfo.Country}': '{notification.CountryInfo.Url}'");
         return _myTunerStationsScraper.StartCachingStations(notification.CountryInfo.Country, notification.CountryInfo.Url);
+    }
+
+    public async Task<RadioStationInfo> Handle(ParseRadioStationRequest request, CancellationToken cancellationToken)
+    {
+        await _myTunerStationsScraper.ParseOneStationInfo(request.RadioStation);
+        return request.RadioStation;
     }
 }

@@ -17,7 +17,10 @@ public class DataAccessService :
     INotificationHandler<SaveCountriesNotification>,
     IRequestHandler<GetStationsInfosRequest, RadioStationInfo[]>,
     INotificationHandler<SaveStationsInfosNotification>,
-    INotificationHandler<CleanUpMuTunerCacheNotification>
+    INotificationHandler<CleanUpMuTunerCacheNotification>,
+    IRequestHandler<GetRadioStationsForCachingRequest, RadioStationInfo[]>,
+    IRequestHandler<GetRadioStationsCachingStatusRequest, MyTunerCachingStatus>,
+    INotificationHandler<UpdateRadioStationInfoNotification>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -159,6 +162,53 @@ public class DataAccessService :
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+
+    public async Task<RadioStationInfo[]> Handle(GetRadioStationsForCachingRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var stations = await dbContext.RadioStationInfos.AsNoTracking()
+            .Where(s => !s.StationProcessed).ToArrayAsync(cancellationToken);
+        return stations ?? [];
+    }
+
+    public async Task<MyTunerCachingStatus> Handle(GetRadioStationsCachingStatusRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var stationsInfo = await dbContext.RadioStationInfos.AsNoTracking().Where(s => s.Country == request.Country)
+            .Select(s => s.StationProcessed).ToArrayAsync(cancellationToken);
+        return new MyTunerCachingStatus
+        {
+            TotalStations = stationsInfo.Length,
+            ProcessedCount = stationsInfo.Count(processed => processed),
+        };
+    }
+
+
+    public async Task Handle(UpdateRadioStationInfoNotification notification, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        var stationFromDb =
+            await dbContext.RadioStationInfos.Where(s => s.DetailsUrl == notification.StationInfo.DetailsUrl)
+                .FirstOrDefaultAsync(cancellationToken);
+        if (stationFromDb == null)
+        {
+            return;
+        }
+        
+        stationFromDb.Rating = notification.StationInfo.Rating;
+        stationFromDb.Likes = notification.StationInfo.Likes;
+        stationFromDb.Dislikes = notification.StationInfo.Dislikes;
+        stationFromDb.StationDescription = notification.StationInfo.StationDescription;
+        stationFromDb.StationWebPage = notification.StationInfo.StationWebPage;
+        stationFromDb.StationImageUrl = notification.StationInfo.StationImageUrl;
+        stationFromDb.StationStreamUrl = notification.StationInfo.StationStreamUrl;
+        stationFromDb.StationProcessed = notification.StationInfo.StationProcessed;
+        
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 
     private RadioStationEntity ConvertToStationEntity(RadioStation station)
     {

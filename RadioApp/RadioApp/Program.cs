@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using RadioApp.Common.Hardware;
+using RadioApp.Common.MyTunerScraper;
 using RadioApp.Common.PlayerProcessor;
 using RadioApp.Hardware;
 using RadioApp.Hardware.Mock;
 using RadioApp.Hardware.PiGpio;
+using RadioApp.MyTunerBackgroundScraper;
 using RadioApp.Persistence;
 using RadioApp.PlayerProcessors;
 using RadioApp.RadioController;
@@ -78,6 +80,10 @@ builder.Services.AddSingleton<RadioStatus>();
 
 // Background worker with IO listening logic
 builder.Services.AddHostedService<RadioControllerService>();
+
+// Background worker for MyTuner radio stations info scraping
+builder.Services.AddSingleton<MyTunerCachingDispatcher>();
+builder.Services.AddHostedService<MyTunerCachingBackgroundService>();
 
 // Player processor factory
 builder.Services.AddTransient<IdlePlayerProcessor>();

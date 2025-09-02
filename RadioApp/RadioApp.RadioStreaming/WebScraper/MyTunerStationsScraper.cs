@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.RadioStream;
+using RadioApp.Common.MyTunerScraper;
 
 namespace RadioApp.RadioStreaming.WebScraper;
 
@@ -10,11 +11,13 @@ public class MyTunerStationsScraper : MyTunerScraperBase
 {
     private readonly ILogger<MyTunerStationsScraper> _logger;
     private readonly IMediator _mediator;
+    private readonly MyTunerCachingDispatcher _myTunerCachingDispatcher;
 
-    public MyTunerStationsScraper(ILogger<MyTunerStationsScraper> logger, IMediator mediator)
+    public MyTunerStationsScraper(ILogger<MyTunerStationsScraper> logger, IMediator mediator, MyTunerCachingDispatcher myTunerCachingDispatcher)
     {
         _logger = logger;
         _mediator = mediator;
+        _myTunerCachingDispatcher = myTunerCachingDispatcher;
     }
 
     /// <summary>
@@ -33,6 +36,7 @@ public class MyTunerStationsScraper : MyTunerScraperBase
 
             _logger.LogDebug($"{stationsCatalog.Length} stations found");
             await _mediator.Publish(new SaveStationsInfosNotification(stationsCatalog));
+            _myTunerCachingDispatcher.SignalForStartProcessing();
         }
         catch (Exception e)
         {
@@ -59,7 +63,10 @@ public class MyTunerStationsScraper : MyTunerScraperBase
         {
             if (resp.LooksLikeAudio())
             {
-                lock (foundStreamUrls) foundStreamUrls.Add(resp.Url);
+                lock (foundStreamUrls)
+                {
+                    foundStreamUrls.Add(resp.Url);
+                }
             }
 
             await Task.CompletedTask;
@@ -89,7 +96,7 @@ public class MyTunerStationsScraper : MyTunerScraperBase
             {
                 var playButtonStyle = await stationPlayButton.GetAttributeAsync("style");
                 // If style is "display: none;" then, pause button is shown that means that stream is already playing
-                if (playButtonStyle != null && !playButtonStyle.Contains("display: none;"))
+                if (string.IsNullOrEmpty(playButtonStyle) || !playButtonStyle.Contains("display: none;"))
                 {
                     try
                     {
@@ -118,6 +125,10 @@ public class MyTunerStationsScraper : MyTunerScraperBase
                 {
                     stationInfo.StationDescription = await pElement.InnerTextAsync();
                 }
+                else
+                {
+                    stationInfo.StationDescription = await descriptionElement.InnerTextAsync();
+                }
             }
 
             // Rating
@@ -139,8 +150,10 @@ public class MyTunerStationsScraper : MyTunerScraperBase
             // Wait for network requests to grab an audio stream if page starts to play radio on load
             await page.WaitForTimeoutAsync(7000);
             stationInfo.StationStreamUrl = await foundStreamUrls.PickPreferredStreamUrl();
-            
-            // TODO: Save one station info to DB With StationProcessed status = true
+            if (string.IsNullOrEmpty(stationInfo.StationStreamUrl))
+            {
+                _logger.LogWarning($"Not found audio stream for '{stationInfoUrl}'");
+            }
         }
         catch (Exception e)
         {
