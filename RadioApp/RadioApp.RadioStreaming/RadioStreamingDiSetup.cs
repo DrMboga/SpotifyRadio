@@ -9,5 +9,6 @@ public static class RadioStreamingDiSetup
     {
         services.AddTransient<MyTunerCountriesScrapper>();
         services.AddTransient<MyTunerStationsScraper>();
+        services.AddTransient<MyTunerStationInfoScraper>();
     }
 }
