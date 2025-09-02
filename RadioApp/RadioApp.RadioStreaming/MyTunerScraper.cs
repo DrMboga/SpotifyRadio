@@ -42,6 +42,11 @@ public class MyTunerScraper :
     public async Task<RadioStationInfo> Handle(ParseRadioStationRequest request, CancellationToken cancellationToken)
     {
         await _myTunerStationInfoScraper.ParseOneStationInfo(request.RadioStation);
+        if (string.IsNullOrEmpty(request.RadioStation.StationStreamUrl))
+        {
+            // Sometimes MyTuner opens a stream in a popup window with some changed URL. Here is another try to get stream URL opening a popup URL.
+            await _myTunerStationInfoScraper.ParseOneStationInfo(request.RadioStation, true);
+        }
         return request.RadioStation;
     }
 }

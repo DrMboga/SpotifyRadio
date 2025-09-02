@@ -17,12 +17,23 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
     /// Parses one station details (For background processing) 
     /// </summary>
     /// <param name="stationInfo"></param>
-    public async Task ParseOneStationInfo(RadioStationInfo stationInfo)
+    /// <param name="embed"></param>
+    public async Task ParseOneStationInfo(RadioStationInfo stationInfo, bool embed = false)
     {
-        var stationInfoUrl = NormalizeUrl(stationInfo.DetailsUrl, "https://mytuner-radio.com");
+        var stationInfoUrl = embed
+            ? BuildEmbedUrl(stationInfo.DetailsUrl, "http://e.mytuner-radio.com/embed")
+            : NormalizeUrl(stationInfo.DetailsUrl, "https://mytuner-radio.com");
 
         using var playwright = await Playwright.CreateAsync();
-        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var browser = await playwright.Chromium.LaunchAsync(new()
+        {
+            Headless = true,
+            Args = new[]
+            {
+                "--disable-popup-blocking",
+                "--autoplay-policy=no-user-gesture-required"
+            }
+        });
         var browserContext = await GenerateBrowserContext(browser);
         var page = await browserContext.NewPageAsync();
 
@@ -51,20 +62,26 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
                 new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
             _logger.LogDebug($"Navigation start: '{stationInfoUrl}'");
 
+            await TryAcceptConsent(page);
+
             // Play
             await ClickPlayButton(page, stationInfoUrl);
-            
+
             // Parse page
-            stationInfo.StationImageUrl = await page.ParseStationImage();
-            stationInfo.Likes = await page.GetLikesOrDislikes("#like_button");
-            stationInfo.Dislikes = await page.GetLikesOrDislikes("#dislike_button");
-            stationInfo.StationDescription = await page.ParseDescription();
-            stationInfo.Rating = await page.GetRatingInPercent();
-            stationInfo.StationWebPage = await page.ParseStationWebPage();
+            if (!embed)
+            {
+                stationInfo.StationImageUrl = await page.ParseStationImage();
+                stationInfo.Likes = await page.GetLikesOrDislikes("#like_button");
+                stationInfo.Dislikes = await page.GetLikesOrDislikes("#dislike_button");
+                stationInfo.StationDescription = await page.ParseDescription();
+                stationInfo.Rating = await page.GetRatingInPercent();
+                stationInfo.StationWebPage = await page.ParseStationWebPage();
+            }
 
             // Wait for network requests to grab an audio stream if page starts to play radio on load
-            await page.WaitForTimeoutAsync(7000);
+            await page.WaitForTimeoutAsync(3000);
             stationInfo.StationStreamUrl = await foundStreamUrls.PickPreferredStreamUrl();
+
             if (string.IsNullOrEmpty(stationInfo.StationStreamUrl))
             {
                 _logger.LogWarning($"Not found audio stream for '{stationInfoUrl}'");
@@ -77,6 +94,27 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
         finally
         {
             page.Response -= responseHandler;
+        }
+    }
+
+    private async Task TryAcceptConsent(IPage page)
+    {
+        var consentRoot = page.Locator("#qc-cmp2-ui");
+        if (await consentRoot.IsVisibleAsync(new() { Timeout = 1000 }))
+        {
+            _logger.LogInformation("Got consent response");
+            var btn = page.GetByRole(AriaRole.Button, new()
+            {
+                Name = "AGREE"
+            });
+
+            if (await btn.IsVisibleAsync())
+            {
+                _logger.LogInformation("Agree button is visible");
+                await btn.ScrollIntoViewIfNeededAsync();
+                await btn.ClickAsync(new() { Timeout = 15000 });
+                await consentRoot.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 15000 });
+            }
         }
     }
 
@@ -101,7 +139,7 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
             }
         }
     }
-    
+
     /// <summary>
     /// Checks if URL is relative, adds a base address
     /// </summary>
@@ -112,4 +150,16 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
 
         return new Uri(new Uri(baseUrl), url).ToString();
     }
+
+    private static string BuildEmbedUrl(string relativeUrl, string baseUrl)
+    {
+        var slug = relativeUrl.TrimEnd('/').Split('/').Last();
+        return $"{baseUrl}/{slug}";
+    }
 }
+
+/*
+ * <button mode="primary" size="large" class=" css-47sehv"><span>AGREE</span></button>
+ *
+ * http://e.mytuner-radio.com/embed/1046-rtl-die-besten-neuen-hits-444306
+ */
