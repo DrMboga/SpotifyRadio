@@ -31,12 +31,25 @@
   <div class="top-row mat-elevation-z8">
     <div class="top-row-item">
       <mat-form-field>
-        <mat-select placeholder="Country">
-          <!--        [(ngModel)]="selectedRegion"-->
-          <!--        @for (region of regionsList; track region) {-->
-          <!--          <mat-option [value]="region">{{ region }}</mat-option>-->
-          <!--          <mat-divider></mat-divider>-->
-          <!--        }-->
+        <mat-select placeholder="Country" [(ngModel)]="selectedCountry">
+          <mat-select-trigger>
+            @if (selectedCountry(); as sc) {
+              <div class="country-item">
+                <img [src]="selectedCountryFlag()" [alt]="sc" class="flag-image" />
+                {{ sc.country }}
+              </div>
+            }
+          </mat-select-trigger>
+          @if (countries(); as countriesList) {
+            @for (country of countriesList; track country.country) {
+              <mat-option [value]="country">
+                <div class="country-item">
+                  <img [src]="country.flagImageUrl" [alt]="country.country" class="flag-image" />
+                  {{ country.country }}
+                </div>
+              </mat-option>
+            }
+          }
         </mat-select>
       </mat-form-field>
     </div>

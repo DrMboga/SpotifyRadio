@@ -5,7 +5,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
 import { MOCK_SPOTIFY_SETTINGS } from '../mock/spotify-mock';
-import { MOCK_RADIO_BUTTONS_LIST, MOCK_RADIO_CHANNELS } from '../mock/radio-mock';
+import {
+  MOCK_RADIO_BUTTONS_LIST,
+  MOCK_RADIO_CHANNELS,
+  MOCK_RADIO_COUNTRIES,
+} from '../mock/radio-mock';
 
 // https://angular.dev/guide/http/testing
 describe('BackendService', () => {
@@ -115,6 +119,19 @@ describe('BackendService', () => {
     pendingRequest.flush('OK');
 
     expect(await responsePromise).toBe(void 0);
+
+    httpTesting.verify();
+  });
+
+  it('should read radio countries', async () => {
+    const radioCountriesPromise = firstValueFrom(service.getRadioCountries());
+    const pendingRequest = httpTesting.expectOne(`${baseUrl}/radio-countries-list`);
+
+    expect(pendingRequest.request.method).toBe('GET');
+
+    pendingRequest.flush(MOCK_RADIO_COUNTRIES);
+
+    expect(await radioCountriesPromise).toBe(MOCK_RADIO_COUNTRIES);
 
     httpTesting.verify();
   });

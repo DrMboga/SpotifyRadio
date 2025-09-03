@@ -7,18 +7,21 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { RadioChannel } from '../model/radio-channel';
+import { RadioCountry } from '../model/radio-country';
 
 const SABA_MIN_FREQUENCY = 87;
 const SABA_MAX_FREQUENCY = 105;
 
 type RadioSettingsState = {
   radioButtonsList: RadioButtonInfo[];
+  countries: RadioCountry[];
   sabaStationsList: number[]; //87-105 MHz
   sabaRadioChannels: RadioChannel[];
 };
 
 const initialState: RadioSettingsState = {
   radioButtonsList: [],
+  countries: [],
   sabaStationsList: [],
   sabaRadioChannels: [],
 };
@@ -38,6 +41,12 @@ export const RadioStore = signalStore(
         .pipe(takeUntilDestroyed())
         .subscribe(radioButtonsList => {
           patchState(store, { radioButtonsList });
+        });
+      backend
+        .getRadioCountries()
+        .pipe(takeUntilDestroyed())
+        .subscribe(countries => {
+          patchState(store, { countries });
         });
     },
   }),

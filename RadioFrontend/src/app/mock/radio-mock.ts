@@ -1,5 +1,6 @@
 import { RadioChannel } from '../model/radio-channel';
 import { RadioButtonInfo } from '../model/radio-button-info';
+import { RadioCountry } from '../model/radio-country';
 
 export const MOCK_RADIO_CHANNELS_LIST: RadioChannel[] = [
   {
@@ -48,6 +49,19 @@ export const MOCK_RADIO_BUTTONS_LIST: RadioButtonInfo[] = [
     button: 4,
     buttonLabel: 'U',
     buttonDescription: 'FM waves button which has an U sign on a SABA panel',
+  },
+];
+
+export const MOCK_RADIO_COUNTRIES: RadioCountry[] = [
+  {
+    country: 'Germany',
+    flagImageUrl: 'https://static.mytuner.mobi/media/countries/de.png',
+    detailsUrl: 'https://mytuner-radio.com/radio/country/germany-stations/frequency/fm',
+  },
+  {
+    country: 'Netherlands',
+    flagImageUrl: 'https://static.mytuner.mobi/media/countries/nl.png',
+    detailsUrl: 'https://mytuner-radio.com/radio/country/netherlands-stations/frequency/fm',
   },
 ];
 

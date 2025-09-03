@@ -3,14 +3,21 @@ import { of, Subject } from 'rxjs';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { BackendService } from '../services/backend.service';
 import { RadioStore } from './radio.store';
-import { MOCK_RADIO_BUTTONS_LIST, MOCK_RADIO_CHANNELS } from '../mock/radio-mock';
+import {
+  MOCK_RADIO_BUTTONS_LIST,
+  MOCK_RADIO_CHANNELS,
+  MOCK_RADIO_COUNTRIES,
+} from '../mock/radio-mock';
 import { RadioChannel } from '../model/radio-channel';
+import { signal } from '@angular/core';
+import { RadioCountry } from '../model/radio-country';
 
 describe('RadioStore', () => {
   let store: any;
   let backend = {
     readRadioButtons: jest.fn().mockReturnValue(of(MOCK_RADIO_BUTTONS_LIST)),
     getSabaChannels: jest.fn().mockReturnValue(of(MOCK_RADIO_CHANNELS)),
+    getRadioCountries: jest.fn().mockReturnValue(of(MOCK_RADIO_COUNTRIES)),
     // @ts-ignore
     setSabaChannel: jest.fn().mockImplementation((channel: RadioChannel) => of(channel)),
     deleteSabaChannel: jest.fn().mockReturnValue(of(void 0)),
@@ -34,6 +41,7 @@ describe('RadioStore', () => {
     const expectedChannels = Array.from({ length: 105 - 87 + 1 }, (_, i) => i + 87);
     expect(store.sabaStationsList()).toEqual(expectedChannels);
     expect(store.radioButtonsList()).toEqual(MOCK_RADIO_BUTTONS_LIST);
+    expect(store.countries()).toEqual(MOCK_RADIO_COUNTRIES);
   });
 
   it('should get getSabaRadioChannels', fakeAsync(() => {

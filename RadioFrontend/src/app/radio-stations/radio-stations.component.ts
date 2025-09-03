@@ -1,16 +1,17 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RadioStore } from '../store/radio.store';
 import { MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButton } from '@angular/material/button';
-import { MatFormField, MatOption, MatSelect } from '@angular/material/select';
+import { MatFormField, MatOption, MatSelect, MatSelectTrigger } from '@angular/material/select';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { RadioStationInfo } from '../model/radio-station-info';
 import { RadioChannel } from '../model/radio-channel';
 import { SabaRadioChannelInfoComponent } from '../components/saba-radio-channel-info/saba-radio-channel-info.component';
 import { RadioChannelPipe } from '../pipes/radio-channel.pipe';
 import { RadioInfoInUsePipe } from '../pipes/radio-info-in-use.pipe';
+import { RadioCountry } from '../model/radio-country';
 
 @Component({
   selector: 'app-radio-stations',
@@ -27,6 +28,7 @@ import { RadioInfoInUsePipe } from '../pipes/radio-info-in-use.pipe';
     SabaRadioChannelInfoComponent,
     RadioChannelPipe,
     RadioInfoInUsePipe,
+    MatSelectTrigger,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
@@ -35,6 +37,17 @@ export class RadioStationsComponent {
   private readonly radioStore = inject(RadioStore);
 
   buttons = this.radioStore.radioButtonsList;
+
+  countries = this.radioStore.countries;
+  selectedCountry = signal<RadioCountry | undefined>(undefined);
+  selectedCountryFlag = computed(() => {
+    if (this.selectedCountry() === undefined || this.countries() === undefined) {
+      return undefined;
+    }
+    return this.countries().find(country => country.country === this.selectedCountry()?.country)
+      ?.flagImageUrl;
+  });
+
   sabaStationsFrequenciesList = this.radioStore.sabaStationsList;
   sabaRadioChannels = this.radioStore.sabaRadioChannels;
 

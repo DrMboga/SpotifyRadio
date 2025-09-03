@@ -9,9 +9,11 @@ import { RadioChannel } from '../model/radio-channel';
 import {
   MOCK_RADIO_BUTTONS_LIST,
   MOCK_RADIO_CHANNELS,
+  MOCK_RADIO_COUNTRIES,
   MOCK_SABA_CHANNELS_FREQUENCIES,
 } from '../mock/radio-mock';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { RadioCountry } from '../model/radio-country';
 
 // console.log((fixture.nativeElement as HTMLElement).innerHTML);
 
@@ -22,6 +24,7 @@ describe('RadioStationsComponent', () => {
     radioButtonsList: signal<RadioButtonInfo[]>(MOCK_RADIO_BUTTONS_LIST),
     sabaStationsList: signal<number[]>(MOCK_SABA_CHANNELS_FREQUENCIES),
     sabaRadioChannels: signal<RadioChannel[]>(MOCK_RADIO_CHANNELS),
+    countries: signal<RadioCountry[]>(MOCK_RADIO_COUNTRIES),
     getSabaRadioChannels: jest.fn(),
     getRadioStationsByRegion: jest.fn(),
     setRadioButtonRegion: jest.fn(),
@@ -120,6 +123,23 @@ describe('RadioStationsComponent', () => {
         expect(firstDiv).toBeFalsy();
       }
     }
+  });
+
+  it('should set countries list to dropdown', async () => {
+    // Get the mat-select element
+    const matSelect: HTMLElement = fixture.nativeElement.querySelector('mat-select');
+    expect(matSelect).toBeTruthy();
+
+    // Click to open the mat-select dropdown
+    matSelect.click();
+    fixture.detectChanges();
+
+    // Find mat-option elements in the overlay container
+    const options = document.querySelectorAll('mat-option');
+    expect(options.length).toBe(MOCK_RADIO_COUNTRIES.length);
+
+    const optionTexts = Array.from(options).map(opt => opt.textContent?.trim());
+    expect(optionTexts).toEqual(MOCK_RADIO_COUNTRIES.map(c => c.country));
   });
 
   // it('should save new SABA Radio channel on drag-drop onto the channels list table on the left', async () => {

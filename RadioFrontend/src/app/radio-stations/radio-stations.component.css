@@ -34,11 +34,23 @@
     flex-direction: column;
     flex-grow: 1;
   }
+
   .radio-stations-right-panel {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
   }
+}
+
+.country-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.flag-image {
+  width: 24px;
+  height: 24px;
 }
 
 .cdk-drag-preview {
