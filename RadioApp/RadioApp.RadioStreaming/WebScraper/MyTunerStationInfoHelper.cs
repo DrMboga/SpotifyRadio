@@ -92,4 +92,30 @@ internal static class MyTunerStationInfoHelper
         return int.TryParse(System.Text.RegularExpressions.Regex.Match(style, @"\d+").Value, out var value) ? value : 0;
     }
 
+    /// <summary>
+    /// Parses Genres chips
+    /// </summary>
+    public static async Task<string?> ParseGenres(this IPage page)
+    {
+        var genresPanel = await page.QuerySelectorAsync(".genres");
+        if (genresPanel == null)
+        {
+            return null;
+        }
+        
+        var allAnchors = await genresPanel.QuerySelectorAllAsync("a");
+
+        string result = string.Empty;
+        foreach (var anchor in allAnchors)
+        {
+            var genre = await anchor.InnerTextAsync();
+            if (!string.IsNullOrWhiteSpace(genre))
+            {
+                result = $"{(string.IsNullOrWhiteSpace(result) ? genre : $"{result} | {genre}")}";
+            }
+        }
+        
+        return result;
+    }
+
 }

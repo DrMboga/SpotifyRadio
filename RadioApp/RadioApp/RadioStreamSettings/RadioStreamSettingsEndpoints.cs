@@ -28,7 +28,10 @@ public static class RadioStreamSettingsEndpoints
                 async (IMediator mediator, [FromQuery] string country) =>
                 {
                     var cachedStations = await mediator.Send(new GetStationsInfosRequest(country));
-                    return cachedStations;
+                    return cachedStations
+                        .OrderByDescending(s => s.Likes)
+                        .ThenByDescending(s => s.Rating)
+                        .ToArray();
                 })
             .WithName("List of stations by country sorted by rating");
 

@@ -11,6 +11,11 @@ public class RadioStationInfo
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Radio station genres
+    /// </summary>
+    public string? Genres { get; set; }
+
+    /// <summary>
     /// Radio station MyTuner page URL
     /// </summary>
     public string DetailsUrl { get; set; } = string.Empty;

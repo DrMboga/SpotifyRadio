@@ -205,6 +205,7 @@ public class DataAccessService :
         stationFromDb.StationWebPage = notification.StationInfo.StationWebPage;
         stationFromDb.StationImageUrl = notification.StationInfo.StationImageUrl;
         stationFromDb.StationStreamUrl = notification.StationInfo.StationStreamUrl;
+        stationFromDb.Genres = notification.StationInfo.Genres;
         stationFromDb.StationProcessed = notification.StationInfo.StationProcessed;
         
         await dbContext.SaveChangesAsync(cancellationToken);

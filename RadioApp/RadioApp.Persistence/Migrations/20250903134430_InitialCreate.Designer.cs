@@ -10,7 +10,7 @@ using RadioApp.Persistence;
 namespace RadioApp.Persistence.Migrations
 {
     [DbContext(typeof(Persistence))]
-    [Migration("20250901144313_InitialCreate")]
+    [Migration("20250903134430_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -48,6 +48,9 @@ namespace RadioApp.Persistence.Migrations
 
                     b.Property<int>("Dislikes")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Genres")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Likes")
                         .HasColumnType("INTEGER");

@@ -49,6 +49,7 @@ namespace RadioApp.Persistence.Migrations
                 {
                     DetailsUrl = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Genres = table.Column<string>(type: "TEXT", nullable: true),
                     Country = table.Column<string>(type: "TEXT", nullable: false),
                     RegionInfo = table.Column<string>(type: "TEXT", nullable: true),
                     Rating = table.Column<int>(type: "INTEGER", nullable: false),

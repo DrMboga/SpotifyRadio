@@ -46,6 +46,9 @@ namespace RadioApp.Persistence.Migrations
                     b.Property<int>("Dislikes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Genres")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Likes")
                         .HasColumnType("INTEGER");
 

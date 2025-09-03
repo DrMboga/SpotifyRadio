@@ -28,11 +28,6 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
         await using var browser = await playwright.Chromium.LaunchAsync(new()
         {
             Headless = true,
-            Args = new[]
-            {
-                "--disable-popup-blocking",
-                "--autoplay-policy=no-user-gesture-required"
-            }
         });
         var browserContext = await GenerateBrowserContext(browser);
         var page = await browserContext.NewPageAsync();
@@ -76,6 +71,7 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
                 stationInfo.StationDescription = await page.ParseDescription();
                 stationInfo.Rating = await page.GetRatingInPercent();
                 stationInfo.StationWebPage = await page.ParseStationWebPage();
+                stationInfo.Genres = await page.ParseGenres();
             }
 
             // Wait for network requests to grab an audio stream if page starts to play radio on load
@@ -130,7 +126,7 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
                 try
                 {
                     // Click to play, then stream URL should be caught in the Response handler
-                    await stationPlayButton.ClickAsync();
+                    await stationPlayButton.ClickAsync(new ElementHandleClickOptions() { Timeout = 5000 });
                 }
                 catch (TimeoutException exception)
                 {
@@ -157,9 +153,3 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
         return $"{baseUrl}/{slug}";
     }
 }
-
-/*
- * <button mode="primary" size="large" class=" css-47sehv"><span>AGREE</span></button>
- *
- * http://e.mytuner-radio.com/embed/1046-rtl-die-besten-neuen-hits-444306
- */
