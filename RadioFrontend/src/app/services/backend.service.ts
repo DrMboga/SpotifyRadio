@@ -41,6 +41,24 @@ export class BackendService {
     return this.http.get<RadioStationsCacheStatus>(url);
   }
 
+  startCacheRadioStations(country: string, countryUrl: string): Observable<void> {
+    const url = `${this.baseUrl}/radio-stations-cache-by-country`;
+    const body = { country, url: countryUrl };
+    return this.http.post<void>(url, body, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  getRadioStationsByCountry(country: string): Observable<RadioStationInfo[]> {
+    const url = `${this.baseUrl}/radio-stations-by-country?country=${country}`;
+    return this.http.get<RadioStationInfo[]>(url);
+  }
+
+  clearCache(): Observable<void> {
+    const url = `${this.baseUrl}/radio-stations-cache`;
+    return this.http.delete(url).pipe(map(response => void 0));
+  }
+
   getSabaChannels(button: number): Observable<RadioChannel[]> {
     const url = `${this.baseUrl}/radio-stations-by-button?button=${button}`;
     return this.http.get<RadioChannel[]>(url);

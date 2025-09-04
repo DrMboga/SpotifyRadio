@@ -9,6 +9,7 @@ import { tapResponse } from '@ngrx/operators';
 import { RadioChannel } from '../model/radio-channel';
 import { RadioCountry } from '../model/radio-country';
 import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
+import { RadioStationInfo } from '../model/radio-station-info';
 
 const SABA_MIN_FREQUENCY = 87;
 const SABA_MAX_FREQUENCY = 105;
@@ -17,6 +18,7 @@ type RadioSettingsState = {
   radioButtonsList: RadioButtonInfo[];
   countries: RadioCountry[];
   countryCacheStatus: RadioStationsCacheStatus;
+  countryRadioStations: RadioStationInfo[];
   sabaStationsList: number[]; //87-105 MHz
   sabaRadioChannels: RadioChannel[];
 };
@@ -25,6 +27,7 @@ const initialState: RadioSettingsState = {
   radioButtonsList: [],
   countries: [],
   countryCacheStatus: { totalStations: 0, processedCount: 0 },
+  countryRadioStations: [],
   sabaStationsList: [],
   sabaRadioChannels: [],
 };
@@ -118,6 +121,46 @@ export const RadioStore = signalStore(
                   sabaRadioChannels: [
                     ...store.sabaRadioChannels().filter(c => c.sabaFrequency !== sabaFrequency),
                   ],
+                })),
+              error: err => {
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+    startCacheRadioStations: rxMethod<{ country: string; countryUrl: string }>(
+      pipe(
+        switchMap(({ country, countryUrl }) =>
+          backend.startCacheRadioStations(country, countryUrl),
+        ),
+      ),
+    ),
+    getRadioStationsByCountry: rxMethod<string>(
+      pipe(
+        switchMap(country =>
+          backend.getRadioStationsByCountry(country).pipe(
+            tapResponse({
+              next: countryRadioStations => patchState(store, () => ({ countryRadioStations })),
+              error: err => {
+                patchState(store, () => ({ countryRadioStations: [] }));
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
+    clearCache: rxMethod<void>(
+      pipe(
+        switchMap(() =>
+          backend.clearCache().pipe(
+            tapResponse({
+              next: () =>
+                patchState(store, () => ({
+                  countries: [],
+                  countryRadioStations: [],
                 })),
               error: err => {
                 console.error(err);

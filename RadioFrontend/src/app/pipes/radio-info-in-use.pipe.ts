@@ -12,6 +12,6 @@ export class RadioInfoInUsePipe implements PipeTransform {
    * @param channelsList
    */
   transform(radioInfo: RadioStationInfo, channelsList: RadioChannel[]): RadioChannel | undefined {
-    return channelsList.find(channel => radioInfo.name === channel.name);
+    return channelsList.find(channel => radioInfo.detailsUrl === channel.stationDetailsUrl);
   }
 }

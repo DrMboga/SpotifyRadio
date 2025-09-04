@@ -68,17 +68,17 @@
   <table class="mat-elevation-z8" cdkDropList (cdkDropListDropped)="radioStationDrop($event)"
          #stations="cdkDropList" [cdkDropListConnectedTo]="[channels]">
     <caption>Radio channels:</caption>
-    <!--      @for (stationInfo of regionStationsList(); track (stationInfo.name + stationInfo.frequency)) {-->
-    <!--        <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo | radioInfoInUse: sabaRadioChannels())">-->
-    <!--          <td>{{ stationInfo.frequency }} MHz</td>-->
-    <!--          <td>-->
-    <!--            {{ stationInfo.name }}-->
-    <!--          </td>-->
-    <!--          <td>-->
-    <!--            <a [href]="stationInfo.stationUrl" target="_blank">Station info</a>-->
-    <!--          </td>-->
-    <!--        </tr>-->
-    <!--      }-->
+          @for (stationInfo of countryRadioStations(); track (stationInfo.detailsUrl)) {
+            <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo | radioInfoInUse: sabaRadioChannels())">
+              <td>
+                {{ stationInfo.name }}
+              </td>
+              <td>{{ stationInfo.genres }}</td>
+              <td>
+                <a [href]="stationInfo.stationWebPage" target="_blank">Station info</a>
+              </td>
+            </tr>
+          }
   </table>
 
 </div>

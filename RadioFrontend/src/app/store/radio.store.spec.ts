@@ -77,7 +77,7 @@ describe('RadioStore', () => {
     const newRadioChannel: RadioChannel = {
       button: 4,
       name: 'mockChannel',
-      region: 'mockRegion',
+      stationDetailsUrl: '/radio/mockChannel',
       sabaFrequency: 103,
     };
 

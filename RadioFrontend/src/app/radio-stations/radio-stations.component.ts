@@ -50,6 +50,8 @@ export class RadioStationsComponent {
 
   countryCacheStatus = this.radioStore.countryCacheStatus;
 
+  countryRadioStations = this.radioStore.countryRadioStations;
+
   sabaStationsFrequenciesList = this.radioStore.sabaStationsList;
   sabaRadioChannels = this.radioStore.sabaRadioChannels;
 
@@ -65,11 +67,24 @@ export class RadioStationsComponent {
       const aCountry = this.selectedCountry();
       if (aCountry) {
         this.radioStore.getRadioCountryCacheStatus(aCountry.country);
+        this.radioStore.getRadioStationsByCountry(aCountry.country);
       }
     });
   }
 
-  startToCacheStations() {}
+  startToCacheStations() {
+    const selectedCountry = this.selectedCountry();
+    if (selectedCountry) {
+      this.radioStore.startCacheRadioStations({
+        country: selectedCountry.country,
+        countryUrl: selectedCountry.detailsUrl,
+      });
+    }
+  }
+
+  clearCache() {
+    this.radioStore.clearCache();
+  }
 
   radioStationDrop(event: CdkDragDrop<string>) {
     const sameContainer = event.previousContainer === event.container;
@@ -126,8 +141,9 @@ export class RadioStationsComponent {
       sabaFrequency,
       name: radio.name,
       button: this.selectedButton(),
-      region: radio.region,
+      stationDetailsUrl: radio.detailsUrl,
       streamUrl: radio.stationStreamUrl,
+      country: radio.country,
     };
     this.radioStore.setSabaRadioChannel(channel);
   }

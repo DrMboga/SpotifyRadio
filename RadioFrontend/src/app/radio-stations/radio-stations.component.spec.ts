@@ -10,6 +10,7 @@ import {
   MOCK_RADIO_BUTTONS_LIST,
   MOCK_RADIO_CHANNELS,
   MOCK_RADIO_COUNTRIES,
+  MOCK_RADIO_STATION_INFOS,
   MOCK_SABA_CHANNELS_FREQUENCIES,
   MOCK_STATIONS_CACHE_STATUS,
 } from '../mock/radio-mock';
@@ -29,11 +30,13 @@ describe('RadioStationsComponent', () => {
     sabaRadioChannels: signal<RadioChannel[]>(MOCK_RADIO_CHANNELS),
     countries: signal<RadioCountry[]>(MOCK_RADIO_COUNTRIES),
     countryCacheStatus: signal<RadioStationsCacheStatus>(MOCK_STATIONS_CACHE_STATUS),
+    countryRadioStations: signal<RadioStationInfo[]>(MOCK_RADIO_STATION_INFOS),
     getSabaRadioChannels: jest.fn(),
     getRadioCountryCacheStatus: jest.fn(),
     setRadioButtonRegion: jest.fn(),
     setSabaRadioChannel: jest.fn(),
     deleteSabaRadioChannel: jest.fn(),
+    getRadioStationsByCountry: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -279,8 +282,10 @@ describe('RadioStationsComponent', () => {
       sabaFrequency: MOCK_SABA_CHANNELS_FREQUENCIES[radioChannelCurrentIndex],
       name: channel?.name,
       button: 2,
-      region: channel?.region,
+      country: channel?.country,
       radioLogoBase64: channel?.radioLogoBase64,
+      stationDetailsUrl: channel?.stationDetailsUrl,
+      streamUrl: channel?.streamUrl,
     });
   });
 });

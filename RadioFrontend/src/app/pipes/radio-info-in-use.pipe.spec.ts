@@ -12,13 +12,13 @@ describe('RadioInfoInUsePipe', () => {
     'should find appropriate channels',
     (expectedChannelName: string) => {
       const pipe = new RadioInfoInUsePipe();
+      const detailsUrl = expectedChannelName === 'Channel 2' ? '/radio/g2/' : '/radio/g4/';
       const radioInfo: RadioStationInfo = {
         name: expectedChannelName,
-        region: 'Bayern',
-        frequency: 87.5,
-        detailsUrl: '',
-        stationUrl: '',
+        detailsUrl,
         stationImageUrl: '',
+        country: 'fake',
+        stationProcessed: true,
       };
       const result = pipe.transform(radioInfo, MOCK_RADIO_CHANNELS_LIST);
 

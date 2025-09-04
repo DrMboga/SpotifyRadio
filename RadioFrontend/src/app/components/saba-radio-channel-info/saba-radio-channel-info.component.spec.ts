@@ -29,7 +29,7 @@ describe('SabaRadioChannelInfoComponent', () => {
     const radioChannel: RadioChannel = {
       name: 'fake Radio',
       streamUrl: 'http://fake-radio.com',
-      region: 'Bayern',
+      stationDetailsUrl: 'http://fake-radio.com',
       sabaFrequency: 89,
       button: 1,
     };
@@ -56,7 +56,7 @@ describe('SabaRadioChannelInfoComponent', () => {
     // Arrange
     const radioChannel: RadioChannel = {
       name: 'fake Radio',
-      region: 'Bayern',
+      stationDetailsUrl: 'http://fake-radio.com',
       sabaFrequency: 89,
       button: 1,
     };
@@ -84,7 +84,7 @@ describe('SabaRadioChannelInfoComponent', () => {
 
     const radioChannel: RadioChannel = {
       name: 'fake Radio',
-      region: 'Bayern',
+      stationDetailsUrl: 'http://fake-radio.com',
       sabaFrequency: 89,
       button: 1,
     };
@@ -107,7 +107,7 @@ describe('SabaRadioChannelInfoComponent', () => {
     // Assert
     expect(outputEventSpy).toHaveBeenCalledWith({
       name: 'fake Radio',
-      region: 'Bayern',
+      stationDetailsUrl: 'http://fake-radio.com',
       sabaFrequency: 89,
       button: 1,
       streamUrl,
@@ -120,7 +120,7 @@ describe('SabaRadioChannelInfoComponent', () => {
 
     const radioChannel: RadioChannel = {
       name: 'fake Radio',
-      region: 'Bayern',
+      stationDetailsUrl: 'http://fake-radio.com',
       sabaFrequency: 89,
       button: 1,
     };

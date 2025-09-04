@@ -1,9 +1,15 @@
 export interface RadioStationInfo {
   name: string;
-  frequency: number;
+  genres?: string;
   detailsUrl: string;
-  region: string;
-  stationUrl: string;
-  stationImageUrl: string;
+  country: string;
+  regionInfo?: string;
+  rating?: number;
+  likes?: number;
+  dislikes?: number;
+  stationDescription?: string;
+  stationWebPage?: string;
+  stationImageUrl?: string;
   stationStreamUrl?: string;
+  stationProcessed: boolean;
 }
