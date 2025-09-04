@@ -11,9 +11,12 @@ import {
   MOCK_RADIO_CHANNELS,
   MOCK_RADIO_COUNTRIES,
   MOCK_SABA_CHANNELS_FREQUENCIES,
+  MOCK_STATIONS_CACHE_STATUS,
 } from '../mock/radio-mock';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { RadioCountry } from '../model/radio-country';
+import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
+import { By } from '@angular/platform-browser';
 
 // console.log((fixture.nativeElement as HTMLElement).innerHTML);
 
@@ -25,8 +28,9 @@ describe('RadioStationsComponent', () => {
     sabaStationsList: signal<number[]>(MOCK_SABA_CHANNELS_FREQUENCIES),
     sabaRadioChannels: signal<RadioChannel[]>(MOCK_RADIO_CHANNELS),
     countries: signal<RadioCountry[]>(MOCK_RADIO_COUNTRIES),
+    countryCacheStatus: signal<RadioStationsCacheStatus>(MOCK_STATIONS_CACHE_STATUS),
     getSabaRadioChannels: jest.fn(),
-    getRadioStationsByRegion: jest.fn(),
+    getRadioCountryCacheStatus: jest.fn(),
     setRadioButtonRegion: jest.fn(),
     setSabaRadioChannel: jest.fn(),
     deleteSabaRadioChannel: jest.fn(),
@@ -140,6 +144,40 @@ describe('RadioStationsComponent', () => {
 
     const optionTexts = Array.from(options).map(opt => opt.textContent?.trim());
     expect(optionTexts).toEqual(MOCK_RADIO_COUNTRIES.map(c => c.country));
+  });
+
+  it('should call cache status method on country select', async () => {
+    // Arrange
+    const countryIndex = 1; // Netherlands in the mock MOCK_RADIO_COUNTRIES
+
+    const matSelect: HTMLElement = fixture.nativeElement.querySelector('mat-select');
+    expect(matSelect).toBeTruthy();
+    matSelect.click();
+    fixture.detectChanges();
+
+    const options = document.querySelectorAll('mat-option');
+    expect(options.length).toBe(MOCK_RADIO_COUNTRIES.length);
+    const optionToSelect = Array.from(options)[countryIndex] as HTMLElement;
+    expect(optionToSelect).toBeTruthy();
+
+    // Act
+    optionToSelect.click();
+    fixture.detectChanges();
+
+    // Assert
+    expect(component.selectedCountry()!.country).toBe(MOCK_RADIO_COUNTRIES[countryIndex].country);
+
+    // should request cache status on Country select
+    expect(radioStore.getRadioCountryCacheStatus).toHaveBeenLastCalledWith(
+      MOCK_RADIO_COUNTRIES[countryIndex].country,
+    );
+
+    // Check if cache info is shown
+    const topRowItems = fixture.debugElement.queryAll(By.css('.top-row-item'));
+    expect(topRowItems.length).toBeGreaterThan(2);
+    expect(topRowItems[2].nativeElement.textContent.trim()).toBe(
+      `${MOCK_STATIONS_CACHE_STATUS.processedCount} radio stations from ${MOCK_STATIONS_CACHE_STATUS.totalStations} cached`,
+    );
   });
 
   // it('should save new SABA Radio channel on drag-drop onto the channels list table on the left', async () => {

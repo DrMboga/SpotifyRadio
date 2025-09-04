@@ -8,6 +8,7 @@ import { pipe, switchMap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { RadioChannel } from '../model/radio-channel';
 import { RadioCountry } from '../model/radio-country';
+import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
 
 const SABA_MIN_FREQUENCY = 87;
 const SABA_MAX_FREQUENCY = 105;
@@ -15,6 +16,7 @@ const SABA_MAX_FREQUENCY = 105;
 type RadioSettingsState = {
   radioButtonsList: RadioButtonInfo[];
   countries: RadioCountry[];
+  countryCacheStatus: RadioStationsCacheStatus;
   sabaStationsList: number[]; //87-105 MHz
   sabaRadioChannels: RadioChannel[];
 };
@@ -22,6 +24,7 @@ type RadioSettingsState = {
 const initialState: RadioSettingsState = {
   radioButtonsList: [],
   countries: [],
+  countryCacheStatus: { totalStations: 0, processedCount: 0 },
   sabaStationsList: [],
   sabaRadioChannels: [],
 };
@@ -51,6 +54,23 @@ export const RadioStore = signalStore(
     },
   }),
   withMethods((store, backend = inject(BackendService)) => ({
+    getRadioCountryCacheStatus: rxMethod<string>(
+      pipe(
+        switchMap(country =>
+          backend.getRadioStationsCacheStatus(country).pipe(
+            tapResponse({
+              next: countryCacheStatus => patchState(store, { countryCacheStatus }),
+              error: err => {
+                patchState(store, () => ({
+                  countryCacheStatus: { totalStations: 0, processedCount: 0 },
+                }));
+                console.error(err);
+              },
+            }),
+          ),
+        ),
+      ),
+    ),
     getSabaRadioChannels: rxMethod<number>(
       pipe(
         switchMap(button =>

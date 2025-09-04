@@ -1,6 +1,7 @@
 import { RadioChannel } from '../model/radio-channel';
 import { RadioButtonInfo } from '../model/radio-button-info';
 import { RadioCountry } from '../model/radio-country';
+import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
 
 export const MOCK_RADIO_CHANNELS_LIST: RadioChannel[] = [
   {
@@ -64,6 +65,11 @@ export const MOCK_RADIO_COUNTRIES: RadioCountry[] = [
     detailsUrl: 'https://mytuner-radio.com/radio/country/netherlands-stations/frequency/fm',
   },
 ];
+
+export const MOCK_STATIONS_CACHE_STATUS: RadioStationsCacheStatus = {
+  totalStations: 48,
+  processedCount: 12,
+};
 
 export const MOCK_SABA_CHANNELS_FREQUENCIES: number[] = [87, 88, 89, 90, 91];
 

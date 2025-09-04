@@ -7,6 +7,7 @@ import { RadioButtonInfo } from '../model/radio-button-info';
 import { RadioStationInfo } from '../model/radio-station-info';
 import { RadioChannel } from '../model/radio-channel';
 import { RadioCountry } from '../model/radio-country';
+import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
 
 @Injectable({
   providedIn: 'root',
@@ -33,6 +34,11 @@ export class BackendService {
   getRadioCountries(): Observable<RadioCountry[]> {
     const url = `${this.baseUrl}/radio-countries-list`;
     return this.http.get<RadioCountry[]>(url);
+  }
+
+  getRadioStationsCacheStatus(country: string): Observable<RadioStationsCacheStatus> {
+    const url = `${this.baseUrl}/radio-stations-cache-by-country-status?country=${country}`;
+    return this.http.get<RadioStationsCacheStatus>(url);
   }
 
   getSabaChannels(button: number): Observable<RadioChannel[]> {

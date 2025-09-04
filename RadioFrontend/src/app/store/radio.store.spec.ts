@@ -7,10 +7,9 @@ import {
   MOCK_RADIO_BUTTONS_LIST,
   MOCK_RADIO_CHANNELS,
   MOCK_RADIO_COUNTRIES,
+  MOCK_STATIONS_CACHE_STATUS,
 } from '../mock/radio-mock';
 import { RadioChannel } from '../model/radio-channel';
-import { signal } from '@angular/core';
-import { RadioCountry } from '../model/radio-country';
 
 describe('RadioStore', () => {
   let store: any;
@@ -18,6 +17,7 @@ describe('RadioStore', () => {
     readRadioButtons: jest.fn().mockReturnValue(of(MOCK_RADIO_BUTTONS_LIST)),
     getSabaChannels: jest.fn().mockReturnValue(of(MOCK_RADIO_CHANNELS)),
     getRadioCountries: jest.fn().mockReturnValue(of(MOCK_RADIO_COUNTRIES)),
+    getRadioStationsCacheStatus: jest.fn().mockReturnValue(of(MOCK_STATIONS_CACHE_STATUS)),
     // @ts-ignore
     setSabaChannel: jest.fn().mockImplementation((channel: RadioChannel) => of(channel)),
     deleteSabaChannel: jest.fn().mockReturnValue(of(void 0)),
@@ -43,6 +43,20 @@ describe('RadioStore', () => {
     expect(store.radioButtonsList()).toEqual(MOCK_RADIO_BUTTONS_LIST);
     expect(store.countries()).toEqual(MOCK_RADIO_COUNTRIES);
   });
+
+  it('should read country cache status', fakeAsync(() => {
+    const countrySubject$ = new Subject<string>();
+    const country = 'FakeCountry';
+    store.getRadioCountryCacheStatus(countrySubject$);
+
+    // Act
+    countrySubject$.next(country);
+    tick(100);
+
+    // Assert
+    expect(backend.getRadioStationsCacheStatus).toHaveBeenCalledWith(country);
+    expect(store.countryCacheStatus()).toEqual(MOCK_STATIONS_CACHE_STATUS);
+  }));
 
   it('should get getSabaRadioChannels', fakeAsync(() => {
     const buttonSubject$ = new Subject<number>();

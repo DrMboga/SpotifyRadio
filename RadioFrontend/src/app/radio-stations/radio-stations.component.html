@@ -53,6 +53,17 @@
         </mat-select>
       </mat-form-field>
     </div>
+    @if (selectedCountry()) {
+      <div class="top-row-item">
+        {{ countryCacheStatus().processedCount }} radio stations from {{ countryCacheStatus().totalStations }} cached
+      </div>
+      @if (countryCacheStatus().totalStations === 0) {
+        <div class="top-row-item">
+          <button mat-flat-button (click)="startToCacheStations()">Start to cache stations
+          </button>
+        </div>
+      }
+    }
   </div>
   <table class="mat-elevation-z8" cdkDropList (cdkDropListDropped)="radioStationDrop($event)"
          #stations="cdkDropList" [cdkDropListConnectedTo]="[channels]">
@@ -69,6 +80,7 @@
     <!--        </tr>-->
     <!--      }-->
   </table>
+
 </div>
 
 

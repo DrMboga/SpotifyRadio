@@ -48,6 +48,8 @@ export class RadioStationsComponent {
       ?.flagImageUrl;
   });
 
+  countryCacheStatus = this.radioStore.countryCacheStatus;
+
   sabaStationsFrequenciesList = this.radioStore.sabaStationsList;
   sabaRadioChannels = this.radioStore.sabaRadioChannels;
 
@@ -58,7 +60,16 @@ export class RadioStationsComponent {
       const button = this.selectedButton();
       this.radioStore.getSabaRadioChannels(button);
     });
+
+    effect(() => {
+      const aCountry = this.selectedCountry();
+      if (aCountry) {
+        this.radioStore.getRadioCountryCacheStatus(aCountry.country);
+      }
+    });
   }
+
+  startToCacheStations() {}
 
   radioStationDrop(event: CdkDragDrop<string>) {
     const sameContainer = event.previousContainer === event.container;

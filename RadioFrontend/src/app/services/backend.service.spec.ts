@@ -10,6 +10,7 @@ import {
   MOCK_RADIO_CHANNELS,
   MOCK_RADIO_COUNTRIES,
 } from '../mock/radio-mock';
+import { RadioStationsCacheStatus } from '../model/radio-stations-cache-status';
 
 // https://angular.dev/guide/http/testing
 describe('BackendService', () => {
@@ -132,6 +133,22 @@ describe('BackendService', () => {
     pendingRequest.flush(MOCK_RADIO_COUNTRIES);
 
     expect(await radioCountriesPromise).toBe(MOCK_RADIO_COUNTRIES);
+
+    httpTesting.verify();
+  });
+
+  it('should read cached radio stations status', async () => {
+    const status: RadioStationsCacheStatus = { totalStations: 42, processedCount: 3 };
+    const statusPromise = firstValueFrom(service.getRadioStationsCacheStatus('FakeCountry'));
+    const pendingRequest = httpTesting.expectOne(
+      `${baseUrl}/radio-stations-cache-by-country-status?country=FakeCountry`,
+    );
+
+    expect(pendingRequest.request.method).toBe('GET');
+
+    pendingRequest.flush(status);
+
+    expect(await statusPromise).toBe(status);
 
     httpTesting.verify();
   });
