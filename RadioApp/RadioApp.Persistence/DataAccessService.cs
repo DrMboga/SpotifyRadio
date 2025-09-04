@@ -20,7 +20,9 @@ public class DataAccessService :
     INotificationHandler<CleanUpMuTunerCacheNotification>,
     IRequestHandler<GetRadioStationsForCachingRequest, RadioStationInfo[]>,
     IRequestHandler<GetRadioStationsCachingStatusRequest, MyTunerCachingStatus>,
-    INotificationHandler<UpdateRadioStationInfoNotification>
+    INotificationHandler<UpdateRadioStationInfoNotification>,
+    IRequestHandler<GetOneRadioStationInfoRequest, RadioStationInfo?>,
+    IRequestHandler<GetOneCountryInfoRequest, MyTunerCountryInfo?>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -197,7 +199,7 @@ public class DataAccessService :
         {
             return;
         }
-        
+
         stationFromDb.Rating = notification.StationInfo.Rating;
         stationFromDb.Likes = notification.StationInfo.Likes;
         stationFromDb.Dislikes = notification.StationInfo.Dislikes;
@@ -207,8 +209,29 @@ public class DataAccessService :
         stationFromDb.StationStreamUrl = notification.StationInfo.StationStreamUrl;
         stationFromDb.Genres = notification.StationInfo.Genres;
         stationFromDb.StationProcessed = notification.StationInfo.StationProcessed;
-        
+
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+
+    public async Task<RadioStationInfo?> Handle(GetOneRadioStationInfoRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+
+        var stationInfo = await dbContext.RadioStationInfos.AsNoTracking()
+            .Where(s => s.Country == request.Country && s.DetailsUrl == request.DetailsUrl)
+            .FirstOrDefaultAsync(cancellationToken);
+        return stationInfo;
+    }
+
+
+    public async Task<MyTunerCountryInfo?> Handle(GetOneCountryInfoRequest request, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var countryInfo = await dbContext.Countries.AsNoTracking().Where(s => s.Country == request.Country)
+            .FirstOrDefaultAsync(cancellationToken);
+        return countryInfo;
     }
 
     private RadioStationEntity ConvertToStationEntity(RadioStation station)

@@ -62,21 +62,35 @@ public static class RadioStreamSettingsEndpoints
 
         app.MapPost("radio-stations-by-button", async (RadioStation station, IMediator mediator) =>
         {
-            if (station.RadioLogoBase64 == null)
+            if (station.RadioLogoBase64 == null && station.Country != null)
             {
-                // TODO: Find another way of saving image of the station
-                // if (radioInfo?.StationImageUrl != null)
-                // {
-                //     var extension = Path.GetExtension(radioInfo.StationImageUrl).Replace(".", "").ToLower();
-                //     using var webClient = new HttpClient();
-                //     var imageData = await webClient.GetByteArrayAsync(radioInfo.StationImageUrl);
-                //     var imageBase64 = Convert.ToBase64String(imageData);
-                //     station.RadioLogoBase64 = $"data:image/{extension};base64,{imageBase64}";
-                // }
+                var radioStationInfo = await mediator.Send(new GetOneRadioStationInfoRequest(station.Country, station.StationDetailsUrl));
+                if (radioStationInfo?.StationImageUrl != null)
+                {
+                    station.RadioLogoBase64 = await GetBase64ByUrl(radioStationInfo.StationImageUrl);
+                }
+            }
+
+            if (station.CountryFlagBase64 == null && station.Country != null)
+            {
+                var country = await mediator.Send(new GetOneCountryInfoRequest(station.Country));
+                if (country?.FlagImageUrl != null)
+                {
+                    station.CountryFlagBase64 = await GetBase64ByUrl(country.FlagImageUrl);
+                }
             }
 
             await mediator.Publish(new SaveRadioStationNotification(station));
             return station;
+
+            async Task<string> GetBase64ByUrl(string url)
+            {
+                var extension = Path.GetExtension(url).Replace(".", "").ToLower();
+                using var webClient = new HttpClient();
+                var imageData = await webClient.GetByteArrayAsync(url);
+                var imageBase64 = Convert.ToBase64String(imageData);
+                return $"data:image/{extension};base64,{imageBase64}";
+            }
         }).WithName("SavesStationInfo");
 
         app.MapDelete("radio-stations-by-button",

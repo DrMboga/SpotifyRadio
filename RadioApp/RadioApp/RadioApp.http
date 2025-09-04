@@ -65,11 +65,13 @@ Content-Type: application/json
 
 {
   "button": {{saba_button}},
-  "region": "Saarland",
-  "name": "CityRadio Homburg",
+  "stationDetailsUrl": "/radio/klassik-radio-399934/",
+  "name": "Klassik Radio",
   "sabaFrequency": 88,
-  "streamUrl": "https://stream.radiogroup.de/cityradio-homburg/mp3-192",
-  "radioLogoBase64": null
+  "streamUrl": "https://stream.klassikradio.de/national/mp3-192/mytuner",
+  "radioLogoBase64": null,
+  "country": "Germany",
+  "countryFlagBase64": null
 }
 
 ###
