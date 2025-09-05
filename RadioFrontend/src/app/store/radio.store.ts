@@ -4,7 +4,7 @@ import { inject } from '@angular/core';
 import { BackendService } from '../services/backend.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { pipe, switchMap } from 'rxjs';
+import { pipe, switchMap, tap } from 'rxjs';
 import { tapResponse } from '@ngrx/operators';
 import { RadioChannel } from '../model/radio-channel';
 import { RadioCountry } from '../model/radio-country';
@@ -23,6 +23,7 @@ type RadioSettingsState = {
   sabaStationsList: number[]; //87-105 MHz
   sabaRadioChannels: RadioChannel[];
   cacheCleaningInProcess: boolean;
+  cacheRadioStationsStarted: boolean;
 };
 
 const initialState: RadioSettingsState = {
@@ -34,6 +35,7 @@ const initialState: RadioSettingsState = {
   sabaStationsList: [],
   sabaRadioChannels: [],
   cacheCleaningInProcess: false,
+  cacheRadioStationsStarted: false,
 };
 
 export const RadioStore = signalStore(
@@ -153,9 +155,12 @@ export const RadioStore = signalStore(
     ),
     startCacheRadioStations: rxMethod<{ country: string; countryUrl: string }>(
       pipe(
-        switchMap(({ country, countryUrl }) =>
-          backend.startCacheRadioStations(country, countryUrl),
-        ),
+        switchMap(({ country, countryUrl }) => {
+          patchState(store, { cacheRadioStationsStarted: true });
+          return backend
+            .startCacheRadioStations(country, countryUrl)
+            .pipe(tap(() => patchState(store, { cacheRadioStationsStarted: false })));
+        }),
       ),
     ),
     getRadioStationsByCountry: rxMethod<string>(

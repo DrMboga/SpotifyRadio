@@ -60,14 +60,26 @@
       </div>
     }
     @if (selectedCountry()) {
-      <div class="top-row-item">
-        {{ countryCacheStatus().processedCount }} radio stations from {{ countryCacheStatus().totalStations }} cached
-      </div>
-      @if (countryCacheStatus().totalStations === 0) {
-        <div class="top-row-item">
-          <button mat-flat-button (click)="startToCacheStations()">Start to cache stations
-          </button>
-        </div>
+      @if (countryCacheStatus(); as cacheStatus) {
+        @if (cacheStatus.totalStations === 0) {
+          <div class="top-row-item">
+            <button mat-flat-button (click)="startToCacheStations()">Start to cache stations
+            </button>
+          </div>
+        } @else {
+          @if (cacheStatus.totalStations === cacheStatus.processedCount) {
+            <div class="top-row-item">
+              {{ cacheStatus.totalStations }} radio stations
+            </div>
+          } @else {
+            <div class="top-row-item">
+              Caching:
+              <mat-progress-bar mode="determinate" [value]="(100*cacheStatus.processedCount/cacheStatus.totalStations)"
+                                style="width: 150px;"></mat-progress-bar>
+              {{ cacheStatus.processedCount }} of {{ cacheStatus.totalStations }}
+            </div>
+          }
+        }
       }
     }
     <div class="top-row-item">

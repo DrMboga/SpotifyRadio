@@ -33,6 +33,7 @@ describe('RadioStationsComponent', () => {
     countryRadioStations: signal<RadioStationInfo[]>(MOCK_RADIO_STATION_INFOS),
     loadingCountries: signal<boolean>(false),
     cacheCleaningInProcess: signal<boolean>(false),
+    cacheRadioStationsStarted: signal<boolean>(false),
     getSabaRadioChannels: jest.fn(),
     getRadioCountryCacheStatus: jest.fn(),
     setRadioButtonRegion: jest.fn(),
@@ -181,7 +182,7 @@ describe('RadioStationsComponent', () => {
     const topRowItems = fixture.debugElement.queryAll(By.css('.top-row-item'));
     expect(topRowItems.length).toBeGreaterThan(2);
     expect(topRowItems[2].nativeElement.textContent.trim()).toBe(
-      `${MOCK_STATIONS_CACHE_STATUS.processedCount} radio stations from ${MOCK_STATIONS_CACHE_STATUS.totalStations} cached`,
+      `Caching:  ${MOCK_STATIONS_CACHE_STATUS.processedCount} of ${MOCK_STATIONS_CACHE_STATUS.totalStations}`,
     );
   });
 

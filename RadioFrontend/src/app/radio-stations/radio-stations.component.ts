@@ -16,6 +16,7 @@ import { RadioStationInfoComponent } from '../components/radio-station-info/radi
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 @Component({
   selector: 'app-radio-stations',
@@ -37,11 +38,18 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatIcon,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatProgressBarModule,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
 })
 export class RadioStationsComponent {
+  private cleanCacheStarted = false;
+  private countryCacheStarted = false;
+  private countryCacheTimerStarted = false;
+  private readonly countryCacheStatusInterval = 1000;
+  private timer: any;
+
   private readonly radioStore = inject(RadioStore);
 
   buttons = this.radioStore.radioButtonsList;
@@ -67,8 +75,6 @@ export class RadioStationsComponent {
 
   selectedButton = signal<number>(2);
 
-  private cleanCacheStarted = false;
-
   constructor() {
     effect(() => {
       const button = this.selectedButton();
@@ -91,6 +97,45 @@ export class RadioStationsComponent {
         // Cache just cleaned up
         this.radioStore.loadCountries();
         this.cleanCacheStarted = false;
+      }
+    });
+
+    effect(() => {
+      const cacheRadioStationsStarted = this.radioStore.cacheRadioStationsStarted();
+      if (cacheRadioStationsStarted) {
+        this.countryCacheStarted = true;
+      } else if (this.countryCacheStarted) {
+        // The button for caching the radio stations just started requesting the first status update
+        const aCountry = this.selectedCountry();
+        if (aCountry) {
+          this.radioStore.getRadioCountryCacheStatus(aCountry.country);
+        }
+      }
+    });
+
+    effect(() => {
+      const currentCacheStatus = this.countryCacheStatus();
+      if (
+        currentCacheStatus.totalStations > 0 &&
+        currentCacheStatus.processedCount !== currentCacheStatus.totalStations &&
+        !this.countryCacheTimerStarted
+      ) {
+        this.countryCacheTimerStarted = true;
+        this.timer = setInterval(() => {
+          const aCountry = this.selectedCountry();
+          if (aCountry) {
+            this.radioStore.getRadioCountryCacheStatus(aCountry.country);
+            this.radioStore.getRadioStationsByCountry(aCountry.country);
+          }
+        }, this.countryCacheStatusInterval);
+      }
+
+      if (
+        currentCacheStatus.processedCount === currentCacheStatus.totalStations &&
+        this.countryCacheTimerStarted
+      ) {
+        this.countryCacheTimerStarted = false;
+        clearInterval(this.timer);
       }
     });
   }
