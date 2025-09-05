@@ -1,0 +1,33 @@
+:host {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+
+  .row-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+  }
+
+  .row-item:first-child {
+    flex: 0;
+  }
+
+  .row-item:nth-child(2),
+  .row-item:nth-child(3) {
+    flex: 2;
+  }
+
+  .station-logo {
+    width: 24px;
+  }
+
+}
+
+.description {
+  padding: 8px;
+  font-size: smaller;
+  font-style: italic;
+}

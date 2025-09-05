@@ -3,7 +3,7 @@ import { RadioStore } from '../store/radio.store';
 import { MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatButton } from '@angular/material/button';
+import { MatButtonModule } from '@angular/material/button';
 import { MatFormField, MatOption, MatSelect, MatSelectTrigger } from '@angular/material/select';
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { RadioStationInfo } from '../model/radio-station-info';
@@ -12,6 +12,9 @@ import { SabaRadioChannelInfoComponent } from '../components/saba-radio-channel-
 import { RadioChannelPipe } from '../pipes/radio-channel.pipe';
 import { RadioInfoInUsePipe } from '../pipes/radio-info-in-use.pipe';
 import { RadioCountry } from '../model/radio-country';
+import { RadioStationInfoComponent } from '../components/radio-station-info/radio-station-info.component';
+import { MatIcon } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-radio-stations',
@@ -19,7 +22,7 @@ import { RadioCountry } from '../model/radio-country';
     MatRadioModule,
     FormsModule,
     MatDividerModule,
-    MatButton,
+    MatButtonModule,
     MatSelect,
     MatOption,
     MatFormField,
@@ -29,6 +32,9 @@ import { RadioCountry } from '../model/radio-country';
     RadioChannelPipe,
     RadioInfoInUsePipe,
     MatSelectTrigger,
+    RadioStationInfoComponent,
+    MatIcon,
+    MatTooltipModule,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
@@ -83,6 +89,7 @@ export class RadioStationsComponent {
   }
 
   clearCache() {
+    this.selectedCountry.set(undefined);
     this.radioStore.clearCache();
   }
 

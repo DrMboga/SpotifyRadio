@@ -1,0 +1,43 @@
+@if (station(); as stationInfo) {
+  <div class="row-item ">
+    <a [href]="stationInfo.stationWebPage" target="_blank">
+      <img [src]="stationInfo.stationImageUrl" [alt]="stationInfo.name" class="station-logo">
+    </a>
+  </div>
+  <div class="row-item">
+    {{ stationInfo.name }}
+    <button mat-flat-button [matMenuTriggerFor]="infoMenu">
+      <mat-icon>info</mat-icon>
+    </button>
+  </div>
+  <div class="row-item">
+    <mat-chip-set aria-label="Genres">
+      @for (genre of stationInfo.genres | textSplit; track genre) {
+        <mat-chip>{{ genre }}</mat-chip>
+      }
+    </mat-chip-set>
+  </div>
+  <div class="row-item">
+    <mat-icon>thumb_up</mat-icon>
+    {{ stationInfo.likes }}
+  </div>
+  <div class="row-item">
+    <mat-icon>thumb_down</mat-icon>
+    {{ stationInfo.dislikes }}
+  </div>
+  <div class="row-item">
+    <mat-icon>star_rate</mat-icon>
+    {{ stationInfo.rating }}
+  </div>
+
+  <mat-menu #infoMenu="matMenu">
+    <div class="description">{{ stationInfo.stationDescription }}</div>
+    <ul>
+      @for (regionInfo of stationInfo.regionInfo | textSplit; track regionInfo) {
+        <li>
+          {{ regionInfo }}
+        </li>
+      }
+    </ul>
+  </mat-menu>
+}

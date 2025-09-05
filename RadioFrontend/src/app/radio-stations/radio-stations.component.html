@@ -64,21 +64,21 @@
         </div>
       }
     }
+    <div class="top-row-item">
+      <button matFab (click)="clearCache()" matTooltip="Clear cache"><mat-icon>delete</mat-icon>
+      </button>
+    </div>
   </div>
   <table class="mat-elevation-z8" cdkDropList (cdkDropListDropped)="radioStationDrop($event)"
          #stations="cdkDropList" [cdkDropListConnectedTo]="[channels]">
     <caption>Radio channels:</caption>
-          @for (stationInfo of countryRadioStations(); track (stationInfo.detailsUrl)) {
-            <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo | radioInfoInUse: sabaRadioChannels())">
-              <td>
-                {{ stationInfo.name }}
-              </td>
-              <td>{{ stationInfo.genres }}</td>
-              <td>
-                <a [href]="stationInfo.stationWebPage" target="_blank">Station info</a>
-              </td>
-            </tr>
-          }
+    @for (stationInfo of countryRadioStations(); track (stationInfo.detailsUrl)) {
+      <tr cdkDrag [cdkDragData]="stationInfo" [cdkDragDisabled]="(stationInfo | radioInfoInUse: sabaRadioChannels())">
+        <td>
+          <app-radio-station-info [station]="stationInfo"></app-radio-station-info>
+        </td>
+      </tr>
+    }
   </table>
 
 </div>

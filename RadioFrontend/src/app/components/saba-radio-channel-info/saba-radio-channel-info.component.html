@@ -1,6 +1,6 @@
 @if (radioChannel(); as channel) {
-  <img [src]="channel.countryFlagBase64" [alt]="channel.country">
-  <img [src]="channel.radioLogoBase64" [alt]="channel.name">
+  <img [src]="channel.countryFlagBase64" [alt]="channel.country" class="flag">
+  <img [src]="channel.radioLogoBase64" [alt]="channel.name" class="radio-logo">
   <div>{{channel.name}}</div>
   @if(channel.streamUrl) {
     <a [href]="channel.streamUrl" target="_blank">Stream</a>

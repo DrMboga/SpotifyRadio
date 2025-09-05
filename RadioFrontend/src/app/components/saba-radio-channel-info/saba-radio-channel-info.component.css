@@ -4,8 +4,11 @@
   align-items: center;
   gap: 10px;
 
-  img {
-    max-height: 48px;
-    padding: 5px;
+  .flag {
+    width: 24px;
+  }
+
+  .radio-logo {
+    width: 32px;
   }
 }
