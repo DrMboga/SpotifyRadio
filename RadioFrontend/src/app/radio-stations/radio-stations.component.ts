@@ -15,6 +15,7 @@ import { RadioCountry } from '../model/radio-country';
 import { RadioStationInfoComponent } from '../components/radio-station-info/radio-station-info.component';
 import { MatIcon } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-radio-stations',
@@ -35,6 +36,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     RadioStationInfoComponent,
     MatIcon,
     MatTooltipModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './radio-stations.component.html',
   styleUrl: './radio-stations.component.css',
@@ -43,6 +45,8 @@ export class RadioStationsComponent {
   private readonly radioStore = inject(RadioStore);
 
   buttons = this.radioStore.radioButtonsList;
+
+  loadingCountries = this.radioStore.loadingCountries;
 
   countries = this.radioStore.countries;
   selectedCountry = signal<RadioCountry | undefined>(undefined);
@@ -63,6 +67,8 @@ export class RadioStationsComponent {
 
   selectedButton = signal<number>(2);
 
+  private cleanCacheStarted = false;
+
   constructor() {
     effect(() => {
       const button = this.selectedButton();
@@ -74,6 +80,17 @@ export class RadioStationsComponent {
       if (aCountry) {
         this.radioStore.getRadioCountryCacheStatus(aCountry.country);
         this.radioStore.getRadioStationsByCountry(aCountry.country);
+      }
+    });
+
+    effect(() => {
+      const cacheCleaningInProcess = this.radioStore.cacheCleaningInProcess();
+      if (cacheCleaningInProcess) {
+        this.cleanCacheStarted = true;
+      } else if (this.cleanCacheStarted) {
+        // Cache just cleaned up
+        this.radioStore.loadCountries();
+        this.cleanCacheStarted = false;
       }
     });
   }

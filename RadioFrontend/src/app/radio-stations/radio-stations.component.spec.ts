@@ -31,6 +31,8 @@ describe('RadioStationsComponent', () => {
     countries: signal<RadioCountry[]>(MOCK_RADIO_COUNTRIES),
     countryCacheStatus: signal<RadioStationsCacheStatus>(MOCK_STATIONS_CACHE_STATUS),
     countryRadioStations: signal<RadioStationInfo[]>(MOCK_RADIO_STATION_INFOS),
+    loadingCountries: signal<boolean>(false),
+    cacheCleaningInProcess: signal<boolean>(false),
     getSabaRadioChannels: jest.fn(),
     getRadioCountryCacheStatus: jest.fn(),
     setRadioButtonRegion: jest.fn(),

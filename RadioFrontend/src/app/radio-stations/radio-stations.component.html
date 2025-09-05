@@ -29,30 +29,36 @@
 </div>
 <div class="radio-stations-right-panel">
   <div class="top-row mat-elevation-z8">
-    <div class="top-row-item">
-      <mat-form-field>
-        <mat-select placeholder="Country" [(ngModel)]="selectedCountry">
-          <mat-select-trigger>
-            @if (selectedCountry(); as sc) {
-              <div class="country-item">
-                <img [src]="selectedCountryFlag()" [alt]="sc" class="flag-image" />
-                {{ sc.country }}
-              </div>
-            }
-          </mat-select-trigger>
-          @if (countries(); as countriesList) {
-            @for (country of countriesList; track country.country) {
-              <mat-option [value]="country">
+    @if (loadingCountries()) {
+      <div class="top-row-item">
+        <mat-spinner diameter="32"></mat-spinner>
+      </div>
+    } @else {
+      <div class="top-row-item">
+        <mat-form-field>
+          <mat-select placeholder="Country" [(ngModel)]="selectedCountry">
+            <mat-select-trigger>
+              @if (selectedCountry(); as sc) {
                 <div class="country-item">
-                  <img [src]="country.flagImageUrl" [alt]="country.country" class="flag-image" />
-                  {{ country.country }}
+                  <img [src]="selectedCountryFlag()" [alt]="sc" class="flag-image" />
+                  {{ sc.country }}
                 </div>
-              </mat-option>
+              }
+            </mat-select-trigger>
+            @if (countries(); as countriesList) {
+              @for (country of countriesList; track country.country) {
+                <mat-option [value]="country">
+                  <div class="country-item">
+                    <img [src]="country.flagImageUrl" [alt]="country.country" class="flag-image" />
+                    {{ country.country }}
+                  </div>
+                </mat-option>
+              }
             }
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    }
     @if (selectedCountry()) {
       <div class="top-row-item">
         {{ countryCacheStatus().processedCount }} radio stations from {{ countryCacheStatus().totalStations }} cached
@@ -65,7 +71,8 @@
       }
     }
     <div class="top-row-item">
-      <button matFab (click)="clearCache()" matTooltip="Clear cache"><mat-icon>delete</mat-icon>
+      <button matFab (click)="clearCache()" matTooltip="Clear cache">
+        <mat-icon>delete</mat-icon>
       </button>
     </div>
   </div>
