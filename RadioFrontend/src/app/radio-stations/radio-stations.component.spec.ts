@@ -183,42 +183,43 @@ describe('RadioStationsComponent', () => {
     );
   });
 
-  // it('should save new SABA Radio channel on drag-drop onto the channels list table on the left', async () => {
-  //   const radioStationsRightPanel = fixture.nativeElement.querySelector(
-  //     '.radio-stations-right-panel',
-  //   );
-  //
-  //   const radioStationsLeftPanel = fixture.nativeElement.querySelector(
-  //     '.radio-stations-left-panel',
-  //   );
-  //
-  //   // Dragging rp[1] -> lp[0],
-  //   const radioChannelIndex = 0;
-  //   const radioStationIndex = 1;
-  //   const radioStation = MOCK_SAARLAND_RADIO_STATIONS[radioStationIndex];
-  //   const event = {
-  //     previousIndex: radioStationIndex,
-  //     currentIndex: radioChannelIndex,
-  //     previousContainer: radioStationsRightPanel,
-  //     container: radioStationsLeftPanel,
-  //     item: {
-  //       data: radioStation,
-  //     },
-  //   };
-  //
-  //   // Act
-  //   component.sabaChannelDrop(event as CdkDragDrop<RadioStationInfo>);
-  //
-  //   // Assert
-  //   expect(radioStore.setSabaRadioChannel).toHaveBeenCalledWith({
-  //     sabaFrequency: MOCK_SABA_CHANNELS_FREQUENCIES[radioChannelIndex],
-  //     name: radioStation.name,
-  //     button: 2,
-  //     region: radioStation.region,
-  //     streamUrl: radioStation.stationStreamUrl,
-  //   });
-  //   expect(radioStore.deleteSabaRadioChannel).not.toHaveBeenCalled();
-  // });
+  it('should save new SABA Radio channel on drag-drop onto the channels list table on the left', async () => {
+    const radioStationsRightPanel = fixture.nativeElement.querySelector(
+      '.radio-stations-right-panel',
+    );
+
+    const radioStationsLeftPanel = fixture.nativeElement.querySelector(
+      '.radio-stations-left-panel',
+    );
+
+    // Dragging rp[1] -> lp[0],
+    const radioChannelIndex = 0;
+    const radioStationIndex = 1;
+    const radioStation = MOCK_RADIO_STATION_INFOS[radioStationIndex];
+    const event = {
+      previousIndex: radioStationIndex,
+      currentIndex: radioChannelIndex,
+      previousContainer: radioStationsRightPanel,
+      container: radioStationsLeftPanel,
+      item: {
+        data: radioStation,
+      },
+    };
+
+    // Act
+    component.sabaChannelDrop(event as CdkDragDrop<RadioStationInfo>);
+
+    // Assert
+    expect(radioStore.setSabaRadioChannel).toHaveBeenCalledWith({
+      sabaFrequency: MOCK_SABA_CHANNELS_FREQUENCIES[radioChannelIndex],
+      name: radioStation.name,
+      button: 2,
+      stationDetailsUrl: radioStation.detailsUrl,
+      streamUrl: radioStation.stationStreamUrl,
+      country: radioStation.country,
+    });
+    expect(radioStore.deleteSabaRadioChannel).not.toHaveBeenCalled();
+  });
 
   it('should remove SABA Radio channel from list on drag-drop onto radio station list on the right', async () => {
     const radioStationsRightPanel = fixture.nativeElement.querySelector(
