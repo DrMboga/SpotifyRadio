@@ -4,7 +4,7 @@
 
 1. Install Powershell 
 
-Go to this page https://github.com/PowerShell/PowerShell/releases/tag/v7.5.2
+Go to this page https://github.com/PowerShell/PowerShell/releases
 And choose the `linux-arm64.tar.gz` version of powershell distrib. For example:
 `powershell-7.5.2-linux-arm64.tar.gz`
 
