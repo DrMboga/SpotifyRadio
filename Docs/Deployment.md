@@ -1,5 +1,22 @@
 # Raspberry Pi setup
 
+## VLC install
+
+### Windows
+
+Download VLC for Windows (x64) from VideoLAN:
+https://www.videolan.org/vlc/download-windows.html
+
+### Raspberry
+
+```bash
+
+sudo apt update
+sudo apt install libvlc-dev vlc
+
+```
+
+
 ## Playwright install
 
 1. Install Powershell 
