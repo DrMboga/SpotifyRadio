@@ -47,6 +47,6 @@ cd RadioApp
 sudo dotnet build
 
 # install browsers
-pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
+sudo pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
 
 ```
