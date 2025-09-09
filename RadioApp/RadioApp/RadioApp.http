@@ -130,8 +130,8 @@ Content-Type: application/json
 POST {{RadioApp_HostAddress}}/screen-api-show-song-info?message=Metallica Master of Puppets
 
 
-# curl -X POST "http://localhost:5262/screen-api-show-frequency-info?message=M 102 MHz"
-# curl -X POST "http://localhost:5262/screen-api-show-song-info?message=Metallica Master of Puppets"
+# curl -X POST "http://localhost:5262/screen-api-show-frequency-info?message=M%20102%20MHz"
+# curl -X POST "http://localhost:5262/screen-api-show-song-info?message=Metallica%20Master%20of%20Puppets"
 
 ###
 
@@ -140,8 +140,8 @@ POST {{RadioApp_HostAddress}}/screen-api-show-song-info?message=Metallica Master
 #  -d '{
 #    "stationName": "Classic Rock Radio",
 #    "stationCountry": "Germany",
-#    "stationCountryFlagBase64": "data:image/png;base64,iVBO...",
-#    "stationLogoBase64": "data:image/jpg;base64,/9j/4AAQSk..."
+#    "stationCountryFlagBase64": "",
+#    "stationLogoBase64": ""
 #  }'
 
 

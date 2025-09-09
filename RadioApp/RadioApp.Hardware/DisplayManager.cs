@@ -163,7 +163,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     /// </summary>
     public Task Handle(ShowFrequencyInfoNotification notification, CancellationToken cancellationToken)
     {
-        DrawText(60, 2, notification.FrequencyInfo, ScreenGpioParameters.White);
+        DrawText(100, 2, notification.FrequencyInfo, ScreenGpioParameters.White);
         return Task.CompletedTask;
     }
     
