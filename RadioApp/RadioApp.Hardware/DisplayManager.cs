@@ -16,7 +16,8 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     INotificationHandler<ShowStaticImageNotification>,
     IRequestHandler<ShowSongInfoRequest, bool>,
     INotificationHandler<ShowProgressNotification>,
-    INotificationHandler<ShowFrequencyInfoNotification>
+    INotificationHandler<ShowFrequencyInfoNotification>,
+    INotificationHandler<ShowRadioStationNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
@@ -165,6 +166,23 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         return Task.CompletedTask;
     }
     
+    
+    /// <summary>
+    /// Shows radio station logo, flag and station name
+    /// </summary>
+    public async Task Handle(ShowRadioStationNotification notification, CancellationToken cancellationToken)
+    {
+        var flagBmp = await notification.ScreenInfo.StationCountryFlagBase64.GetBmpImageFromBase64(16);
+        var flagRgb565 = flagBmp.ToRgb565();
+        var logoBmp = await notification.ScreenInfo.StationLogoBase64.GetBmpImageFromBase64(92);
+        var logoRgb565 = logoBmp.ToRgb565();
+        
+        DrawImage(flagRgb565, 101, 3);
+        DrawImage(logoRgb565, 13);
+        
+        DrawText(19, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
+    }
+    
     /// <summary>
     /// Draws a text by coordinates
     /// </summary>
@@ -251,7 +269,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     /// <summary>
     /// Draws an image. Data should be converted to RGB 565 pixels array
     /// </summary>
-    private void DrawImage(BmpRgb565Data imageData, int topMargin)
+    private void DrawImage(BmpRgb565Data imageData, int topMargin, int? x = null)
     {
         if (imageData.Rgb565Pixels == null || imageData.Rgb565Pixels.Length == 0)
         {
@@ -261,7 +279,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         int y1 = topMargin; // Top margin
         int y2 = y1 + imageData.Height - 1;
         // Placing a picture in the middle of the screen
-        int x1 = (ScreenGpioParameters.DisplayWidth - imageData.Width) / 2;
+        int x1 = x ?? ((ScreenGpioParameters.DisplayWidth - imageData.Width) / 2);
         int x2 = x1 + imageData.Width - 1;
 
         InitDrawArea(x1, y1, x2, y2);

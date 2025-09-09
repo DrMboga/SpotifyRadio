@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.Hardware.Display;
 
 namespace RadioApp.RadioStreamSettings;
@@ -17,5 +18,12 @@ public static class ScreenApiEndpoints
                     await mediator.Publish(new ShowFrequencyInfoNotification(message));
                 })
             .WithDescription("Shows a sting in the upper right corner of the screen");
+
+        app.MapPost("screen-api-show-station-info",
+                async (IMediator mediator, ILogger<Program> logger, [FromBody] RadioScreenInfo screenInfo) =>
+                {
+                    await mediator.Publish(new ShowRadioStationNotification(screenInfo));
+                })
+            .WithDescription("Shows a station info");
     }
 }
