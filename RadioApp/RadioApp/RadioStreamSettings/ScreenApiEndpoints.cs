@@ -25,5 +25,12 @@ public static class ScreenApiEndpoints
                     await mediator.Publish(new ShowRadioStationNotification(screenInfo));
                 })
             .WithDescription("Shows a station info");
+
+        app.MapPost("screen-api-show-song-info",
+                async (IMediator mediator, ILogger<Program> logger, [FromQuery] string message) =>
+                {
+                    await mediator.Publish(new ShowRadioSongInfoNotification(message));
+                })
+            .WithDescription("Shows a song info");
     }
 }

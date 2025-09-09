@@ -17,7 +17,8 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     IRequestHandler<ShowSongInfoRequest, bool>,
     INotificationHandler<ShowProgressNotification>,
     INotificationHandler<ShowFrequencyInfoNotification>,
-    INotificationHandler<ShowRadioStationNotification>
+    INotificationHandler<ShowRadioStationNotification>,
+    INotificationHandler<ShowRadioSongInfoNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
@@ -181,6 +182,15 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         DrawImage(logoRgb565, 13);
         
         DrawText(19, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
+    }
+    
+    /// <summary>
+    /// Shows a text on a bottom line
+    /// </summary>
+    public Task Handle(ShowRadioSongInfoNotification notification, CancellationToken cancellationToken)
+    {
+        DrawText(3, 117, notification.SongInfo, ScreenGpioParameters.White);
+        return Task.CompletedTask;
     }
     
     /// <summary>
