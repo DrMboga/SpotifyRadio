@@ -70,7 +70,7 @@ Content-Type: application/json
   "sabaFrequency": 88,
   "streamUrl": "https://stream.klassikradio.de/national/mp3-192/mytuner",
   "radioLogoBase64": null,
-  "country": "Germany",
+  "country": "Luxembourg",
   "countryFlagBase64": null
 }
 
@@ -135,8 +135,8 @@ POST {{RadioApp_HostAddress}}/screen-api-show-song-info?message=Metallica Master
 
 ###
 
-# curl -X POST "http://localhost:5262/screen-api-show-station-info" 
-#  -H "Content-Type: application/json" 
+# curl -X POST "http://localhost:5262/screen-api-show-station-info" \
+#  -H "Content-Type: application/json" \
 #  -d '{
 #    "stationName": "Classic Rock Radio",
 #    "stationCountry": "Germany",

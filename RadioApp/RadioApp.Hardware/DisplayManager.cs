@@ -178,10 +178,10 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         var logoBmp = await notification.ScreenInfo.StationLogoBase64.GetBmpImageFromBase64(92);
         var logoRgb565 = logoBmp.ToRgb565();
         
-        DrawImage(flagRgb565, 101, 3);
+        DrawImage(flagRgb565, 100, 3);
         DrawImage(logoRgb565, 13);
         
-        DrawText(19, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
+        DrawText(20, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
     }
     
     /// <summary>
