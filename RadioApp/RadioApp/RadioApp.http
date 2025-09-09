@@ -105,3 +105,12 @@ POST {{RadioApp_HostAddress}}/spotify-api-skip-to?device={{device}}&next=true
 ###
 GET {{RadioApp_HostAddress}}/spotify-api-get-song-info
 
+
+###
+# ------------
+# Temporary Screen API endpoints
+###
+
+@frequencyMessage=M 102 MHz
+
+POST  {{RadioApp_HostAddress}}/screen-api-show-frequency-info?message={{frequencyMessage}}

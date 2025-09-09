@@ -15,7 +15,8 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     INotificationHandler<ClearScreenNotification>,
     INotificationHandler<ShowStaticImageNotification>,
     IRequestHandler<ShowSongInfoRequest, bool>,
-    INotificationHandler<ShowProgressNotification>
+    INotificationHandler<ShowProgressNotification>,
+    INotificationHandler<ShowFrequencyInfoNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
@@ -151,6 +152,16 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
             ScreenGpioParameters.ProgressBarHeight, 
             ScreenGpioParameters.ProgressColor,
             ScreenGpioParameters.ProgressBackgroundColor);
+        return Task.CompletedTask;
+    }
+    
+    
+    /// <summary>
+    /// Shows text in the upper right corner
+    /// </summary>
+    public Task Handle(ShowFrequencyInfoNotification notification, CancellationToken cancellationToken)
+    {
+        DrawText(60, 2, notification.FrequencyInfo, ScreenGpioParameters.White);
         return Task.CompletedTask;
     }
     

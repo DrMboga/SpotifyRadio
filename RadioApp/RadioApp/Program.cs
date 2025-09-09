@@ -163,6 +163,7 @@ app.MapSpotifySettingsEndpoints();
 app.MapRadioStreamSettingsEndpoints();
 
 // app.MapSpotifyApiEndpoints();
+app.MapScreenApiEndpoints();
 
 // Log file endpoint
 app.MapGet("/logs", (IHostEnvironment env) => Results.File(Path.Combine(env.ContentRootPath, "radioService.log"), "text/plain"))

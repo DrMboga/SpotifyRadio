@@ -46,4 +46,6 @@ public static class ScreenGpioParameters
 
     public const int ProgressBarTopPosition = 100;
     public const int ProgressBarHeight = 4;
+
+    public const ushort White = 0xFFFF;
 }
