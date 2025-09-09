@@ -181,7 +181,7 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         DrawImage(flagRgb565, 100, 3);
         DrawImage(logoRgb565, 13);
         
-        DrawText(20, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
+        DrawText(21, 107, notification.ScreenInfo.StationName, ScreenGpioParameters.SongNameColor);
     }
     
     /// <summary>
