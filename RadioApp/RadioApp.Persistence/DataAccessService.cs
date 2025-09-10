@@ -22,7 +22,8 @@ public class DataAccessService :
     IRequestHandler<GetRadioStationsCachingStatusRequest, MyTunerCachingStatus>,
     INotificationHandler<UpdateRadioStationInfoNotification>,
     IRequestHandler<GetOneRadioStationInfoRequest, RadioStationInfo?>,
-    IRequestHandler<GetOneCountryInfoRequest, MyTunerCountryInfo?>
+    IRequestHandler<GetOneCountryInfoRequest, MyTunerCountryInfo?>,
+    IRequestHandler<GetRadioStationToPlayRequest, RadioStation?>
 {
     private readonly IDbContextFactory<Persistence> _dbContextFactory;
 
@@ -232,6 +233,16 @@ public class DataAccessService :
         var countryInfo = await dbContext.Countries.AsNoTracking().Where(s => s.Country == request.Country)
             .FirstOrDefaultAsync(cancellationToken);
         return countryInfo;
+    }
+
+
+    public async Task<RadioStation?> Handle(GetRadioStationToPlayRequest request, CancellationToken cancellationToken)
+    {
+        await using var dbContext = await _dbContextFactory!.CreateDbContextAsync(cancellationToken);
+        var station = await dbContext.RadioStation.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Button == request.Button && s.SabaFrequency == request.Frequency,
+                cancellationToken);
+        return station;
     }
 
     private RadioStationEntity ConvertToStationEntity(RadioStation station)

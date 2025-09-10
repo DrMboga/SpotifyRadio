@@ -10,19 +10,15 @@ namespace RadioApp.PlayerProcessors;
 
 public class SpotifyPlayerProcessor : IPlayerProcessor
 {
-    // Debounce frequency change 
-    private const int FrequencyChangeThresholdMilliseconds = 500;
-
     private readonly ILogger<SpotifyPlayerProcessor> _logger;
     private readonly IMediator _mediator;
+    private readonly PlayerProcessorDebounceFrequencyService _debounceService = new();
 
     private bool _canPlay = false;
     private bool _isPlaying = false;
     private Common.Contracts.SpotifySettings? _spotifySettings = null;
     private int _frequencyValue;
     private int _temporaryFrequencyValue;
-    private long _lastFrequencyChangeTime = 0;
-    private readonly Lock _frequencyLock = new Lock();
 
     private bool _newStart = true;
     private string _deviceId = string.Empty;
@@ -154,17 +150,9 @@ public class SpotifyPlayerProcessor : IPlayerProcessor
     /// </summary>
     public async Task FrequencyChanged(int frequency)
     {
-        lock (_frequencyLock)
+        if (!_debounceService.CheckLastTime())
         {
-            // The capacitance measurement is not precise. So if the knob is somewhere on frequency measurement borders, it can send new frequency values very often.
-            // So, we are debouncing this buzz here
-            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            if (now - _lastFrequencyChangeTime < FrequencyChangeThresholdMilliseconds)
-            {
-                return;
-            }
-
-            _lastFrequencyChangeTime = now;
+            return;
         }
 
         if (!_canPlay || !_isPlaying)

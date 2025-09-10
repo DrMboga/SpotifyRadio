@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.Hardware.Display;
+using RadioApp.Common.Messages.RadioStream;
 
 namespace RadioApp.RadioStreamSettings;
 
@@ -44,5 +45,11 @@ public static class ScreenApiEndpoints
                     await mediator.Publish(new ShowRadioSongInfoNotification(message));
                 })
             .WithDescription("Shows a song info");
+
+        app.MapGet("get-radio-station",
+                async (IMediator mediator, ILogger<Program> logger, [FromQuery] int button,
+                        [FromQuery] int frequency) =>
+                    await mediator.Send(new GetRadioStationToPlayRequest((SabaRadioButtons)button, frequency)))
+            .WithDescription("Gets a radio station");
     }
 }
