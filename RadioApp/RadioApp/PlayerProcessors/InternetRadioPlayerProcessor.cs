@@ -2,6 +2,7 @@
 using RadioApp.Common.Contracts;
 using RadioApp.Common.Messages.Hardware.Display;
 using RadioApp.Common.Messages.RadioStream;
+using RadioApp.Common.MyTunerScraper;
 using RadioApp.Common.PlayerProcessor;
 
 namespace RadioApp.PlayerProcessors;
@@ -9,20 +10,27 @@ namespace RadioApp.PlayerProcessors;
 public class InternetRadioPlayerProcessor : IPlayerProcessor
 {
     public PlayerType Type => PlayerType.InternetRadio;
+    
+    private static readonly TimeSpan UpdateSongInterval = TimeSpan.FromSeconds(2);
 
     private readonly ILogger<InternetRadioPlayerProcessor> _logger;
     private readonly IMediator _mediator;
+    private readonly IRadioVlcPlayer _radioVlcPlayer;
+    private readonly PlayerProcessorTimerService _updateSongTimer;
 
     private readonly PlayerProcessorDebounceFrequencyService _debounceService = new();
 
     private int _currentFrequency = 0;
     private SabaRadioButtons _currentButton = SabaRadioButtons.M;
     private PlayerMode _currentPlayerMode = PlayerMode.Pause;
+    private string? _currentSongTitle;
 
-    public InternetRadioPlayerProcessor(ILogger<InternetRadioPlayerProcessor> logger, IMediator mediator)
+    public InternetRadioPlayerProcessor(ILogger<InternetRadioPlayerProcessor> logger, IMediator mediator, IRadioVlcPlayer radioVlcPlayer)
     {
         _logger = logger;
         _mediator = mediator;
+        _radioVlcPlayer = radioVlcPlayer;
+        _updateSongTimer = new PlayerProcessorTimerService(UpdateSongInterval, UpdateSongInfoIfNeeded);
     }
 
     public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
@@ -35,10 +43,10 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
         await Reset();
     }
 
-    public Task Stop()
+    public async Task Stop()
     {
-        // TODO: Stop player and timer
-        return Task.CompletedTask;
+        await _updateSongTimer.Stop();
+        _radioVlcPlayer.Stop();
     }
 
     public async Task Play()
@@ -49,7 +57,8 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
             return;
         }
 
-        // TODO: start player and timer
+        _radioVlcPlayer.Play(currentStation.StreamUrl);
+        await _updateSongTimer.Start();
         var screenInfo = new RadioScreenInfo
         {
             StationCountry = currentStation.Country ?? string.Empty,
@@ -96,6 +105,25 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
         if (_currentPlayerMode == PlayerMode.Play)
         {
             await Play();
+        }
+    }
+
+    /// <summary>
+    /// This method runs every interval to get song info and show it on TFT
+    /// </summary>
+    private async Task UpdateSongInfoIfNeeded(CancellationToken cancellationToken)
+    {
+        var title = _radioVlcPlayer.GetCurrentlyPlaying();
+
+        if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(_currentSongTitle))
+        {
+            // TODO: Cleanup title row
+        }
+
+        if (!string.IsNullOrEmpty(title) && _currentSongTitle != title)
+        {
+            _currentSongTitle = title;
+            await _mediator.Publish(new ShowRadioSongInfoNotification(_currentSongTitle), cancellationToken);
         }
     }
 }
