@@ -18,7 +18,8 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     INotificationHandler<ShowProgressNotification>,
     INotificationHandler<ShowFrequencyInfoNotification>,
     INotificationHandler<ShowRadioStationNotification>,
-    INotificationHandler<ShowRadioSongInfoNotification>
+    INotificationHandler<ShowRadioSongInfoNotification>,
+    INotificationHandler<CleanRadioSongInfoNotification>
 {
     private readonly ILogger<DisplayManager> _logger;
     private readonly IHardwareManager _hardwareManager;
@@ -190,6 +191,32 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
     public Task Handle(ShowRadioSongInfoNotification notification, CancellationToken cancellationToken)
     {
         DrawText(3, 117, notification.SongInfo, ScreenGpioParameters.White);
+        return Task.CompletedTask;
+    }
+    
+    /// <summary>
+    /// Cleans the bottom row where song info was written 
+    /// </summary>
+    public Task Handle(CleanRadioSongInfoNotification notification, CancellationToken cancellationToken)
+    {
+        _logger.LogDebug("Clean radio song info - the part of the screen from Y = 117 until Y = 128");
+        const byte yStart = 117;
+        const ushort color = ScreenGpioParameters.BackgroundColor;
+        SendCommand(0x2A); // Column address set
+        SendData(0x00); SendData(0x00); // X start
+        SendData(0x00); SendData(ScreenGpioParameters.DisplayWidth); // X end (160 pixels)
+
+        SendCommand(0x2B); // Row address set
+        SendData(0x00); SendData(yStart); // Y start
+        SendData(0x00); SendData(ScreenGpioParameters.DisplayHeight); // Y end (128 pixels)
+
+        SendCommand(0x2C); // Write Memory Start
+        for (int i = 0; i < (ScreenGpioParameters.DisplayWidth + 1) * (ScreenGpioParameters.DisplayHeight - yStart + 1); i++)
+        {
+            SendData(Convert.ToByte(color >> 8));
+            SendData(Convert.ToByte(color & 0xFF));
+        }
+
         return Task.CompletedTask;
     }
     

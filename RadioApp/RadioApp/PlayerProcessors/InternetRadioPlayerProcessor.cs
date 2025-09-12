@@ -36,7 +36,6 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
     public async Task Start(SabaRadioButtons currentButton, PlayerMode currentPlayerMode, int currentFrequency)
     {
         _logger.LogInformation("Starting Internet radio player processor");
-        await _mediator.Publish(new ClearScreenNotification());
         _currentFrequency = currentFrequency;
         _currentButton = currentButton;
         _currentPlayerMode = currentPlayerMode;
@@ -117,12 +116,13 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
 
         if (string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(_currentSongTitle))
         {
-            // TODO: Cleanup title row
+            await _mediator.Publish(new CleanRadioSongInfoNotification(), cancellationToken);
         }
 
         if (!string.IsNullOrEmpty(title) && _currentSongTitle != title)
         {
             _currentSongTitle = title;
+            await _mediator.Publish(new CleanRadioSongInfoNotification(), cancellationToken);
             await _mediator.Publish(new ShowRadioSongInfoNotification(_currentSongTitle), cancellationToken);
         }
     }
