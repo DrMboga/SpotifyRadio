@@ -64,13 +64,21 @@ curl -4 -I https://dealer.spotify.com/  -m 8
 
 If IPv6 hangs but IPv4 connects quickly, Try to setup prefer IPv4 over IPv6:
 
-Disable IPv6:
+- This one helps temporary:
 
 ```bash
-sudo nano /boot/firmware/cmdline.txt
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
 ```
 
-Add: `ipv6.disable=1`
+- To make it permanent (haven't tried yet):
+
+```bash
+echo "net.ipv6.conf.all.disable_ipv6=1" | sudo tee /etc/sysctl.d/99-disable-ipv6.conf
+sudo sysctl -p /etc/sysctl.d/99-disable-ipv6.conf
+sudo reboot
+```
+
+More Info: https://chatgpt.com/g/g-p-68790e87dcdc81918ca5cd2ccfdadd85-radio/c/68c550c9-ec88-832e-b01d-f84f3bcb1fb1
 
 
 ## VLC install
