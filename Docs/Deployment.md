@@ -1,5 +1,78 @@
 # Raspberry Pi setup
 
+## Raspotify
+
+### Install
+
+[TBD]
+
+### Setup
+
+1. Get the device name:
+
+```bash
+aplay -l
+```
+
+For 3.5mm output it should be something like: 
+`card 0: Headphones [bcm2835 Headphones], device 0: bcm2835 Headphones [bcm2835 Headphones]`
+
+So, we need then ALSA card 0, device 0: `plughw:0,0`
+
+2. Config
+```bash
+sudo nano /etc/raspotify/conf
+```
+
+```ini
+
+LIBRESPOT_NAME=SABA
+
+# Audio backend and output
+LIBRESPOT_BACKEND=alsa
+LIBRESPOT_DEVICE=plughw:0,0       # <-- set from `aplay -l`
+LIBRESPOT_BITRATE=160
+
+
+```
+
+```bash
+sudo systemctl restart raspotify
+```
+
+3. Diagnostic:
+
+```bash
+sudo journalctl -u raspotify -n 100 --no-pager
+```
+
+### Making librespot working
+
+If logs shows thefollowing error:
+
+` ERROR librespot_connect::spirc] starting dealer failed: Invalid state { Websocket couldn't be started because: Deadline expired before operation could complete { Connection timed out (os error 110) } }`
+
+then try these 2 commands:
+
+```bash
+# IPv6 test (likely to hang or timeout on your setup)
+curl -6 -I https://dealer.spotify.com/  -m 8
+
+# IPv4 fallback test (should connect fast and show HTTP headers)
+curl -4 -I https://dealer.spotify.com/  -m 8
+```
+
+If IPv6 hangs but IPv4 connects quickly, Try to setup prefer IPv4 over IPv6:
+
+Disable IPv6:
+
+```bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+Add: `ipv6.disable=1`
+
+
 ## VLC install
 
 ### Windows

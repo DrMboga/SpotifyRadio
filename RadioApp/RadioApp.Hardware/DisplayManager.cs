@@ -233,6 +233,10 @@ public class DisplayManager : INotificationHandler<InitDisplayNotification>,
         {
             DrawChar(x, y, symbol, color);
             x += 6; // Pixels distance between characters
+            if (x > ScreenGpioParameters.DisplayWidth)
+            {
+                return;
+            }
         }
     }
     

@@ -56,6 +56,7 @@ public class InternetRadioPlayerProcessor : IPlayerProcessor
             return;
         }
 
+        _logger.LogDebug($"Playing '{currentStation.Name}'");
         _radioVlcPlayer.Play(currentStation.StreamUrl);
         await _updateSongTimer.Start();
         var screenInfo = new RadioScreenInfo
