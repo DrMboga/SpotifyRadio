@@ -1,10 +1,129 @@
 # Raspberry Pi setup
 
-## Raspotify
+1. [Install Raspbian OS](#install-raspberry-pi-imager--os)
+2.  Configure SSH Keys
+    2.1. [Configure SSH Keys Windows](#configure-ssh-key-based-authentication-windows)
+    2.2. [Configure SSH Key based authentication (Mac)](#configure-ssh-key-based-authentication-mac)
+3. [Install system updates](#install-system-updates)
+4. [Install Raspotify (spotify connect)](#install-spotify-connect)
+5. [Install VLC libraries](#vlc-install)
+6. [Install .Net SKD](#install-net)
+7. [InstallPlaywright](#playwright-install-needed-to-run-mytuner-scraper)
+8. [Enable SPI1 port](#enable-spi1-needed-for-tft-screen-communication)
+9. [Depoly main .Net app as service](#run-main-app-as-service)
+10. [NGINX setup](#setup-nginx)
 
-### Install
+---
 
-[TBD]
+## Install Raspberry Pi imager + OS
+
+Download imager: https://www.raspberrypi.com/software/
+
+Install it, plug in the CD card to computer and walk through the Wizard and don't forget to set up:
+
+- Machine name: `spotifyradio`
+- admin user (`pi`) and password;
+- WLAN name and password;
+- Check `Access via SSH` mark
+
+After installing SD card and switching on the Pi, check if it is available:
+
+```bash
+ping spotifyradio
+```
+
+---
+
+## Configure SSH Key based authentication (Windows)
+
+### 1. Generate key (Windows machine)
+
+```bash
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+```
+
+### 2. Copy public key to Raspberry Pi (Windows machine)
+
+```bash
+scp -r C:/Users/Mike/.ssh/id_rsa.pub pi@spotifyradio:~/.ssh/authorized_keys
+```
+
+### 3. Set permissons to public key (Linux machine)
+
+```bash
+chmod 700 ~/.ssh
+chmod 400 authorized_keys
+```
+
+---
+
+## Configure SSH Key based authentication (Mac)
+
+### 1. Generate an SSH Key Pair on Your Mac
+
+1. Open Terminal on your Mac.
+2. Run the following command to generate an SSH key pair:
+
+   ```sh
+   ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+   ```
+
+   - `-t rsa`: Specifies the type of key to create, which is RSA.
+   - `-b 4096`: Specifies the key size in bits (4096 bits is more secure than the default 2048 bits).
+   - `-C "your_email@example.com"`: Adds a comment (usually your email) to the key.
+
+3. When prompted for a file to save the key, press `Enter` to accept the default location (`~/.ssh/id_rsa`).
+4. If asked for a passphrase, you can enter one or leave it empty for no passphrase (for convenience, leave it empty, but for security, use a passphrase).
+
+#### 2. Copy the Public Key to Your Raspberry Pi
+
+1. Use `ssh-copy-id` to copy your public key to the Raspberry Pi:
+
+   ```sh
+   ssh-copy-id pi@spotifyradio
+
+   ```
+
+2. Enter the password for the `pi` user when prompted. This command will copy the public key to the Raspberry Pi and automatically configure the SSH server to use it.
+
+#### 3. Test SSH Key-Based Login
+
+1. Try logging in to the Raspberry Pi using the key:
+   ```sh
+   ssh pi@spotifyradio
+
+   ```
+   You should be able to log in without being prompted for a password.
+
+---
+
+## Install system updates
+
+```bash
+sudo apt update
+sudo apt upgrade
+```
+
+---
+
+## Install Spotify Connect
+
+### 1. Install Raspotify
+
+```bash
+
+# Install curl and https
+sudo apt install -y apt-transport-https curl
+
+# Add the “raspotify” GPG key and its repository.
+curl -sSL https://dtcooper.github.io/raspotify/key.asc | sudo tee /usr/share/keyrings/raspotify-archive-keyrings.asc >/dev/null
+echo 'deb [signed-by=/usr/share/keyrings/raspotify-archive-keyrings.asc] https://dtcooper.github.io/raspotify raspotify main' | sudo tee /etc/apt/sources.list.d/raspotify.list
+
+# Install raspotify
+sudo apt update
+sudo apt install raspotify
+
+```
 
 ### Setup
 
@@ -80,6 +199,7 @@ sudo reboot
 
 More Info: https://chatgpt.com/g/g-p-68790e87dcdc81918ca5cd2ccfdadd85-radio/c/68c550c9-ec88-832e-b01d-f84f3bcb1fb1
 
+---
 
 ## VLC install
 
@@ -97,8 +217,26 @@ sudo apt install libvlc-dev vlc
 
 ```
 
+---
 
-## Playwright install
+## Install .Net
+
+https://learn.microsoft.com/en-gb/dotnet/core/install/linux-debian
+
+```bash
+wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+sudo apt-get update
+
+# Install SDK
+sudo apt-get install -y dotnet-sdk-10.0
+
+```
+
+---
+
+## Playwright install (needed to run MyTuner scraper)
 
 1. Install Powershell 
 
@@ -148,3 +286,181 @@ sudo dotnet build
 sudo pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
 
 ```
+
+---
+
+## Enable SPI1 (needed for TFT screen communication)
+On Raspberry Pi 4, SPI1 is **disabled by default**, so you need to enable it first. Here's how you can check and enable SPI1:
+
+### **1. Check if SPI1 is Enabled**
+Run the following command in the terminal:
+
+```sh
+ls /dev/spi*
+```
+
+- If **SPI1 is enabled**, you should see:
+  ```
+  /dev/spidev0.0  /dev/spidev0.1  /dev/spidev1.0  /dev/spidev1.1
+  ```
+- If you only see `/dev/spidev0.*`, SPI1 is disabled.
+
+### **2. Enable SPI1**
+If SPI1 is missing, follow these steps:
+
+#### **A) Edit `config.txt`**
+Open the configuration file:
+```sh
+sudo nano /boot/firmware/config.txt
+```
+Add the following line at the bottom:
+```
+dtparam=spi1=on
+```
+Save and exit (`CTRL+X`, then `Y`, then `Enter`).
+
+#### **B) Reboot the Raspberry Pi**
+```sh
+sudo reboot
+```
+
+### **3. Verify SPI1 After Enabling**
+After reboot, check again:
+```sh
+ls /dev/spi*
+```
+Now you should see:
+```
+/dev/spidev0.0  /dev/spidev0.1  /dev/spidev1.0  /dev/spidev1.1
+```
+
+Additionally, you can check SPI configuration with:
+```sh
+lsmod | grep spi
+```
+
+And list active SPI buses with:
+```sh
+dmesg | grep spi
+```
+
+#### **4. Check SPI1 Using PIGPIO**
+If you are using the **PIGPIO** library, you can test SPI1 with:
+```sh
+pigs spio 1 500000 0
+```
+If there is no error, SPI1 is enabled.
+
+## Run main app as service
+
+- Application deployment folder is: `~/projects/spotify-radio-service`
+
+```bash
+cd ~/projects/
+mkdir spotify-radio-service
+```
+
+### Build frontend:
+
+From the root of repository:
+
+```bash
+cd RadioFrontend
+npm run build
+```
+
+### Publish backend as self-contained app. And copy it to the deployment folder:
+
+From the root of repository:
+
+```bash
+cd RadioApp/RadioApp
+
+dotnet publish -c release -r linux-arm64
+
+cp -r ./bin/release/net10.0/linux-arm64/publish/* ~/projects/spotify-radio-service
+```
+
+### Add run permissions:
+
+```bash
+cd ~/projects/spotify-radio-service
+chmod +x ./RadioApp
+
+# Run app for test:
+./RadioApp
+```
+
+### Copy a service file
+
+From the root of repository:
+```bash
+cd RadioApp
+cp -r ./radio-app.service /etc/systemd/system/radio-app.service
+```
+
+### Register a service as `systemctl`
+```bash
+
+# Restart daemon
+sudo systemctl daemon-reload
+# Start services
+sudo systemctl start radio-app.service
+# Enable auto start
+sudo systemctl enable radio-app.service
+```
+
+---
+
+
+## Setup Nginx
+
+```bash
+sudo apt install nginx
+sudo systemctl start nginx
+```
+
+### Permissions to web folder:
+
+```bash
+sudo gpasswd -a www-data pi
+
+chmod g+x /home/pi && chmod g+x /home/pi/projects && chmod g+x /home/pi/projects/spotify-radio-service && #TODO: All folders downt to index.html and js+css files
+```
+
+### Nginx config
+```bash
+sudo nano /etc/nginx/nginx.conf
+```
+
+```json
+map $http_connection $connection_upgrade {
+"~*Upgrade" $http_connection;
+default keep-alive;
+}
+
+server {
+    listen 80;
+    server_name spotify-radio.com *.spotify-radio.com;
+
+    access_log /var/log/nginx/spotify_radio.log;
+    error_log  /var/log/nginx/spotify_radio_error.log;
+
+    location / {
+        proxy_pass         http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection $connection_upgrade;
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+```bash
+sudo systemctl restart nginx.service
+```
+
+---

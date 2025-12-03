@@ -1,4 +1,4 @@
-# 🎛️ Analog transistor radio upgrade project
+# Analog transistor radio upgrade project
 
 This project transforms a vintage German transistor radio — the **SABA Mainau** — into a modern smart audio device powered by **Raspberry Pi 4** and **Raspberry Pi Pico**. While preserving the iconic design and analog audio amplifier of the original, the project adds support for **Spotify Connect**, **Internet Radio**, and a **TFT display interface**, fully controlled by physical buttons and a rotary tuning dial.
 
@@ -6,10 +6,9 @@ This project transforms a vintage German transistor radio — the **SABA Mainau*
 
 ## 📦 Hardware Overview
 
-- **Raspberry Pi 4** — main processing unit (audio, web interface, display)
-- **Raspberry Pi Pico** — microcontroller for reading physical I/O (buttons, tuning dial)
-- **1.77" TFT SPI Display** (128x160, ST7735)
-- **PAM8403** — compact audio amplifier (for signal bridging)
+- [**Raspberry Pi 4**](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/) — main processing unit (audio, web interface, display)
+- [**Raspberry Pi Pico**](https://www.raspberrypi.com/products/raspberry-pi-pico/) — microcontroller for reading physical I/O (buttons, tuning dial)
+- [**1.77" TFT SPI Display** (128x160, ST7735)](https://www.az-delivery.de/en/products/1-77-zoll-spi-tft-display)
 - **Original SABA transistor amplifier** — reused as final stage for audio output
 
 ---
@@ -17,8 +16,7 @@ This project transforms a vintage German transistor radio — the **SABA Mainau*
 ## 🔧 Hardware Integration Plan
 
 - Remove original radio circuits, leaving only the **transistor audio amplifier**.
-- **Mix stereo output** from Raspberry Pi’s 3.5mm jack into mono using two resistors.
-- Feed mono signal into one channel of **PAM8403**, then into the radio's transistor amplifier.
+- **Mix stereo output** from Raspberry Pi’s 3.5mm jack into mono using two resistors. And inject this signal into radio's circuit.
 - Mount **TFT display** to the front panel, connected to **SPI interface** of the Pi 4.
 - Connect physical **buttons** to **Raspberry Pi Pico**.
 - Use the original **variable capacitor** (from radio oscillator) as a **tuning dial**:
@@ -59,7 +57,7 @@ The device will support **two modes**, switchable via physical controls:
 - **Frontend UI**:
   - Web interface built with **Angular**
   - Used for **initial setup** and **Spotify authentication**
-  - Hosted together with WebAPI app, accessible in local network
+  - Hosted together with WebAPI app, accessible in local network via [NGINX](https://nginx.org/index.html)
 
 ---
 
@@ -70,7 +68,6 @@ The device will support **two modes**, switchable via physical controls:
 | Raspberry Pi 4   | UART      | Master, receives input events    |
 | Raspberry Pi Pico| UART + ADC| I/O controller (buttons, dial)   |
 | Pi 4 ↔ TFT LCD   | SPI       | Display track/station info       |
-| Pi 4 ↔ PAM8403   | Audio     | Mono audio to transistor amp     |
 
 ---
 
@@ -78,10 +75,11 @@ The device will support **two modes**, switchable via physical controls:
 
 All schematics, wiring diagrams, and specifications are in the [`Docs/`](Docs) folder:
 
-- [📡 System Architecture](Docs/SystemOverview.md)
-- [📺 TFT Display And PICO Wiring](Docs/Wiring.md)
-- [🧠 Pico I/O & RC Tuning Circuit](Docs/PicoControl.md)
-- [🔌 SABA Upgrade Circuit Plan](Docs/SabaCircuit.md)
+- [Raspberry Pi Setup instructions](Docs/Deployment.md)
+- [System Architecture](Docs/SystemOverview.md)
+- [TFT Display And PICO Wiring](Docs/Wiring.md)
+- [Pico I/O & RC Tuning Circuit](Docs/PicoControl.md)
+- [SABA Upgrade Circuit Plan](Docs/SabaCircuit.md)
 
 Diagrams are stored in [`Docs/Img/`](Docs/Img) and created using [draw.io](https://draw.io).
 
