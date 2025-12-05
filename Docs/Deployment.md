@@ -9,9 +9,8 @@
 5. [Install VLC libraries](#vlc-install)
 6. [Install .Net SKD](#install-net)
 7. [InstallPlaywright](#playwright-install-needed-to-run-mytuner-scraper)
-8. [Enable SPI1 port](#enable-spi1-needed-for-tft-screen-communication)
-9. [Depoly main .Net app as service](#run-main-app-as-service)
-10. [NGINX setup](#setup-nginx)
+8. [Depoly main .Net app as service](#run-main-app-as-service)
+9. [NGINX setup](#setup-nginx)
 
 ---
 
@@ -288,68 +287,6 @@ sudo pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
 ```
 
 ---
-
-## Enable SPI1 (needed for TFT screen communication)
-On Raspberry Pi 4, SPI1 is **disabled by default**, so you need to enable it first. Here's how you can check and enable SPI1:
-
-### **1. Check if SPI1 is Enabled**
-Run the following command in the terminal:
-
-```sh
-ls /dev/spi*
-```
-
-- If **SPI1 is enabled**, you should see:
-  ```
-  /dev/spidev0.0  /dev/spidev0.1  /dev/spidev1.0  /dev/spidev1.1
-  ```
-- If you only see `/dev/spidev0.*`, SPI1 is disabled.
-
-### **2. Enable SPI1**
-If SPI1 is missing, follow these steps:
-
-#### **A) Edit `config.txt`**
-Open the configuration file:
-```sh
-sudo nano /boot/firmware/config.txt
-```
-Add the following line at the bottom:
-```
-dtparam=spi1=on
-```
-Save and exit (`CTRL+X`, then `Y`, then `Enter`).
-
-#### **B) Reboot the Raspberry Pi**
-```sh
-sudo reboot
-```
-
-### **3. Verify SPI1 After Enabling**
-After reboot, check again:
-```sh
-ls /dev/spi*
-```
-Now you should see:
-```
-/dev/spidev0.0  /dev/spidev0.1  /dev/spidev1.0  /dev/spidev1.1
-```
-
-Additionally, you can check SPI configuration with:
-```sh
-lsmod | grep spi
-```
-
-And list active SPI buses with:
-```sh
-dmesg | grep spi
-```
-
-#### **4. Check SPI1 Using PIGPIO**
-If you are using the **PIGPIO** library, you can test SPI1 with:
-```sh
-pigs spio 1 500000 0
-```
-If there is no error, SPI1 is enabled.
 
 ## Run main app as service
 
