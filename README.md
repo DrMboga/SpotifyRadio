@@ -23,6 +23,8 @@ This project transforms a vintage German transistor radio — the **SABA Mainau*
   - Read its analog value via **RC circuit** and ADC input on the Pico.
 - Connect **Pico and Pi 4 via UART**: Pico acts as an **I/O controller**, sending input events to the Pi.
 
+![HardwarePlan](./Docs/Img/Video1WholePlan.png)
+
 ---
 
 ## 🎯 Functional Features
