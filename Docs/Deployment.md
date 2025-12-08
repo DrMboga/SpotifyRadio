@@ -370,6 +370,8 @@ chmod g+x /home/pi && chmod g+x /home/pi/projects && chmod g+x /home/pi/projects
 sudo nano /etc/nginx/nginx.conf
 ```
 
+> TODO: Setup as https because Spotify Auth requres https as redirect url
+
 ```json
 map $http_connection $connection_upgrade {
 "~*Upgrade" $http_connection;
