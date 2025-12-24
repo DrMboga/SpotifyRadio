@@ -2,10 +2,10 @@
 Description=Spotify Radio ASP.NET service
 [Service]
 Type=simple
-ExecStart=/home/pi/projects/spotify-radio-service/RadioApp
-WorkingDirectory=/home/pi/projects/spotify-radio-service
-User=pi
-Group=pi
+ExecStart=/home/pi/spotifyRadio/RadioApp
+WorkingDirectory=/home/pi/spotifyRadio
+User=root
+Group=root
 Restart=on-failure
 RestartSec=10
 KillMode=process

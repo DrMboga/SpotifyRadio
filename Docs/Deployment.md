@@ -1,16 +1,17 @@
 # Raspberry Pi setup
 
-1. [Install Raspbian OS](#install-raspberry-pi-imager--os)
-2.  Configure SSH Keys
-    2.1. [Configure SSH Keys Windows](#configure-ssh-key-based-authentication-windows)
-    2.2. [Configure SSH Key based authentication (Mac)](#configure-ssh-key-based-authentication-mac)
-3. [Install system updates](#install-system-updates)
-4. [Install Raspotify (spotify connect)](#install-spotify-connect)
-5. [Install VLC libraries](#vlc-install)
-6. [Install .Net SKD](#install-net)
-7. [InstallPlaywright](#playwright-install-needed-to-run-mytuner-scraper)
-8. [Depoly main .Net app as service](#run-main-app-as-service)
-9. [NGINX setup](#setup-nginx)
+- [Install Raspbian OS](#install-raspberry-pi-imager--os)
+-  Configure SSH Keys
+    - [Configure SSH Keys Windows](#configure-ssh-key-based-authentication-windows)
+    - [Configure SSH Key based authentication (Mac)](#configure-ssh-key-based-authentication-mac)
+- [Install system updates](#install-system-updates)
+- [Install Raspotify (spotify connect)](#install-spotify-connect)
+- [Install VLC libraries](#vlc-install)
+- [install PIGPIO library](#install-pigpio-library)
+- [Install .Net SKD](#install-net)
+- [InstallPlaywright](#playwright-install-needed-to-run-mytuner-scraper)
+- [Depoly main .Net app as service](#run-main-app-as-service)
+- [NGINX setup](#setup-nginx)
 
 ---
 
@@ -218,22 +219,65 @@ sudo apt install libvlc-dev vlc
 
 ---
 
+## Install PIGPIO library
+
+```bash
+sudo apt update
+sudo apt install -y git build-essential
+
+cd ~
+git clone https://github.com/joan2937/pigpio.git
+cd pigpio
+make
+sudo make install
+sudo ldconfig
+```
+
+---
+
 ## Install .Net
 
 https://learn.microsoft.com/en-gb/dotnet/core/install/linux-debian
 
 ```bash
-wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+wget https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 sudo dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
-sudo apt-get update
 
-# Install SDK
-sudo apt-get install -y dotnet-sdk-10.0
+# install the runtume
+sudo apt-get update
+sudo apt-get install -y aspnetcore-runtime-10.0
 
 ```
 
 ---
+
+## Publish main application
+
+- Create a `~/spotifyRadio` on Raspberry Pi
+- On windows mashine make main program and copy it to Raspberry Pi
+
+```bash
+# Build frontend
+cd RadioFrontend
+npm run build
+
+# Build backend
+cd ../RadioApp/RadioApp
+dotnet publish -c release -r linux-arm64
+scp -r ./bin/release/net10.0/linux-arm64/publish/* pi@spotifyradio:/home/pi/spotifyRadio
+scp -r ./bin/release/net10.0/linux-arm64/.playwright pi@spotifyradio:/home/pi/spotifyRadio/.playwright
+```
+
+### Add run permissions:
+
+```bash
+cd ~/spotifyRadio
+chmod +x ./RadioApp
+
+# Run app for test:
+./RadioApp
+```
 
 ## Playwright install (needed to run MyTuner scraper)
 
@@ -277,12 +321,10 @@ pwsh
 2. Install playwright required browsers.
 
 ```bash
-cd RadioApp
-# Build solution
-sudo dotnet build
+cd ~/spotifyRadio
 
 # install browsers
-sudo pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
+sudo pwsh playwright.ps1 install
 
 ```
 
@@ -290,50 +332,19 @@ sudo pwsh RadioApp/bin/Debug/net9.0/playwright.ps1 install
 
 ## Run main app as service
 
-- Application deployment folder is: `~/projects/spotify-radio-service`
-
-```bash
-cd ~/projects/
-mkdir spotify-radio-service
-```
-
-### Build frontend:
-
-From the root of repository:
-
-```bash
-cd RadioFrontend
-npm run build
-```
-
-### Publish backend as self-contained app. And copy it to the deployment folder:
-
-From the root of repository:
-
-```bash
-cd RadioApp/RadioApp
-
-dotnet publish -c release -r linux-arm64
-
-cp -r ./bin/release/net10.0/linux-arm64/publish/* ~/projects/spotify-radio-service
-```
-
-### Add run permissions:
-
-```bash
-cd ~/projects/spotify-radio-service
-chmod +x ./RadioApp
-
-# Run app for test:
-./RadioApp
-```
-
 ### Copy a service file
 
-From the root of repository:
+On Windows machine:
+
 ```bash
-cd RadioApp
-cp -r ./radio-app.service /etc/systemd/system/radio-app.service
+scp -r RadioApp/radio-app.service pi@spotifyradio:/home/pi/spotifyRadio/radio-app.service
+```
+
+On Raspberry Pi:
+
+```bash
+cd ~/spotifyRadio
+sudo cp -r ./radio-app.service /etc/systemd/system/radio-app.service
 ```
 
 ### Register a service as `systemctl`
@@ -345,6 +356,10 @@ sudo systemctl daemon-reload
 sudo systemctl start radio-app.service
 # Enable auto start
 sudo systemctl enable radio-app.service
+
+# check service
+sudo journalctl -u radio-app -n 100 --no-pager
+
 ```
 
 ---
@@ -362,7 +377,36 @@ sudo systemctl start nginx
 ```bash
 sudo gpasswd -a www-data pi
 
-chmod g+x /home/pi && chmod g+x /home/pi/projects && chmod g+x /home/pi/projects/spotify-radio-service && #TODO: All folders downt to index.html and js+css files
+chmod g+x /home/pi && chmod g+x /home/pi/spotifyRadio && chmod g+x /home/pi/spotifyRadio/wwwroot && chmod g+x /home/pi/spotifyRadio/wwwroot/browser && chmod g+x /home/pi/spotifyRadio/wwwroot/browser
+```
+
+### Create a self-signed certificate
+
+```bash
+sudo mkdir -p /etc/ssl/localcerts
+cd /etc/ssl/localcerts
+sudo openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout dotnet-api.key \
+  -out dotnet-api.crt
+
+```
+
+You’ll be prompted for info; the important one is:
+
+Common Name (CN):
+Use : `spotifyradio.local`
+
+
+You’ll get:
+
+`/etc/ssl/localcerts/dotnet-api.crt`
+`/etc/ssl/localcerts/dotnet-api.key`
+
+- Set permissions:
+
+```bash
+sudo chmod 600 /etc/ssl/localcerts/dotnet-api.key
 ```
 
 ### Nginx config
@@ -370,36 +414,48 @@ chmod g+x /home/pi && chmod g+x /home/pi/projects && chmod g+x /home/pi/projects
 sudo nano /etc/nginx/nginx.conf
 ```
 
-> TODO: Setup as https because Spotify Auth requres https as redirect url
-
 ```json
-map $http_connection $connection_upgrade {
-"~*Upgrade" $http_connection;
-default keep-alive;
-}
-
+# Redirect all HTTP to HTTPS
 server {
     listen 80;
-    server_name spotify-radio.com *.spotify-radio.com;
+    server_name _;
 
-    access_log /var/log/nginx/spotify_radio.log;
-    error_log  /var/log/nginx/spotify_radio_error.log;
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS reverse proxy to Kestrel
+server {
+    listen 443 ssl;
+    server_name spotifyradio.local;
+
+    ssl_certificate     /etc/ssl/localcerts/dotnet-api.crt;
+    ssl_certificate_key /etc/ssl/localcerts/dotnet-api.key;
+
+    # (Optional) hardening
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
 
     location / {
-        proxy_pass         http://127.0.0.1:5000;
+        proxy_pass         http://localhost:5000;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade $http_upgrade;
-        proxy_set_header   Connection $connection_upgrade;
+        proxy_set_header   Connection keep-alive;
         proxy_set_header   Host $host;
         proxy_cache_bypass $http_upgrade;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
     }
 }
+
 ```
 
 ```bash
-sudo systemctl restart nginx.service
+sudo nginx -t
+sudo systemctl reload nginx
 ```
+
+## Access web site
+
+https://spotifyradio.local
 
 ---

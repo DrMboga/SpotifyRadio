@@ -29,4 +29,10 @@
       <ProjectReference Include="..\RadioApp.RadioStreaming\RadioApp.RadioStreaming.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Content Include="Assets\**\*">
+            <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        </Content>
+    </ItemGroup>
+
 </Project>
