@@ -427,7 +427,7 @@ sudo chmod 600 /etc/ssl/localcerts/dotnet-api.key
 
 ### Nginx config
 ```bash
-sudo nano /etc/nginx/nginx.conf
+sudo nano /etc/nginx/sites-available/dotnet-api.conf
 ```
 
 ```json
@@ -444,15 +444,15 @@ server {
     listen 443 ssl;
     server_name spotifyradio.local;
 
-    ssl_certificate     /etc/ssl/localcerts/dotnet-api.crt;
+    ssl_certificate  /etc/ssl/localcerts/dotnet-api.crt;
     ssl_certificate_key /etc/ssl/localcerts/dotnet-api.key;
 
     # (Optional) hardening
-    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_protocols      TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
     location / {
-        proxy_pass         http://localhost:5000;
+        proxy_pass   http://localhost:5000;
         proxy_http_version 1.1;
         proxy_set_header   Upgrade $http_upgrade;
         proxy_set_header   Connection keep-alive;
@@ -463,6 +463,11 @@ server {
     }
 }
 
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/dotnet-api.conf \
+           /etc/nginx/sites-enabled/dotnet-api.conf
 ```
 
 ```bash
