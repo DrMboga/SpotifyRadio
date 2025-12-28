@@ -39,7 +39,7 @@ int main()
 
         // Check if main unit requests device status
         bool stateRequest = gpio_get(REQUEST_STATE_PIN);
-        if(!stateRequest) {
+        if(stateRequest) {
             uartMessenger.sendWholeStateCommand(
                 toggleButtonsState.getCurrentButtonIndex(), 
                 playButtonState.getPlayState(), 

@@ -31,6 +31,9 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
 
     private TaskCompletionSource _interruptPinTriggered = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private PiGpioInterop.gpioAlertCallback _interruptPinCallback;
+    
+    private int _isUartBusy = 0;
+    private int _statusRequestPinValue = 0;
 
     public UartIoListener(
         ILogger<UartIoListener> logger,
@@ -46,7 +49,7 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         _hardwareManager = hardwareManager;
     }
 
-    public Task StartListenIoChannel(CancellationToken cancellationToken)
+    public async Task StartListenIoChannel(CancellationToken cancellationToken)
     {
         lock (_gpioManager)
         {
@@ -65,7 +68,13 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
         
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenRef.Token);
         _listenToPinInterruptTask = Task.Run(() => ListenToInterruptPin(linkedCts.Token), linkedCts.Token);
-        return Task.CompletedTask;
+        while (_isUartBusy == 1)
+        {
+            await Task.Delay(100, linkedCts.Token);
+        }
+        _hardwareManager.SetStatusRequestPin(true);
+        Interlocked.Exchange(ref _statusRequestPinValue, 1);
+
     }
 
     private async Task ListenToInterruptPin(CancellationToken cancellationToken)
@@ -119,7 +128,8 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
     private async Task<string> ReadUartMessage()
     {
         string? uartMessage = null;
-        while (uartMessage == null)
+        Interlocked.Exchange(ref _isUartBusy, 1);
+        for (int i = 0; i < 50; i++)
         {
             lock (_gpioManager)
             {
@@ -130,11 +140,21 @@ public class UartIoListener : IUartIoListener, IAsyncDisposable
             {
                 await Task.Delay(100);
             }
+            else
+            {
+                break;
+            }
         }
 
+        Interlocked.Exchange(ref _isUartBusy, 0);
         _logger.LogDebug("UART Message read '{uartMessage}'", uartMessage);
+        if (_statusRequestPinValue == 1)
+        {
+            _hardwareManager.SetStatusRequestPin(false);
+            Interlocked.Exchange(ref _statusRequestPinValue, 0);
+        }
 
-        return uartMessage;
+        return uartMessage ?? string.Empty;
     }
 
     #region Dispose

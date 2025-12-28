@@ -5,6 +5,7 @@
     - [Configure SSH Keys Windows](#configure-ssh-key-based-authentication-windows)
     - [Configure SSH Key based authentication (Mac)](#configure-ssh-key-based-authentication-mac)
 - [Install system updates](#install-system-updates)
+- [Enable UART Serial pot hardware](#enable-uart-serial-pot-hardware)
 - [Install Raspotify (spotify connect)](#install-spotify-connect)
 - [Install VLC libraries](#vlc-install)
 - [install PIGPIO library](#install-pigpio-library)
@@ -103,6 +104,18 @@ chmod 400 authorized_keys
 sudo apt update
 sudo apt upgrade
 ```
+
+---
+
+## Enable UART Serial pot hardware
+
+```bash
+# 1. 
+sudo raspi-config
+```
+2. Navigate to Interfacing Options → Serial Port.
+3. Disable the serial console.
+4. Enable the serial port hardware. -->
 
 ---
 
@@ -322,6 +335,9 @@ pwsh
 
 ```bash
 cd ~/spotifyRadio
+
+# make node execute permissions
+chmod +x .playwright/node/linux-arm64/node
 
 # install browsers
 sudo pwsh playwright.ps1 install
