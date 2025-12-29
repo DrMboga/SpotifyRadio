@@ -480,3 +480,9 @@ sudo systemctl reload nginx
 https://spotifyradio.local
 
 ---
+
+### Get log file from Service:
+
+```bash
+scp pi@spotifyradio:/home/pi/spotifyRadio/radioService.log C:/Users/Mike/Downloads/radioService.log
+```

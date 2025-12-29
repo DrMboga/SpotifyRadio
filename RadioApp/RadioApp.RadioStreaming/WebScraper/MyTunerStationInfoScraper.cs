@@ -55,9 +55,7 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
             // Navigate to page
             await page.GotoAsync(stationInfoUrl,
                 new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
-            _logger.LogDebug($"Navigation start: '{stationInfoUrl}'");
-
-            await TryAcceptConsent(page);
+            _logger.LogInformation($"Navigation start: '{stationInfoUrl}'");
 
             // Play
             await ClickPlayButton(page, stationInfoUrl);
@@ -82,6 +80,10 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
             {
                 _logger.LogWarning($"Not found audio stream for '{stationInfoUrl}'");
             }
+            else
+            {
+                _logger.LogInformation($"Found audio stream: '{stationInfo.StationStreamUrl}'");
+            }
         }
         catch (Exception e)
         {
@@ -96,21 +98,33 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
     private async Task TryAcceptConsent(IPage page)
     {
         var consentRoot = page.Locator("#qc-cmp2-ui");
-        if (await consentRoot.IsVisibleAsync(new() { Timeout = 1000 }))
+        try
         {
-            _logger.LogInformation("Got consent response");
-            var btn = page.GetByRole(AriaRole.Button, new()
+            await consentRoot.WaitForAsync(new()
             {
-                Name = "AGREE"
+                State = WaitForSelectorState.Visible,
+                Timeout = 1000
             });
+        }
+        catch
+        {
+            _logger.LogDebug("NO consent visible");
+            return;
+        }
 
-            if (await btn.IsVisibleAsync())
-            {
-                _logger.LogInformation("Agree button is visible");
-                await btn.ScrollIntoViewIfNeededAsync();
-                await btn.ClickAsync(new() { Timeout = 15000 });
-                await consentRoot.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 15000 });
-            }
+        _logger.LogInformation("Got consent response");
+        var btn = page.GetByRole(AriaRole.Button, new PageGetByRoleOptions
+        {
+            Name = "AGREE"
+        });
+
+        if (await btn.IsVisibleAsync())
+        {
+            _logger.LogInformation("Agree button is visible");
+            await btn.ScrollIntoViewIfNeededAsync();
+            await btn.ClickAsync(new() { Timeout = 15000 });
+            await consentRoot.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 15000 });
+            _logger.LogDebug("Agree button is clicked");
         }
     }
 
@@ -123,14 +137,23 @@ public class MyTunerStationInfoScraper : MyTunerScraperBase
             // If style is "display: none;" then, pause button is shown that means that stream is already playing
             if (string.IsNullOrEmpty(playButtonStyle) || !playButtonStyle.Contains("display: none;"))
             {
-                try
+                for (int i = 0; i < 5; i++)
                 {
-                    // Click to play, then stream URL should be caught in the Response handler
-                    await stationPlayButton.ClickAsync(new ElementHandleClickOptions() { Timeout = 5000 });
-                }
-                catch (TimeoutException exception)
-                {
-                    _logger.LogError(exception, $"Failed to click play button '{stationInfoUrl}'");
+                    try
+                    {
+                        // Click to play, then stream URL should be caught in the Response handler
+                        await stationPlayButton.ClickAsync(new ElementHandleClickOptions() { Timeout = 5000 });
+                        break;
+                    }
+                    catch (TimeoutException)
+                    {
+                    }
+
+                    await TryAcceptConsent(page);
+                    if (i == 4)
+                    {
+                        _logger.LogError($"Failed to click play button '{stationInfoUrl}'");
+                    }
                 }
             }
         }

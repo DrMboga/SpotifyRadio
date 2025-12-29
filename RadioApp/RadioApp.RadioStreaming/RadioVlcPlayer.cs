@@ -24,6 +24,7 @@ public class RadioVlcPlayer : IRadioVlcPlayer, IDisposable
             _libVlc = new LibVLC();
             _media = new Media(_libVlc, url, FromType.FromLocation);
             _mediaPlayer = new MediaPlayer(_media);
+            _mediaPlayer.Volume = 30;
         }
 
         _mediaPlayer?.Play();
