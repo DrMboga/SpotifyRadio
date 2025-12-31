@@ -61,7 +61,7 @@ public class HardwareManager : IHardwareManager
     {
         lock (_gpioManager)
         {
-            _gpioManager.SetPinValue(RequestStatusInterruptPin, isRequestStatus ? GpioLevel.Low : GpioLevel.High);
+            _gpioManager.SetPinValue(RequestStatusInterruptPin, isRequestStatus ? GpioLevel.High : GpioLevel.Low);
         }
     }
 }

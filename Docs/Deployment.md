@@ -485,4 +485,7 @@ https://spotifyradio.local
 
 ```bash
 scp pi@spotifyradio:/home/pi/spotifyRadio/radioService.log C:/Users/Mike/Downloads/radioService.log
+
+# Database from Windows machine to Raspberry
+scp -r Data/RadioSettings.db pi@spotifyradio:/home/pi/spotifyRadio/Data/RadioSettings.db
 ```
