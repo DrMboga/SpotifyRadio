@@ -50,7 +50,8 @@ public class RadioControllerServiceTests
         _hardwareFixture.GpioManagerMock.Verify(m => m.GpioInitialize(), Times.Once);
         _hardwareFixture.GpioManagerMock.Verify(m => m.UartInitialize(), Times.Once);
         _hardwareFixture.GpioManagerMock.Verify(m => m.SetPinMode(16, GpioMode.Output), Times.Once);
-        _hardwareFixture.GpioManagerMock.Verify(m => m.SetPinValue(16, GpioLevel.Low), Times.Exactly(2));
+        _hardwareFixture.GpioManagerMock.Verify(m => m.SetPinValue(16, GpioLevel.Low), Times.Once);
+        _hardwareFixture.GpioManagerMock.Verify(m => m.SetPinValue(16, GpioLevel.High), Times.Once);
 
         // Assert listen IO channel
         _hardwareFixture.GpioManagerMock.Verify(m => m.InitInputPinAsPullUp(26), Times.Once);
