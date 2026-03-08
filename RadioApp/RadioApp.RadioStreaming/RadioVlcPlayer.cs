@@ -36,7 +36,7 @@ public class RadioVlcPlayer : IRadioVlcPlayer, IDisposable
                 "--quiet");
             _media = new Media(_libVlc, url, FromType.FromLocation);
             _mediaPlayer = new MediaPlayer(_media);
-            _mediaPlayer.Volume = 30;
+            _mediaPlayer.Volume = 100;
             _logger.LogDebug("LibVLC instance created");
         }
 
