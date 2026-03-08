@@ -11,6 +11,8 @@ void UARTMessenger::sendMessage (const std::string& message) {
     uart_puts(UART_ID, message.c_str());
     sleep_ms(10);
     gpio_put(INTERRUPT_PIN, 1);
+
+    printf("Sent to UART: '%s'\n", message.c_str());
 }
 
 void UARTMessenger::sendPuttonPushedCommand(int buttonIndex) {

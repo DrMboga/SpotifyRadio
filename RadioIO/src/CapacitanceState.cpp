@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
 #include "hardware/gpio.h"
@@ -8,8 +9,9 @@
 
 #define CHARGING_RESISTOR 1000000 // R1 = 1MOhm
 #define CHARGE_LEVEL 2500         // This is used to check when capacitor charged to 63.2%. Full voltage level is 4095 which corresponds to 3,3 V. So, 2588 is 63.2% from 4095
-#define PARASITIC_CAPACITANCE 50  // GP pins, wires and breadboard has the parasitic capacitance. I calculated this value just measuring the time of raising voltage over R1 without any capacitor
+// #define PARASITIC_CAPACITANCE 50  // GP pins, wires and breadboard has the parasitic capacitance. I calculated this value just measuring the time of raising voltage over R1 without any capacitor
 #define STATIONS_COUNT 18
+#define CAPACITANCE_DEVIATION 5
 
 int CapacitanceState::getCurrentFrequency() const {
     return _currentFrequency;
@@ -23,10 +25,16 @@ CapacitanceState::CapacitanceState() {
 
 bool CapacitanceState::updateState() {
     int32_t currentCapacitance = getCapacitance();
-    int frequency = getFrequency(currentCapacitance);
-    if (_currentFrequency != frequency) {
-        _currentFrequency = frequency;
-        return true;
+    static float lastCapacitance = 0;
+    if (abs(currentCapacitance - lastCapacitance) > CAPACITANCE_DEVIATION)
+    {
+        lastCapacitance = currentCapacitance;
+        printf("Capacitance %d pf\n", currentCapacitance);
+        int frequency = getFrequency(currentCapacitance);
+        if (_currentFrequency != frequency) {
+            _currentFrequency = frequency;
+            return true;
+        }
     }
 
     return false;
@@ -51,9 +59,10 @@ int32_t CapacitanceState::getCapacitance() {
         }
     }
 
-    int32_t chargeTimeUs = stop - start - PARASITIC_CAPACITANCE;
+    int32_t chargeTimeUs = stop - start;
     discharge();
-    sleep_ms(300);
+    sleep_ms(400);
+
     if (chargeTimeUs < 0)
     {
         printf("Unable to measure capacitance. Start: %d, stop %d, chargeTimeUs %d mikroseconds, rawValue: %d; index: %d\n", start, stop, chargeTimeUs, rawValue, index);
@@ -108,7 +117,7 @@ int CapacitanceState::getFrequency(int32_t capacitance) {
         90,
         89,
         88};
-    static int32_t threshold[STATIONS_COUNT] = {32, 43, 60, 78, 95, 120, 155, 190, 230, 270, 315, 360, 400, 450, 500, 560, 610, 690};
+    static int32_t threshold[STATIONS_COUNT] = {59, 69, 85, 105, 120, 150, 190, 225, 295, 320, 360, 410, 460, 530, 590, 640, 690, 730};
     for (size_t i = 0; i < STATIONS_COUNT; i++)
     {
         if (capacitance <= threshold[i])
