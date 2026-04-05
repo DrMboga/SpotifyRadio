@@ -1,8 +1,8 @@
 # TFT Display And PICO Wiring
 
-## Raspberry Pi 3.5 mm audio output
+## Final schema
 
-![AusioScheme](./Img/Audio.png)
+![WiringSchema](Img/WiringSchema.png)
 
 ## TFT
 
