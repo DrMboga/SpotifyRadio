@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 wwwroot
 RadioSettings.db
+# SQLite WAL sidecars - can hold rows not yet checkpointed into the .db,
+# including the SpotifySettings client secret and refresh token.
+RadioSettings.db-*
