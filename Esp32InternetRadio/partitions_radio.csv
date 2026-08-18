@@ -1,0 +1,22 @@
+# Custom partition table for the ESP32 internet radio (4 MB flash).
+#
+# Why this exists (D6): the bare M0 WiFi+HTTPS spike already filled 69.6 % of the
+# default 1.25 MB app partition. Adding ESP32-audioI2S (two decoders), TFT_eSPI,
+# PNGdec and ArduinoJson does not fit, so the split is settled here at M1 rather
+# than at M6.
+#
+# No OTA (D7): a single `factory` app slot, 2 MB, roughly 2x the M0 firmware.
+# The rest is the station/logo filesystem. It is formatted as LittleFS
+# (`board_build.filesystem = littlefs`) but must keep the SPIFFS subtype so the
+# IDF 4.4 partition generator and PlatformIO's `uploadfs` both recognise it.
+#
+# PROVISIONAL until M6. Repartitioning wipes LittleFS, so any change to these
+# numbers must happen before the radio is reassembled. The M3 logo-set
+# measurement is what confirms 1.87 MB of filesystem is the right call.
+#
+# Name,     Type, SubType,  Offset,   Size,     Flags
+nvs,        data, nvs,      0x9000,   0x5000,
+otadata,    data, ota,      0xE000,   0x2000,
+app0,       app,  factory,  0x10000,  0x200000,
+spiffs,     data, spiffs,   0x210000, 0x1E0000,
+coredump,   data, coredump, 0x3F0000, 0x10000,

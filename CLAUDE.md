@@ -29,8 +29,8 @@ Those two are the source of truth for the ESP32 work; this file only orients you
 ## Part 1 — ESP32 internet radio (active)
 
 An ESP32 (AZ-Delivery DevKit C V4, ESP32-WROOM-32, 4 MB flash, **no PSRAM**) replaces the Pi 4. It reads
-the physical controls over UART from the unchanged Pico, plays mostly-HTTPS MP3 streams through a
-PCM5102A I2S DAC into the SABA's amplifier, and drives the same ST7735 TFT. Audio is ESP32-audioI2S. No
+the physical controls over UART from the unchanged Pico, plays mostly-HTTPS MP3 streams through an
+I2S audio board into the SABA's amplifier, and drives the same ST7735 TFT. Audio is ESP32-audioI2S. No
 Spotify, no web UI, no hosted service.
 
 All four toggle buttons (`L`/`M`/`K`/`U`) now select internet radio banks: 4 banks × 19 dial positions
@@ -48,6 +48,7 @@ pio run                  # build
 pio run -t upload        # flash firmware over USB (COM3, see platformio.ini)
 pio run -t uploadfs      # flash the LittleFS data partition (stations + logos) — separate step
 pio device monitor       # serial monitor, 115200
+pio run -e tone-test -t upload   # DAC bring-up: 440 Hz sine, no WiFi, no audio library
 ```
 
 Station data changes need only `uploadfs`; firmware changes need `upload`. They are independent.
@@ -59,6 +60,10 @@ Station data changes need only `uploadfs`; firmware changes need `upload`. They 
   the stream buffer that absorbs network jitter — so every KB saved elsewhere buys stability. When
   something is marginal, work down the ladder in `Architecture.md` §9.1; a WROVER is its last rung and
   has been ruled out for now.
+- **The output stage part is not settled.** M1 got first sound from a MAX98357A after the PCM5102A
+  module failed to convert; they are not interchangeable in the cabinet (`Architecture.md` D16). Use
+  `pio run -e tone-test` — a 440 Hz sine with no WiFi and no audio library — before suspecting the
+  firmware for any silence.
 - **Never block the audio task.** PNG decode and TLS handshakes both stall long enough to underrun the
   stream, and both happen at station change. Audio runs pinned to core 1, everything else on core 0,
   joined by a command queue (`Architecture.md` §7.1). A "network glitch" at station change is usually

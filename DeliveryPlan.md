@@ -1,7 +1,7 @@
 # Delivery Plan — ESP32 Internet Radio
 
 Incremental path from the current scaffold (a WiFi + HTTPS connectivity test that prints
-`Received: 512585 bytes`) to a finished radio. Design decisions referenced as **D1–D12** live in
+`Received: 512585 bytes`) to a finished radio. Design decisions referenced as **D1–D16** live in
 [`Architecture.md`](Architecture.md).
 
 Each milestone is independently testable and ends in a state you could stop at. Nothing outside
@@ -50,9 +50,12 @@ display and no JSON parsing. A custom partition table is therefore an **M1 probl
 
 ---
 
-## M1 — First sound
+## M1 — First sound ✅
 
-*Breadboard only: ESP32 + PCM5102A. No UART, no TFT, no station data.*
+*Breadboard only: ESP32 + I2S DAC. No UART, no TFT, no station data.*
+
+**Status: done, August 2026.** Music plays over HTTPS. The DAC that produced it was a **MAX98357A**,
+not the PCM5102A the design assumed — see *What actually happened* below.
 
 - Wire the DAC per the pin map (**§3.1**), including the `SCK`/`FMT`/`XSMT` straps.
 - Replace the HTTP byte-counter spike with ESP32-audioI2S (**D2**): `setPinout()` +
@@ -62,10 +65,64 @@ display and no JSON parsing. A custom partition table is therefore an **M1 probl
 - `setInsecure()`, no CA bundle (**D13**). Fixed software gain (**D12**).
 - Set up the core split now, not later: audio task pinned to core 1, `loop()` on core 0 (**D14**). It is
   far cheaper to start this way than to retrofit it in M4 when the display starts stealing time.
+- Lock in a **custom partition table** (`partitions_radio.csv`) — D6's warning came true immediately.
 
-**Done when:** recognisable music comes out of the DAC into headphones or a test amp, over HTTPS.
-**Record before moving on:** free heap while playing, and the stream buffer size you settled on. These
-are the baseline every later measurement is compared against.
+**Done when:** recognisable music comes out of the DAC into headphones or a test amp, over HTTPS. ✅
+
+### Measured at build time
+
+ESP32-audioI2S 3.0.12, no display, no station data:
+
+| | |
+|---|---|
+| Flash | 1,196,657 bytes — **95.7 % of the default 1.25 MB app partition**, 57.1 % of the new 2 MB one |
+| Static RAM | 48,964 bytes — 9.2 % of 532 KB |
+
+The audio library alone costs ~284 KB of flash over the M0 spike and only ~2 KB of static RAM; its real
+cost is heap, allocated at connect time. The default partition table had ~53 KB of headroom left, so
+`partitions_radio.csv` (2 MB app / 1.87 MB LittleFS / no OTA) landed here rather than at M6. It stays
+**provisional** until the M3 logo measurement confirms the split — repartitioning wipes LittleFS, so it
+must not move after M6.
+
+### Measured while playing — the M2 baseline
+
+| | |
+|---|---|
+| Stream buffer | **27,951 bytes** usable (30,000 requested via `setBufsize`; library default is 16,000) |
+| Free heap while streaming | ~85,000 bytes, steady |
+| **Largest free block** | **26,600–28,700 bytes**, steady across a run |
+| Free heap after TLS handshake | 116,960 bytes |
+| Free heap after MP3 decoder init | 88,400 bytes |
+| Audio task stack headroom | 4,716 bytes free of 10,000 |
+| Input buffer fill | pegged at 27,953/27,952, one dip to 27,535 |
+
+These are the numbers M2's soak is compared against. The largest-free-block figure is the one that
+matters (**§7.3**) — a slow decline in it over hours is the failure mode, not the average free heap.
+
+### What actually happened — the PCM5102A never converted
+
+The firmware was right on the first flash; the DAC was not. The elimination order is worth recording,
+because M6 will re-run parts of it:
+
+1. **The ESP32 side was proven independently of the DAC.** A `vu=` readout taken from the library's
+   per-sample VU meter — sampled *before* the gain stage, so it cannot be faked by a volume setting —
+   showed live music levels, and `i2s_write()` kept returning on schedule, which only happens if the
+   peripheral is actually consuming 44,100 frames/s.
+2. **Every input to the PCM5102A measured correct:** `SCK` grounded, `XSMT` 3.3 V (un-muted), `FMT` 0 V
+   (I2S), `FLT`/`DEMP` 0 V, `A3V3` 3.3 V, and `BCK`/`DIN`/`LCK` all toggling at ~1.6 V DC.
+3. **Output at `LOUT`/`ROUT` was 4–5 mV** against AGND, unloaded, where ~1 V was expected.
+4. `src/ToneTest.cpp` (env `tone-test`) removed WiFi, TLS, the MP3 decoder and ESP32-audioI2S entirely
+   and fed the I2S peripheral a generated 440 Hz sine. Still silent.
+5. A **MAX98357A** on the same three pins played immediately.
+
+So the fault is that specific PCM5102A module. Still open: reflowing its hand-fitted header — the board
+ships with bare plated holes, and an unsoldered pin reads a healthy 1.6 V from the breadboard side while
+the chip sees nothing — then replacing it.
+
+**This does not settle which part the radio ships with.** The MAX98357A is a mono class-D *amplifier*,
+not a line-level DAC: its output is a bridged PWM pair with no ground reference, so it cannot feed the
+SABA's existing 2.2 kΩ mono mixer and transformer the way a PCM5102A can. It is a proven bench
+reference; the cabinet decision is open (**D16**).
 
 ---
 

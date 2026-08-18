@@ -71,16 +71,17 @@ and a logo. Empty slots are legal and common.
                                                       └────────────────────┘
 ```
 
-### 3.1 Proposed ESP32 pin map
+### 3.1 ESP32 pin map
 
-Not yet wired — to be validated during the delivery milestones and corrected here as the single source
-of truth. Avoids strapping pins (0, 2, 12, 15) and flash pins (6–11).
+The I2S trio is wired and verified (M1). The rest is still proposed — to be validated during the
+remaining milestones and corrected here as the single source of truth. Avoids strapping pins
+(0, 2, 12, 15) and flash pins (6–11).
 
 | Function | ESP32 pin | Other end |
 |---|---|---|
-| I2S BCLK | GPIO 26 | PCM5102A `BCK` |
-| I2S LRCK / WS | GPIO 25 | PCM5102A `LCK` |
-| I2S DATA | GPIO 22 | PCM5102A `DIN` |
+| I2S BCLK | GPIO 26 | PCM5102A `BCK` · MAX98357A `BCLK` |
+| I2S LRCK / WS | GPIO 25 | PCM5102A `LCK` · MAX98357A `LRC` |
+| I2S DATA | GPIO 22 | PCM5102A `DIN` · MAX98357A `DIN` |
 | TFT SCK | GPIO 18 (VSPI) | ST7735 `SCK` |
 | TFT MOSI | GPIO 23 (VSPI) | ST7735 `SDA` |
 | TFT CS | GPIO 5 | ST7735 `CS` |
@@ -101,9 +102,20 @@ Notes:
   harmless here.
 
 PCM5102A jumpers/straps: `SCK`→GND (use the internal PLL), `FMT`→GND (I2S), `XSMT`→3.3 V (unmute),
-`VIN`→5 V (the board has its own regulator), `GND`→GND. Its `LOUT`/`ROUT` are summed to mono through
-two resistors and injected into the SABA amplifier exactly where the Pi's 3.5 mm mix went — see
-[`Docs/SabaCircuit.md`](Docs/SabaCircuit.md).
+`VIN`→5 V (the board has its own regulator), `GND`→GND.
+
+The mono mix **already exists inside the cabinet** and is reused unchanged, so there is no resistor pair
+to build: the Pi's 3.5 mm output fed two 2.2 kΩ summing resistors into a 47 kΩ shunt and an audio
+transformer whose secondary drives the SABA amplifier (see [`Docs/Wiring.md`](Docs/Wiring.md)). A 3.5 mm
+male-to-male cable from the DAC's own jack replaces the Pi's. The network is passive and unchanged, so
+the only thing that moves is level — the PCM5102A's 2.1 Vrms full scale is roughly 5× the Pi's
+~0.4 Vrms, about +14 dB, which the fixed software gain absorbs (**D12**; `kFixedGain` ≈ 9 on the
+library's 0–21 square curve reproduces the Pi's level).
+
+**Verified at M1:** the I2S pinout above works. First sound came from a **MAX98357A** wired to the same
+`GPIO 26 / 25 / 22`, plus its `SD` pin pulled to 3.3 V to enable it, driving a test speaker directly.
+The PCM5102A module on hand accepts valid I2S and outputs ~5 mV; see `DeliveryPlan.md` M1 for the
+elimination trail. Which part ships in the cabinet is now an open decision (**D16**).
 
 Volume stays analog: the SABA's own potentiometer. Software gain is a fixed compile-time constant tuned
 once for a clean level into the amplifier — there is no spare control input for a digital volume, and
@@ -302,11 +314,11 @@ why M2 is a soak test with heap logging, and why M7 soaks again in the finished 
 | # | Decision | Rationale / consequence |
 |---|---|---|
 | D1 | **ESP32-WROOM-32** (AZ-Delivery DevKit C V4), 4 MB flash, **no PSRAM**. No new hardware. | Already bought and smoke-tested — the scaffold streamed 512 KB over HTTPS successfully. Explicit project constraint: make it work on this board. PSRAM is the *last* rung of the §9 ladder, not a plan. |
-| D2 | Audio via **ESP32-audioI2S** (schreibfaul1) | Native `https://` support, follows CDN redirects, gives ICY titles and reconnects for free. Supersedes an earlier choice of ESP8266Audio, which was made when the stream list was assumed HTTP-only and which would need a hand-written `WiFiClientSecure` injection to do TLS on ESP32. |
+| D2 | Audio via **ESP32-audioI2S** (schreibfaul1) | Native `https://` support, follows CDN redirects, gives ICY titles and reconnects for free. Supersedes an earlier choice of ESP8266Audio, which was made when the stream list was assumed HTTP-only and which would need a hand-written `WiFiClientSecure` injection to do TLS on ESP32. **Pinned to tag 3.0.12** — the last release supporting Arduino core 2.x / ESP-IDF 4.4, which is what `platform = espressif32` installs here. 3.1.0+ requires Arduino core 3.x and will not compile against this framework. |
 | D3 | **HTTPS is the norm** | Measured, not assumed: 758 of 874 usable candidate URLs (87 %) are HTTPS (§5.1). Costs ~40 KB of RAM for the TLS session, which is the whole reason §7 exists. Selecting for HTTP is not a viable lever — only 116 candidates are HTTP. |
 | D4 | Station data as **CSV + PNG on LittleFS** | Update stations with `pio run -t uploadfs`, no firmware rebuild. Costs ~40 KB flash for PNGdec. |
 | D5 | Logos decoded at runtime with **PNGdec** (bitbank2), pre-sized to 92×92 | Keeps the workflow "drop a PNG in `data/logos/`". No runtime scaling. |
-| D6 | **Partition table deferred** to after the logo set is measured | 4 MB must cover firmware + LittleFS (+ optionally an OTA slot). Locking it in before knowing what 76 logos cost risks a wrong split. **Repartitioning wipes LittleFS**, so this must be settled before the radio is reassembled — see M6. ⚠️ Measured at M0: the bare WiFi+HTTPS spike already fills **69.6 % of the default 1.25 MB app partition**. Adding the audio library with two decoders, TFT_eSPI, PNGdec and ArduinoJson will not fit. Expect to need a custom table *early* — likely at M1 — rather than at M6, and note this makes D7 (no OTA) close to forced. |
+| D6 | **Custom partition table**, `Esp32InternetRadio/partitions_radio.csv`: 2 MB `factory` app, 1.87 MB LittleFS, no OTA slot. Provisional until M3 measures the real logo set. | 4 MB must cover firmware + LittleFS (+ optionally an OTA slot). ⚠️ It landed at M1, not M6, exactly as feared: the M0 WiFi+HTTPS spike already filled 69.6 % of the default 1.25 MB app partition, and merely adding ESP32-audioI2S took that to **95.7 %** — before TFT_eSPI, PNGdec or ArduinoJson. That also settles D7. The filesystem partition keeps the `spiffs` *subtype* (the IDF 4.4 partition generator and PlatformIO's `uploadfs` both key off it) while being formatted LittleFS via `board_build.filesystem`. **Repartitioning wipes LittleFS**, so the numbers must stop moving before the radio is reassembled — see M6. |
 | D7 | **No OTA in v1**; USB reflash | Revisit at D6 time. If OTA is wanted, two ~1.3 MB app slots leave ~1.2 MB for logos. |
 | D8 | WiFi credentials in a **gitignored `include/Secrets.h`** with a committed `Secrets.h.example` | Simplest thing that works. Changing networks = edit + reflash. **The current scaffold has real credentials inline in `src/main.cpp` — fixing that is M0 and must land before the directory is committed.** |
 | D9 | **TFT_eSPI** for the display | Faster than Adafruit_ST7735 and configured entirely from `platformio.ini` build flags, which keeps the pinout in one place. Revisitable at M3 if its setup-header handling gets in the way. |
@@ -316,6 +328,7 @@ why M2 is a soak test with heap logging, and why M7 soaks again in the finished 
 | D13 | TLS with **`setInsecure()`** — no certificate verification | The payload is public audio; there is nothing to steal and no credentials in flight. A baked-in CA bundle costs RAM and flash *and* eventually expires, which would silently kill every station at once on a radio sitting in a cabinet. The scaffold already does this. |
 | D14 | **Audio pinned to core 1**, everything else on core 0, joined by a command queue | PNG decode and TLS handshake both block for long enough to underrun the stream, and both happen exactly at station change. See §7.1. |
 | D15 | **AAC is required**, alongside MP3 | Resolved by evidence rather than deferred. The aggregate pool looks 91 % MP3, but the 14 stations actually curated for v1 tell a different story: 3 are explicitly AAC (`…/stream/aacp` ×2, `SAM03AAC226_SC`) and 2 more almost certainly are (Global's `media-ssl.musicradio.com` endpoints) — roughly a third of real picks. Dropping AAC would cut ROCK ANTENNE, which is the demo station. Mitigated by the §5.2 variant rule, so AAC is the exception rather than the common path. |
+| D16 | **The output stage part is reopened**: PCM5102A (line-level stereo DAC) vs MAX98357A (mono class-D amp with built-in DAC). Decided at M6. | M1 proved the I2S pinout and the entire software chain using a **MAX98357A**, after the PCM5102A module on hand turned out to accept valid I2S and convert nothing (see `DeliveryPlan.md` M1). They are **not interchangeable in the cabinet**: the PCM5102A gives a ground-referenced line output that drops straight into the SABA's existing 2.2 kΩ mono mixer and transformer (§3.1), whereas the MAX98357A's bridged PWM output has no ground reference and would have to drive the speaker directly, bypassing the SABA amplifier — a different architecture, and one that loses the analog volume pot. The PCM5102A path stays the design intent; the MAX98357A is the proven bench reference and the fallback. |
 
 ## 9. Open items and the WROOM fallback ladder
 
@@ -341,6 +354,9 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
 
 ### 9.2 Still undecided
 
+- **Output stage**: PCM5102A line-out into the existing mono mixer, or MAX98357A straight to the
+  speaker (**D16**). Also whether the failed PCM5102A module is a bad solder joint on its hand-fitted
+  header or a dead part.
 - **Status/error indicator placement** on a layout that is already full (§6).
 - **Partition table** — pending the real logo set measurement (**D6**).
 - **Reconnect policy**: how long to retry a dead stream, what the screen shows meanwhile, and whether a
