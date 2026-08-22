@@ -135,19 +135,30 @@ before touching firmware — `pio run -e tone-test` reaches step 4 in one comman
 
 *Same breadboard. This is the riskiest milestone in the project; everything after it assumes it passed.*
 
-The question is not "does HTTPS play" — M1 answered that. It is whether a no-PSRAM WROOM can hold a TLS
-stream open for hours without fragmenting its heap to death (**§7.3**).
+The question is not "does HTTPS play" — M1 answered that. It is whether a no-PSRAM WROOM survives **a
+listening session**, and a session is defined by the usage profile in **§7.3**, not by uptime: 2–3 hours,
+switched off afterwards, and dominated by station changes — 5–15 in a row while hunting for something
+good, then 3–5 more every time an ad break starts. Call it **30–60 TLS teardown/setup cycles per
+session**. That is the load this milestone has to survive, and it is a much sharper test than sitting on
+one stream all evening.
 
-- **Multi-hour soak with heap logging.** Print free heap and largest free block every 30 s. A slow
-  downward drift in the largest block is the failure mode to watch for — not average free heap.
-- Force 20+ station changes in a row (each one a TLS teardown and setup) and check the heap returns to
-  its baseline. This is where fragmentation shows up fastest.
-- Reconnect on stream drop and on WiFi loss, with backoff. Write down the retry policy (**§9.2**).
+- **The switch storm is the primary gate.** Automate 60 station changes back to back across 3–4 real
+  stations, logging free heap and largest free block after each. Compare the largest block at change 60
+  against change 1. A flat line passes. A steady per-change loss is the failure — and its *slope* is the
+  number that matters, because it converts directly into "how many switches until the radio wedges".
+- **Then hold for three hours** on one station, with the same 30 s heap log, to confirm nothing decays
+  while merely playing. Secondary to the storm, but it is the actual use case.
+- **Reconnect on stream drop, with backoff.** A server hanging up mid-song is routine and must recover
+  by itself. **WiFi-loss recovery is explicitly best-effort** (**D17**) — the network here is reliable
+  and power-cycling the radio is an acceptable answer.
 - ICY metadata: hook the title callback and print `Artist - Title` to serial (M4 consumes it).
-- Two or three real candidate stations, not just the M1 one.
+- Three or four real candidate stations, not just the M1 one, so the storm exercises different servers,
+  bitrates and both codecs.
 
-**Done when:** a multi-hour soak holds with a stable largest-free-block, repeated station changes do not
-leak, and pulling the router mid-stream recovers without a reboot.
+**Done when:** 60 consecutive station changes end with the largest free block where they started, a
+three-hour hold on one station stays flat, and a dropped stream reconnects without a power cycle.
+
+**Explicitly not required:** surviving days of uptime, or riding out a router reboot. See **D17**.
 
 **If it fails:** work down the ladder in **§9.1** in order — buffer size, easier streams, verify the core
 split, then the more expensive rungs. Do not proceed to M3 on a stream that is already marginal; every
@@ -160,19 +171,36 @@ later milestone only adds pressure to the same heap.
 *No ESP32 involved. Off the critical path, but M3 is far cheaper if this is done first.*
 
 The v1 scraper database (`RadioApp/RadioApp/Data/RadioSettings.db`, **read-only** — it is part of the
-frozen tree) holds 874 usable candidates and 14 already-assigned slots (**§5.1**). Turn that into a
-vetted shortlist with a throwaway script, in whatever language is convenient:
+frozen tree) holds 874 usable candidates, MyTuner's own ratings and like counts, and 14 already-assigned
+slots (**§5.1**). Target countries, in priority order: **Germany, United Kingdom, USA, Russia**; genres
+of interest **rock/metal** and **pop**. Everything else is filler.
 
-- **Probe each candidate URL**: follow redirects, record the final URL, the `Content-Type` (the only
-  reliable codec signal — 45 % of URLs reveal nothing), and the ICY headers `icy-name` and `icy-br`.
-  Flag dead links; the data is ~5 months old.
-- **Emit a candidate table** — name, country, final URL, real codec, bitrate, alive — to pick from.
-  Where a station exposes both `…/stream/mp3` and `…/stream/aacp`, keep the MP3 one (**§5.2**).
-- **Migrate the 14 existing slots**: export button, frequency, name, URL and the base64 logo from the
-  `RadioStation` table into `stations.csv` + 92×92 PNGs. Free, real starting content.
+The database covers only two of those four countries (**§5.1**), so MD has two sources, not one.
 
-**Done when:** you have a filtered candidate list with real codecs, and a `stations.csv` + logo set for
-the 14 v1 slots that M3 can load unmodified.
+**MD-1 — rank what the database already has.** Germany and the UK come almost entirely from here. Score
+candidates by the §5.3 formula rather than raw likes, filter to the genres of interest, and emit a
+ranked table per country and genre.
+
+**MD-2 — research USA and Russia from scratch.** There is not a single US or Russian row in the
+database, and only two rows anywhere carry a `Metal` genre tag. Those need hand-researched candidates —
+well-known rock/metal and pop stations with public stream endpoints — added to the same candidate table
+by hand so they go through the identical probe.
+
+**MD-3 — probe every candidate, from both sources.** Follow redirects, record the final URL, the
+`Content-Type` (the only reliable codec signal — 45 % of URLs reveal nothing), and the ICY headers
+`icy-name` and `icy-br`. Flag dead links; the database is ~5 months old and link rot is expected. Where
+a station exposes both `…/stream/mp3` and `…/stream/aacp`, keep the MP3 one (**§5.2**).
+
+**MD-4 — migrate the 14 existing slots**: export button, frequency, name, URL and the base64 logo from
+the `RadioStation` table into `stations.csv` + 92×92 PNGs. Free, real, already-curated content, and it
+exercises the M3 pipeline before anything is hand-picked.
+
+The output of MD-3 is a list of stations **confirmed to be playing right now**. Picking from it, and
+cropping the logos, is a manual step — deliberately, because "is this station any good" is not a
+question a script can answer.
+
+**Done when:** there is a ranked, probe-verified candidate table covering all four countries, and a
+`stations.csv` + logo set for the 14 v1 slots that M3 can load unmodified.
 **Also produces:** a realistic per-logo byte size, which is the input to the partition decision
 (**D6**) — the v1 base64 logos run 6–48 KB each, so a full 76-slot set plausibly lands near 0.5–1 MB.
 

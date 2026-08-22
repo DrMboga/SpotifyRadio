@@ -201,7 +201,10 @@ August 2026:
 | …with a logo URL | 1044 (remote URLs, not stored images) |
 | Scheme, of the 874 | **758 https / 116 http** → 87 % HTTPS |
 | Codec guessed from the URL | 436 mp3 · 42 aac · 3 hls · 2 ogg · **391 unknown** |
-| Countries covered | 3 |
+| Countries covered | **3** — United Kingdom 578, Germany 449, Luxembourg 17 |
+| Rows carrying a non-zero `Rating` | 284 of 1044 — **760 are `0`, meaning unrated, not bad** |
+| `Likes` / `Dislikes` | present on every row; likes run 0–1056, long-tailed |
+| `Genres` | free text, pipe-separated — 103 rows tagged `Rock`, 56 `Classic Rock`, 270 `Pop Music`, **2 `Metal`** |
 | `RadioStation` rows already mapped to dial slots | **14**, with logos stored as base64 |
 
 Two things this database is good for:
@@ -216,6 +219,17 @@ Caveats that matter: the data is ~5 months old, so expect link rot; 45 % of URLs
 only reliable source of truth is the `Content-Type` header at connect time. Both are why M3 starts with
 a validation pass rather than a hand-written CSV.
 
+**The two gaps the scraper left**, which set the shape of MD:
+
+- **No USA and no Russia, at all.** The v1 scraper only ever walked the UK, Germany and Luxembourg. Two
+  of the four target countries therefore cannot be served from this database on any query, and have to
+  be researched from outside it and fed into the same probe.
+- **Almost no metal.** Two rows carry the `Metal` tag. Rock is genuinely covered (103 + 56 rows);
+  metal is not, and also needs outside research.
+
+Everything found outside the database joins the same candidate table and goes through the identical
+probe — the point of the probe is that no URL reaches `stations.csv` unverified, whatever its origin.
+
 ### 5.2 Prefer the MP3 variant of the same station
 
 Many networks expose the same programme on several endpoints — Rock Antenne and Antenne Bayern serve
@@ -227,6 +241,28 @@ heavier path is exercised.
 Note this replaces the earlier idea of preferring `http://` endpoints, which the numbers above killed:
 only 116 of 874 candidates are HTTP at all, and only 43 are HTTP *and* MP3. Too small and too arbitrary
 a pool to select from.
+
+### 5.3 Ranking candidates: use the like ratio, not the like count
+
+MyTuner's own numbers are in the database, but neither field can be sorted on naively.
+
+`Rating` is `0` for 73 % of rows, and `0` means *unrated*, not *bad* — Radio X London carries 355 likes,
+12 dislikes and a `Rating` of `0`. Sorting by `Rating` descending silently buries the unrated stations;
+treating `0` as a score sorts them to the bottom, which is worse. **`Rating = 0` must be read as
+missing.**
+
+`Likes` is an absolute count over a long tail, so sorting by it ranks by *audience size*, not quality:
+the top of that list is London pop — Heart, Capital, Smooth — because London is large, not because those
+stations suit this radio.
+
+What actually ranks well is the **ratio, discounted by confidence**: the lower bound of a Wilson score
+interval on `Likes / (Likes + Dislikes)`. A station with 40 likes and 0 dislikes then outranks one with
+600 likes and 70, while a station with 2 likes and 0 dislikes does not outrank either — which is the
+behaviour wanted, since 76 slots need *good* stations, not *famous* ones. Where `Rating` is non-zero it
+enters as a mild tiebreak, never as the primary key.
+
+Applied after filtering by country and genre, never before: a top-ranked Luxembourgish talk station is
+not a better pick than a mid-ranked German rock station.
 
 ## 6. Screen
 
@@ -305,11 +341,32 @@ The stream buffer is the shock absorber, so **every KB saved elsewhere buys stab
 stream before opening the next; no framebuffer (TFT_eSPI draws straight out, PNGdec decodes line by
 line); avoid `String` churn in the UART and CSV paths.
 
-### 7.3 The real long-run risk
+### 7.3 The real risk, sized against how the radio is actually used
 
-Not "does it play" — it will. The risk is **heap fragmentation over hours** of TLS connect/disconnect
-cycles, which shows up as a radio that dies overnight rather than one that fails on the bench. That is
-why M2 is a soak test with heap logging, and why M7 soaks again in the finished cabinet.
+Not "does it play" — it will. The risk is **heap fragmentation across TLS connect/disconnect cycles**.
+But how bad that is depends entirely on the duty cycle, so the duty cycle is written down here rather
+than assumed:
+
+| | |
+|---|---|
+| Session length | **2–3 hours**, then switched off at the mains |
+| Station changes while hunting | **5–15 in a row** |
+| Station changes per ad break | **3–5 in a row**, several times a session |
+| Station changes per session | **~30–60** |
+| Days of continuous uptime expected | **none** |
+
+So the dominant operation is **switching**, not streaming, and the unit of survival is a session, not a
+week (**D17**). This reframes the fragmentation risk usefully: what matters is the heap cost *per
+station change*, because that is the thing that repeats 60 times an evening. A leak of 200 bytes per
+change is 12 KB by the end of a session — survivable, and cleared by the power switch. The same leak
+would be fatal to an appliance expected to run for weeks, and this radio is not one.
+
+It also says where to spend effort: **reconnect-after-drop matters, WiFi-loss recovery does not.** A
+stream server hanging up mid-song happens during normal listening; a router outage does not, and if one
+happens the answer is the power switch.
+
+That is why M2 leads with a 60-change switch storm rather than an overnight soak, and why M7 re-runs the
+same profile in the finished cabinet with the display and UART also running.
 
 ## 8. Decisions
 
@@ -331,6 +388,7 @@ why M2 is a soak test with heap logging, and why M7 soaks again in the finished 
 | D14 | **Audio pinned to core 1**, everything else on core 0, joined by a command queue | PNG decode and TLS handshake both block for long enough to underrun the stream, and both happen exactly at station change. See §7.1. |
 | D15 | **AAC is required**, alongside MP3 | Resolved by evidence rather than deferred. The aggregate pool looks 91 % MP3, but the 14 stations actually curated for v1 tell a different story: 3 are explicitly AAC (`…/stream/aacp` ×2, `SAM03AAC226_SC`) and 2 more almost certainly are (Global's `media-ssl.musicradio.com` endpoints) — roughly a third of real picks. Dropping AAC would cut ROCK ANTENNE, which is the demo station. Mitigated by the §5.2 variant rule, so AAC is the exception rather than the common path. |
 | D16 | **Output stage settled: PCM5102A**, line-level stereo DAC into the SABA's existing mono mixer. Closed at M1. | Briefly reopened when the first PCM5102A module produced ~5 mV from valid I2S; a MAX98357A was wired to the same three pins purely to prove the ESP32 side, and it played. A **second PCM5102A** then played too, so the first board was faulty and nothing about the design was wrong. The MAX98357A is out of the project: as a mono class-D *amplifier* its output is a bridged PWM pair with no ground reference, so it cannot feed the SABA's 2.2 kΩ mixer and transformer (§3.1) — it would have to drive the speaker directly, bypassing the SABA amplifier and losing the analog volume pot. Practical consequences: keep a spare PCM5102A, and treat "valid I2S in, no audio out" as a suspect board before suspecting firmware. |
+| D17 | **Availability target is session-scale, not appliance-scale**: 2–3 hours of use, ~30–60 station changes, then switched off. Reconnect-after-stream-drop is required; **WiFi-loss recovery is best-effort and a power cycle is an acceptable remedy**. | Set from how the radio is actually used (§7.3), and it changes what the engineering has to prove. The dominant cost is the heap delta *per station change* — 60 of those an evening — not drift over days of uptime. Slow decay measured in KB-per-day is therefore not a defect: the mains switch resets it nightly. This is what lets M2 be a switch storm instead of an overnight soak, keeps §9.1 rung 5 (reboot-on-low-heap) as a backstop that will probably never be needed, and stops effort going into WiFi state-machine recovery that would be exercised perhaps twice a year. |
 
 ## 9. Open items and the WROOM fallback ladder
 
@@ -359,6 +417,7 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
 - **Status/error indicator placement** on a layout that is already full (§6).
 - **Partition table** — pending the real logo set measurement (**D6**).
 - **Reconnect policy**: how long to retry a dead stream, what the screen shows meanwhile, and whether a
-  failed slot falls back to silence.
+  failed slot falls back to silence. Scoped by **D17** — stream drops must self-heal, WiFi loss need
+  not.
 - **Boot behaviour** before WiFi is up: splash screen, and what happens if the network never arrives.
 - **AAC** — counted at M3, decided then (**D15**).

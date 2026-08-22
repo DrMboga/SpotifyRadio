@@ -39,7 +39,10 @@ All four toggle buttons (`L`/`M`/`K`/`U`) now select internet radio banks: 4 ban
 Station content does not start from scratch: the v1 scraper database
 (`RadioApp/RadioApp/Data/RadioSettings.db`) holds 874 vetted candidate URLs and 14 slots already mapped
 to button+frequency with embedded logos. **Read it, never write it** — it belongs to the frozen tree.
-`Architecture.md` §5.1 has the breakdown.
+`Architecture.md` §5.1 has the breakdown. Two gaps to know before querying it: it covers **only the UK,
+Germany and Luxembourg** — no USA, no Russia, both of which are target countries — and only two rows are
+tagged `Metal`. Also, `Rating = 0` on 73 % of rows means *unrated*, not *bad*; rank by the like ratio
+per §5.3.
 
 ### Commands (from `Esp32InternetRadio/`)
 
@@ -68,8 +71,11 @@ Station data changes need only `uploadfs`; firmware changes need `upload`. They 
   stream, and both happen at station change. Audio runs pinned to core 1, everything else on core 0,
   joined by a command queue (`Architecture.md` §7.1). A "network glitch" at station change is usually
   this instead.
-- **Heap fragmentation is the real long-run risk**, not throughput. Measure the *largest free block*
-  over hours of connect/disconnect cycles, not average free heap.
+- **Heap fragmentation is the real risk**, not throughput — and the thing to measure is the *largest
+  free block* **per station change**, not average free heap and not drift over days. The radio is used
+  in 2–3 hour sessions with ~30–60 station changes and is switched off afterwards (`Architecture.md`
+  §7.3, **D17**), so switching is the dominant operation and the mains switch clears slow decay. Stream
+  drops must self-heal; WiFi-loss recovery is explicitly best-effort.
 - **The Pico sends JSON with no trailing newline.** `readStringUntil('\n')` will hang forever. Frame by
   counting braces. The Pico cannot be changed to fix this.
 - **The dial streams `NewFrequency` continuously while turning.** Debounce (~1 s settle) or a single
