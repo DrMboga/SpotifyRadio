@@ -16,20 +16,41 @@ namespace AudioEngine {
 // hot path (§7.2).
 constexpr size_t kMaxUrlLength = 192;
 
+// What the audio task is currently doing. `Playing` means a stream is actually
+// running, not merely requested — the gap between the two is a TLS handshake,
+// which is why the storm driver in M2 waits on this rather than on playUrl()
+// returning.
+enum class State : uint8_t {
+  Idle,        // nothing requested, or explicitly stopped
+  Playing,     // connected and decoding
+  Reconnecting // a stream was requested but is not up; a retry is scheduled
+};
+
 // Creates the command queue and starts the audio task. Call once from setup().
 void begin();
 
 // Queues a station change: the current stream is torn down before the new one
 // opens, so only one TLS session exists at a time (§7.2). Returns false if the
 // URL is too long or the queue is full.
+//
+// A stream started this way is *supervised*: if the server hangs up, the audio
+// task reconnects on its own with backoff (**D17**). Only stop() ends that.
 bool playUrl(const char* url);
 
 // Queues a stop — used for empty slots and for pause, both of which mean
-// disconnecting (§6).
+// disconnecting (§6). Also cancels reconnect supervision.
 bool stop();
 
 // Diagnostics, safe to read from core 0.
 bool isPlaying();
+State state();
+
+// Counters for the M2 switch storm. Written on core 1, read on core 0; they
+// are 32-bit aligned, so a torn read is not possible on this architecture and
+// no lock is needed for numbers that are only ever reported.
+uint32_t connectAttempts();  // including retries
+uint32_t connectFailures();  // connecttohost() returned false
+uint32_t streamDrops();      // was Playing, then the server went away
 
 // Level of the decoded PCM, left and right, 0..127 each. Sampled in the output
 // path just before the gain stage, so a non-zero changing value proves the

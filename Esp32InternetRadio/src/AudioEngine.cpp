@@ -26,6 +26,21 @@ constexpr UBaseType_t kTaskPriority = 2;
 constexpr uint32_t kTaskStackBytes = 10000;
 constexpr UBaseType_t kQueueDepth = 4;
 
+// D17: a stream server hanging up mid-song happens during ordinary listening
+// and has to heal by itself. Retry quickly at first — most drops are a single
+// bad moment on the CDN and the next connect works — then back off so a
+// genuinely dead station does not hammer the network for the rest of the
+// evening. There is no attempt limit on purpose: a radio left on the wrong
+// station should start playing again when the station comes back.
+constexpr uint32_t kFirstRetryDelayMs = 1000;
+constexpr uint32_t kMaxRetryDelayMs = 30000;
+
+// Drop detection is armed only after the stream has been up this long.
+// connecttohost() returns as soon as the response headers parse, and a server
+// that closes immediately afterwards would otherwise be indistinguishable from
+// one that never opened — producing a retry loop with no delay in it.
+constexpr uint32_t kDropGraceMs = 2000;
+
 enum class CommandType : uint8_t { PlayUrl, Stop };
 
 struct Command {
@@ -37,20 +52,97 @@ Audio audio;
 QueueHandle_t commandQueue = nullptr;
 TaskHandle_t audioTaskHandle = nullptr;
 
+// --- Audio task state. Touched only on core 1, except the counters, which are
+// --- read (never written) from core 0.
+char desiredUrl[AudioEngine::kMaxUrlLength] = {0};
+AudioEngine::State streamState = AudioEngine::State::Idle;
+uint32_t retryAtMs = 0;
+uint32_t nextRetryDelayMs = kFirstRetryDelayMs;
+uint32_t playingSinceMs = 0;
+
+volatile uint32_t connectAttemptCount = 0;
+volatile uint32_t connectFailureCount = 0;
+volatile uint32_t streamDropCount = 0;
+
+// millis() wraps after ~49 days. Comparing a *difference* against a bound is
+// correct across the wrap; comparing the timestamps directly is not.
+bool hasElapsed(uint32_t sinceMs, uint32_t intervalMs) {
+  return (millis() - sinceMs) >= intervalMs;
+}
+
+void scheduleRetry() {
+  streamState = AudioEngine::State::Reconnecting;
+  retryAtMs = millis() + nextRetryDelayMs;
+
+  Serial.printf("[audio] reconnect in %u ms\n", nextRetryDelayMs);
+
+  nextRetryDelayMs *= 2;
+  if (nextRetryDelayMs > kMaxRetryDelayMs) {
+    nextRetryDelayMs = kMaxRetryDelayMs;
+  }
+}
+
+void attemptConnect() {
+  // Tear the old session down first — one TLS connection at a time (§7.2).
+  audio.stopSong();
+
+  connectAttemptCount++;
+  Serial.printf("[audio] connecting to %s\n", desiredUrl);
+
+  if (audio.connecttohost(desiredUrl)) {
+    streamState = AudioEngine::State::Playing;
+    playingSinceMs = millis();
+    nextRetryDelayMs = kFirstRetryDelayMs;
+    return;
+  }
+
+  connectFailureCount++;
+  Serial.println("[audio] connect failed");
+  scheduleRetry();
+}
+
 void handleCommand(const Command& command) {
   switch (command.type) {
     case CommandType::PlayUrl:
-      // Tear the old session down first — one TLS connection at a time (§7.2).
-      audio.stopSong();
-      Serial.printf("[audio] connecting to %s\n", command.url);
-      if (!audio.connecttohost(command.url)) {
-        Serial.println("[audio] connect failed");
-      }
+      strlcpy(desiredUrl, command.url, sizeof(desiredUrl));
+      // A deliberate station change starts the backoff ladder from the bottom
+      // again, even if the previous station was in a long retry cycle.
+      nextRetryDelayMs = kFirstRetryDelayMs;
+      attemptConnect();
       break;
 
     case CommandType::Stop:
+      // Clearing the URL is what ends supervision — otherwise the drop check
+      // below would treat a deliberate stop as a failure and reconnect.
+      desiredUrl[0] = '\0';
+      streamState = AudioEngine::State::Idle;
       audio.stopSong();
       Serial.println("[audio] stopped");
+      break;
+  }
+}
+
+// Runs every pass of the audio loop. This is the whole of D17's stream-drop
+// recovery: notice that a stream we believe is playing has gone away, and get
+// it back without anyone touching the radio.
+void superviseStream() {
+  switch (streamState) {
+    case AudioEngine::State::Playing:
+      if (!audio.isRunning() && hasElapsed(playingSinceMs, kDropGraceMs)) {
+        streamDropCount++;
+        Serial.println("[audio] stream dropped");
+        scheduleRetry();
+      }
+      break;
+
+    case AudioEngine::State::Reconnecting:
+      // Signed difference, so this stays correct across the millis() wrap.
+      if ((int32_t)(millis() - retryAtMs) >= 0) {
+        attemptConnect();
+      }
+      break;
+
+    case AudioEngine::State::Idle:
       break;
   }
 }
@@ -81,6 +173,7 @@ void audioTask(void*) {
     }
 
     audio.loop();
+    superviseStream();
     vTaskDelay(1);
   }
 }
@@ -97,13 +190,15 @@ bool enqueue(const Command& command) {
 
 // --- ESP32-audioI2S callbacks ----------------------------------------------
 // These are weak symbols in Audio.h and are invoked from the audio task. For
-// M1 they only reach the serial monitor; M4 routes the station and title lines
-// to the display instead.
+// M1/M2 they only reach the serial monitor; M4 routes the station and title
+// lines to the display instead.
 
 void audio_info(const char* info) { Serial.printf("[audio] %s\n", info); }
 
 void audio_showstation(const char* info) { Serial.printf("[station] %s\n", info); }
 
+// ICY metadata — `Artist - Title`, pushed by the server whenever the track
+// changes. M4 draws this on the bottom line of the screen (§6).
 void audio_showstreamtitle(const char* info) { Serial.printf("[title] %s\n", info); }
 
 void audio_bitrate(const char* info) { Serial.printf("[bitrate] %s\n", info); }
@@ -145,6 +240,14 @@ bool stop() {
 }
 
 bool isPlaying() { return audio.isRunning(); }
+
+State state() { return streamState; }
+
+uint32_t connectAttempts() { return connectAttemptCount; }
+
+uint32_t connectFailures() { return connectFailureCount; }
+
+uint32_t streamDrops() { return streamDropCount; }
 
 void vuLevel(uint8_t& left, uint8_t& right) {
   const uint16_t vu = audio.getVUlevel();

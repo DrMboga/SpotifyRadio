@@ -1,8 +1,14 @@
-// M1 — first sound.
+// M2 — stream robustness.
 //
-// ESP32 + PCM5102A on a breadboard, nothing else. Connects to WiFi, hands one
-// hard-coded HTTPS stream to the audio task and reports the numbers M2 will be
-// compared against. No UART, no TFT, no station catalogue yet.
+// ESP32 + PCM5102A on a breadboard, nothing else. Connects to WiFi and drives
+// the audio task from single-key serial commands, so the whole selection path
+// is exercised without the Pico or the screen.
+//
+// M2 asks whether this board survives a listening *session* (Architecture.md
+// §7.3, D17): 2–3 hours, then switched off, and dominated by station changes —
+// 30–60 of them an evening. So the milestone's primary test is the switch
+// storm (`t`), not sitting on one stream. Reconnect-after-drop lives in
+// AudioEngine and needs no command: pull a stream's plug and it comes back.
 //
 // This loop() runs on core 0 (-DARDUINO_RUNNING_CORE=0); the audio task owns
 // core 1. See Architecture.md §7.1 and D14.
@@ -13,17 +19,16 @@
 
 #include "AudioEngine.h"
 #include "Secrets.h"
+#include "SwitchStorm.h"
+#include "TestStations.h"
 
 namespace {
 
-// D3: the milestone deliberately starts on HTTPS. Proving the easy HTTP case
-// first would only hide the risk M1 exists to expose. This is the same URL the
-// M0 spike streamed 512 KB from.
-constexpr char kTestStreamUrl[] =
-    "https://s1-webradio.rockantenne.de/80er-rock/stream/mp3";
+// The full evening, compressed: ~60 changes is one session's worth (§7.3).
+constexpr uint16_t kStormChanges = 60;
 
 constexpr uint32_t kWifiTimeoutMs = 30000;
-constexpr uint32_t kReportIntervalMs = 10000;
+constexpr uint32_t kReportIntervalMs = 30000;
 
 bool connectWifi() {
   Serial.printf("[wifi] connecting to %s", WIFI_SSID);
@@ -50,10 +55,26 @@ bool connectWifi() {
   return true;
 }
 
-// The M1 baseline. Free heap answers "does it play", largest free block is the
-// one that matters over hours (§7.3) — start recording it now so M2's soak has
-// something to compare against.
-void reportStatus() {
+void printStatus() {
+  uint8_t vuLeft = 0;
+  uint8_t vuRight = 0;
+  AudioEngine::vuLevel(vuLeft, vuRight);
+
+  Serial.printf(
+      "[stat] playing=%d vu=%u/%u heap=%u min=%u largest=%u buf=%u/%u "
+      "stack_free=%u connects=%u fails=%u drops=%u rssi=%d\n",
+      AudioEngine::isPlaying() ? 1 : 0, vuLeft, vuRight, ESP.getFreeHeap(),
+      ESP.getMinFreeHeap(),
+      heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL),
+      AudioEngine::streamBufferFilled(), AudioEngine::streamBufferSize(),
+      AudioEngine::taskStackFreeBytes(), AudioEngine::connectAttempts(),
+      AudioEngine::connectFailures(), AudioEngine::streamDrops(), WiFi.RSSI());
+}
+
+// The three-hour hold half of M2 reads these lines. Largest free block is the
+// one that matters (§7.3); every 30 s is dense enough to see a slope and sparse
+// enough that a whole evening still fits in a text file.
+void reportStatusPeriodically() {
   static uint32_t lastReportAt = 0;
 
   if (millis() - lastReportAt < kReportIntervalMs) {
@@ -61,19 +82,86 @@ void reportStatus() {
   }
 
   lastReportAt = millis();
+  printStatus();
+}
 
-  uint8_t vuLeft = 0;
-  uint8_t vuRight = 0;
-  AudioEngine::vuLevel(vuLeft, vuRight);
+void printHelp() {
+  Serial.println("[cmd] 1-9  play station        s  stop");
+  Serial.println("[cmd] n    next station        h  heap now");
+  Serial.printf("[cmd] t    switch storm (%u changes)   x  abort storm\n",
+                kStormChanges);
+  Serial.println("[cmd] l    list stations       ?  this help");
+}
 
-  Serial.printf(
-      "[stat] playing=%d vu=%u/%u heap=%u min=%u largest=%u buf=%u/%u "
-      "stack_free=%u\n",
-      AudioEngine::isPlaying() ? 1 : 0, vuLeft, vuRight, ESP.getFreeHeap(),
-      ESP.getMinFreeHeap(),
-      heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL),
-      AudioEngine::streamBufferFilled(), AudioEngine::streamBufferSize(),
-      AudioEngine::taskStackFreeBytes());
+void listStations() {
+  for (size_t i = 0; i < kTestStationCount; i++) {
+    Serial.printf("[cmd] %u  %-20s %s\n", (unsigned)(i + 1),
+                  kTestStations[i].name, kTestStations[i].url);
+  }
+}
+
+void playStation(size_t index) {
+  if (index >= kTestStationCount) {
+    Serial.printf("[cmd] no station %u\n", (unsigned)(index + 1));
+    return;
+  }
+
+  Serial.printf("[cmd] play %s\n", kTestStations[index].name);
+  AudioEngine::playUrl(kTestStations[index].url);
+}
+
+// Single characters rather than a line protocol: the storm has to keep being
+// driven from loop() while a command is typed, and nothing here is worth a
+// parser.
+void handleSerialCommand(char key) {
+  static size_t currentStation = 0;
+
+  if (key >= '1' && key <= '9') {
+    currentStation = (size_t)(key - '1');
+    playStation(currentStation);
+    return;
+  }
+
+  switch (key) {
+    case 'n':
+      currentStation = (currentStation + 1) % kTestStationCount;
+      playStation(currentStation);
+      break;
+
+    case 's':
+      Serial.println("[cmd] stop");
+      AudioEngine::stop();
+      break;
+
+    case 't':
+      SwitchStorm::start(kStormChanges);
+      break;
+
+    case 'x':
+      SwitchStorm::stop();
+      break;
+
+    case 'h':
+      printStatus();
+      break;
+
+    case 'l':
+      listStations();
+      break;
+
+    case '?':
+      printHelp();
+      break;
+
+    default:
+      break;  // stray newlines from the monitor
+  }
+}
+
+void pollSerial() {
+  while (Serial.available() > 0) {
+    handleSerialCommand((char)Serial.read());
+  }
 }
 
 }  // namespace
@@ -83,20 +171,25 @@ void setup() {
   delay(1000);
 
   Serial.println();
-  Serial.println("ESP32 internet radio - M1 first sound");
+  Serial.println("ESP32 internet radio - M2 stream robustness");
 
   AudioEngine::begin();
 
   if (!connectWifi()) {
-    // M7 gives this a real retry policy and a screen to say so. For M1, say it
+    // M7 gives this a real retry policy and a screen to say so. For M2, say it
     // and sit still rather than pretending to play.
     return;
   }
 
-  AudioEngine::playUrl(kTestStreamUrl);
+  listStations();
+  printHelp();
+
+  playStation(0);
 }
 
 void loop() {
-  reportStatus();
-  delay(50);
+  pollSerial();
+  SwitchStorm::update();
+  reportStatusPeriodically();
+  delay(20);
 }
