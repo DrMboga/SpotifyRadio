@@ -56,6 +56,22 @@ bool connectWifi() {
   return true;
 }
 
+// WiFi.RSSI() returns 0 when esp_wifi_sta_get_ap_info() fails, which it does
+// intermittently and sometimes for a whole session - a 40-minute soak logged
+// rssi=0 on all 73 samples after reporting -61 dBm correctly at connect. Zero
+// is not a plausible signal strength, so it means "no reading", and printing it
+// throws away the last good one. Signal strength is the first thing to check
+// when decode errors show up, so hold on to it.
+int8_t currentRssi() {
+  static int8_t lastGood = 0;
+
+  const int8_t rssi = WiFi.RSSI();
+  if (rssi != 0) {
+    lastGood = rssi;
+  }
+  return lastGood;
+}
+
 void printStatus() {
   uint8_t vuLeft = 0;
   uint8_t vuRight = 0;
@@ -70,7 +86,7 @@ void printStatus() {
       AudioEngine::streamBufferFilled(), AudioEngine::streamBufferSize(),
       AudioEngine::taskStackFreeBytes(), AudioEngine::connectAttempts(),
       AudioEngine::connectFailures(), AudioEngine::streamDrops(),
-      AudioEngine::decodeErrors(), WiFi.RSSI());
+      AudioEngine::decodeErrors(), currentRssi());
 }
 
 // The three-hour hold half of M2 reads these lines. Largest free block is the
