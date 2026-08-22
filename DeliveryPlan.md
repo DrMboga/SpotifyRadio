@@ -173,6 +173,40 @@ and plain HTTP, and 48/128/256 kbps. Largest free block per station, 15 visits e
 No trend in either direction. **The heap does not fragment across station changes on this board**, which
 is the question M2 existed to answer.
 
+### Three-hour hold — 72 minutes in, flat
+
+ROCK ANTENNE 80er (HTTPS, MP3 128k), single connection, no reconnects at all:
+
+| | |
+|---|---|
+| Largest free block | 25,588–28,660, first-half mean 27,664 → second-half 27,857 (**+193, upward**) |
+| Min free heap | settled at **68,728 after ~5 minutes and never moved again** |
+| `connects` / `fails` / `drops` | **1 / 0 / 0** across 72 minutes |
+| Input buffer | 94–100 % full; dips of 1–2 KB lasting a minute or two, always recovering |
+
+**A prediction that was wrong, usefully.** Four consecutive samples showed the buffer draining in
+regular 418-byte steps — a 0.09 % deficit against a 16 kB/s stream, which looked like I2S playback
+clock drift against the server's encoder, and implied an underrun about 35 minutes later. It never
+came: the buffer refilled to 27,953 and thereafter dipped and recovered repeatedly, never below 94 %.
+So the drain was transient network jitter that happened to look periodic over four samples. **The
+regularity was in the sampling, not the mechanism** — worth remembering before reading a trend into a
+handful of points from a 30-second logger.
+
+### The decode-error bursts are periodic
+
+Seven bursts in 72 minutes (~5.8/hour). Each resyncs in ~50 ms, is barely audible, and never drops the
+connection — `drops=0` throughout, so the reconnect path correctly stays out of it. But the intervals
+are not random:
+
+```
+17m39s · 4m35s · 13m02s · 4m35s · 4m34s · 4m34s
+```
+
+**274–275 s, four times consecutively**, and the resync offset is `pos 49` or `pos 50` on five of the
+seven. A fixed period and a fixed offset mean something structural in the stream, not random packet
+loss — most likely on the station's side. Unidentified; the test is whether a different station shows a
+different period or none, which is what the `decerr=` counter is for.
+
 Two measurement lessons, both learned by getting a wrong answer first:
 
 - **The largest free block is quantised to 1024 bytes.** Every reading in a whole run came from the set
