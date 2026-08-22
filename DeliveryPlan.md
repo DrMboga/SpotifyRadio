@@ -173,16 +173,16 @@ and plain HTTP, and 48/128/256 kbps. Largest free block per station, 15 visits e
 No trend in either direction. **The heap does not fragment across station changes on this board**, which
 is the question M2 existed to answer.
 
-### Three-hour hold — 72 minutes in, flat
+### Three-hour hold — 98 minutes, flat
 
 ROCK ANTENNE 80er (HTTPS, MP3 128k), single connection, no reconnects at all:
 
 | | |
 |---|---|
-| Largest free block | 25,588–28,660, first-half mean 27,664 → second-half 27,857 (**+193, upward**) |
-| Min free heap | settled at **68,728 after ~5 minutes and never moved again** |
-| `connects` / `fails` / `drops` | **1 / 0 / 0** across 72 minutes |
-| Input buffer | 94–100 % full; dips of 1–2 KB lasting a minute or two, always recovering |
+| Largest free block | 25,588–28,660 throughout; half-over-half drift **+193 then +461, both upward** |
+| Min free heap | 68,728 from minute 5, held **~70 minutes**, then one 676-byte step to 68,052 and held again |
+| `connects` / `fails` / `drops` | **1 / 0 / 0** across the whole 98 minutes — the connection was never re-established |
+| Input buffer | 90–100 % full; dips of 1–3 KB lasting a minute or two, always recovering |
 
 **A prediction that was wrong, usefully.** Four consecutive samples showed the buffer draining in
 regular 418-byte steps — a 0.09 % deficit against a 16 kB/s stream, which looked like I2S playback
@@ -194,18 +194,30 @@ handful of points from a 30-second logger.
 
 ### The decode-error bursts are periodic
 
-Seven bursts in 72 minutes (~5.8/hour). Each resyncs in ~50 ms, is barely audible, and never drops the
-connection — `drops=0` throughout, so the reconnect path correctly stays out of it. But the intervals
-are not random:
+Eleven bursts in 98 minutes (~6.7/hour). Each resyncs in ~50 ms, is barely audible, and never drops the
+connection — `drops=0` throughout, so the reconnect path correctly stays out of it. The intervals are
+emphatically not random:
 
 ```
-17m39s · 4m35s · 13m02s · 4m35s · 4m34s · 4m34s
+1059 · 275 · 782 · 275 · 274 · 274 · 783 · 274 · (812) · 245     seconds
+        ^^^         ^^^   ^^^   ^^^         ^^^
 ```
 
-**274–275 s, four times consecutively**, and the resync offset is `pos 49` or `pos 50` on five of the
-seven. A fixed period and a fixed offset mean something structural in the stream, not random packet
-loss — most likely on the station's side. Unidentified; the test is whether a different station shows a
-different period or none, which is what the `decerr=` counter is for.
+**Seven intervals at 274–275 s.** The long gaps cluster too — 782, 783, and 1057/1059 twice — and
+1057 − 782.5 = 274.5, so the same quantum shows up in the gaps between missed events. (The 812/245 pair
+straddles a host-side serial flush and its timestamps are unreliable; the 20:30 → 20:48 span is 1057 s,
+matching the other long gap.)
+
+What does *not* fit a simple "some events missed" model: 782.5 is 2.85 × 274.5, not an integer multiple.
+So there is certainly a ~274.5 s quantum, and it is not fully explained.
+
+**Correction to an earlier reading:** the resync offset is *not* fixed. Over 11 bursts it is
+`pos 49`/`50` eight times, but also `17` and `417` twice. Consistent, not constant — the first seven
+samples made it look tighter than it is.
+
+A period this clean is structural, and most likely on the station's side rather than the network's. The
+test is whether another station shows a different period or none, which is what `decerr=` is for — and
+more of the same station will not answer it.
 
 Two measurement lessons, both learned by getting a wrong answer first:
 
