@@ -201,7 +201,8 @@ August 2026:
 | …with a logo URL | 1044 (remote URLs, not stored images) |
 | Scheme, of the 874 | **758 https / 116 http** → 87 % HTTPS |
 | Codec guessed from the URL | 436 mp3 · 42 aac · 3 hls · 2 ogg · **391 unknown** |
-| Countries covered | **3** — United Kingdom 578, Germany 449, Luxembourg 17 |
+| `Countries` rows (the scraper's *worklist* of places) | **139**, each with its MyTuner entry URL — including United States and Russia |
+| …of those 139 actually scraped into `RadioStationInfos` | **3** — United Kingdom 578, Germany 449, Luxembourg 17 |
 | Rows carrying a non-zero `Rating` | 284 of 1044 — **760 are `0`, meaning unrated, not bad** |
 | `Likes` / `Dislikes` | present on every row; likes run 0–1056, long-tailed |
 | `Genres` | free text, pipe-separated — 103 rows tagged `Rock`, 56 `Classic Rock`, 270 `Pop Music`, **2 `Metal`** |
@@ -219,13 +220,24 @@ Caveats that matter: the data is ~5 months old, so expect link rot; 45 % of URLs
 only reliable source of truth is the `Content-Type` header at connect time. Both are why M3 starts with
 a validation pass rather than a hand-written CSV.
 
-**The two gaps the scraper left**, which set the shape of MD:
+**Two tables carry a country, and they mean different things** — worth stating plainly, because the
+database looks globally stocked at a glance and is not:
 
-- **No USA and no Russia, at all.** The v1 scraper only ever walked the UK, Germany and Luxembourg. Two
-  of the four target countries therefore cannot be served from this database on any query, and have to
-  be researched from outside it and fed into the same probe.
-- **Almost no metal.** Two rows carry the `Metal` tag. Rock is genuinely covered (103 + 56 rows);
-  metal is not, and also needs outside research.
+- `Countries` is the scraper's **worklist**: 139 countries, each with the MyTuner URL to walk. Russia
+  and the United States are both in it, with valid URLs.
+- `RadioStationInfos` is the **result**: 1044 station rows, all of them from **three** countries.
+  `select count(*) … where Country='United States'` returns 0, and so does Russia.
+
+The v1 scraper covered 3 of its 139 countries before v1 was finished with. Every row it did produce is
+marked `StationProcessed = 1`, so this is not an interrupted run to be resumed — it is a worklist that
+was never started for the other 136.
+
+**The two gaps that leaves**, which set the shape of MD:
+
+- **No USA and no Russia rows**, though both are named in `Countries` with a usable entry URL. Two of
+  the four target countries have to come from outside `RadioStationInfos`.
+- **Almost no metal.** Two rows carry the `Metal` tag. Rock proper is genuinely covered (103 + 56
+  rows); metal is not.
 
 Everything found outside the database joins the same candidate table and goes through the identical
 probe — the point of the probe is that no URL reaches `stations.csv` unverified, whatever its origin.

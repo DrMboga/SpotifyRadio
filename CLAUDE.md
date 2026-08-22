@@ -39,10 +39,11 @@ All four toggle buttons (`L`/`M`/`K`/`U`) now select internet radio banks: 4 ban
 Station content does not start from scratch: the v1 scraper database
 (`RadioApp/RadioApp/Data/RadioSettings.db`) holds 874 vetted candidate URLs and 14 slots already mapped
 to button+frequency with embedded logos. **Read it, never write it** — it belongs to the frozen tree.
-`Architecture.md` §5.1 has the breakdown. Two gaps to know before querying it: it covers **only the UK,
-Germany and Luxembourg** — no USA, no Russia, both of which are target countries — and only two rows are
-tagged `Metal`. Also, `Rating = 0` on 73 % of rows means *unrated*, not *bad*; rank by the like ratio
-per §5.3.
+`Architecture.md` §5.1 has the breakdown. Three things to know before querying it: (1) two tables carry
+a country and they are not the same — `Countries` is the scraper's 139-country **worklist** (Russia and
+the US are in it), while `RadioStationInfos` is the **result** and holds only UK, Germany and
+Luxembourg, so a US or Russian station query returns 0 rows; (2) only two rows are tagged `Metal`;
+(3) `Rating = 0` on 73 % of rows means *unrated*, not *bad* — rank by the like ratio per §5.3.
 
 ### Commands (from `Esp32InternetRadio/`)
 

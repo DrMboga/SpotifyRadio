@@ -181,10 +181,17 @@ The database covers only two of those four countries (**§5.1**), so MD has two 
 candidates by the §5.3 formula rather than raw likes, filter to the genres of interest, and emit a
 ranked table per country and genre.
 
-**MD-2 — research USA and Russia from scratch.** There is not a single US or Russian row in the
-database, and only two rows anywhere carry a `Metal` genre tag. Those need hand-researched candidates —
-well-known rock/metal and pop stations with public stream endpoints — added to the same candidate table
-by hand so they go through the identical probe.
+**MD-2 — source USA, Russia and metal from outside `RadioStationInfos`.** Neither country has a single
+station row, and only two rows anywhere carry a `Metal` tag (**§5.1**). The `Countries` table does hold
+a valid MyTuner entry URL for both, so re-running the v1 scrape against those two is *possible* — but
+**[radio-browser.info](https://www.radio-browser.info) is the better source** and should be tried first:
+it is an open community API built for exactly this, returns country, genre tags, codec, bitrate and vote
+counts as structured JSON, and already tracks whether each stream last checked OK. No browser
+automation, no DOM to keep up with, and it covers metal properly where MyTuner's German and British
+listings do not.
+
+Either way the output is candidate rows in the same table, going through the same probe as everything
+else.
 
 **MD-3 — probe every candidate, from both sources.** Follow redirects, record the final URL, the
 `Content-Type` (the only reliable codec signal — 45 % of URLs reveal nothing), and the ICY headers
