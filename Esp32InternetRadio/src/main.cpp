@@ -116,6 +116,15 @@ void playStation(size_t index) {
 void handleSerialCommand(char key) {
   static size_t currentStation = 0;
 
+  // A manual station change during a storm silently corrupts the run: the
+  // measurement that follows is taken against a stream the storm did not open,
+  // and the dwell it was timing is gone. Refuse rather than quietly produce a
+  // wrong number.
+  if (SwitchStorm::isRunning() && (key == 's' || key == 'n' || (key >= '1' && key <= '9'))) {
+    Serial.println("[cmd] storm running - press x to abort it first");
+    return;
+  }
+
   if (key >= '1' && key <= '9') {
     currentStation = (size_t)(key - '1');
     playStation(currentStation);

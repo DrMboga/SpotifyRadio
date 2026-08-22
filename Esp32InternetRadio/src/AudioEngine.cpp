@@ -86,6 +86,15 @@ void attemptConnect() {
   // Tear the old session down first — one TLS connection at a time (§7.2).
   audio.stopSong();
 
+  // Publish Connecting *before* the blocking call, not after it. connecttohost()
+  // sits on a TLS handshake for well over a second, and until it returns the
+  // state variable still says whatever the previous station left behind — so a
+  // core-0 reader polling for "Playing" sees the old station's value and
+  // concludes the new one connected instantly. That is exactly what happened to
+  // the M2 switch storm, which logged connect=20ms against handshakes the audio
+  // log timed at 1356 ms.
+  streamState = AudioEngine::State::Connecting;
+
   connectAttemptCount++;
   Serial.printf("[audio] connecting to %s\n", desiredUrl);
 
@@ -140,6 +149,11 @@ void superviseStream() {
       if ((int32_t)(millis() - retryAtMs) >= 0) {
         attemptConnect();
       }
+      break;
+
+    case AudioEngine::State::Connecting:
+      // attemptConnect() blocks, so this state is only ever observed from the
+      // other core. Nothing to supervise here.
       break;
 
     case AudioEngine::State::Idle:

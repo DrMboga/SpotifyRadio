@@ -10,8 +10,9 @@ namespace {
 
 // Long enough that the connection is fully established and the input ring
 // buffer has actually filled — a change that is torn down before the buffer
-// allocates would not exercise the thing being measured. Short enough that 60
-// changes finish in about ten minutes.
+// allocates would not exercise the thing being measured. The dwell is timed
+// from when the stream is *playing*, not from when it was requested, so a slow
+// TLS handshake does not eat into it.
 constexpr uint32_t kDwellMs = 8000;
 
 // A connect that has not produced audio by now is counted as a failure and the
@@ -27,6 +28,9 @@ constexpr uint32_t kConnectTimeoutMs = 20000;
 constexpr int32_t kPassBytesPerChange = 32;
 constexpr int32_t kMarginalBytesPerChange = 256;
 
+// Heap is measured per station, so the table needs a fixed bound.
+constexpr size_t kMaxTrackedStations = 8;
+
 enum class Phase : uint8_t { Idle, Connecting, Dwelling };
 
 Phase phase = Phase::Idle;
@@ -35,6 +39,7 @@ uint16_t targetChanges = 0;
 uint16_t completedChanges = 0;
 uint16_t connectFailures = 0;
 size_t stationIndex = 0;
+size_t trackedStations = 0;
 
 uint32_t phaseStartedAt = 0;
 uint32_t connectMs = 0;
@@ -46,17 +51,23 @@ uint32_t connectMs = 0;
 // timing a connect it never made.
 uint32_t attemptsAtRequest = 0;
 
-uint32_t firstLargestBlock = 0;
-uint32_t lastLargestBlock = 0;
-uint32_t minLargestBlock = 0;
-uint32_t dropsAtStart = 0;
+// Per-station heap baselines. A single global baseline is worthless here: the
+// four bench stations sit up to 43 KB apart from each other simply because
+// ELDORADIO is plain HTTP and has no ~40 KB TLS session to pay for, so a
+// global delta swings +43000/-3000 from one change to the next and says
+// nothing about whether anything leaked. A leak only shows up by comparing a
+// station against *itself* on an earlier visit.
+uint32_t firstLargest[kMaxTrackedStations];
+uint32_t lastLargest[kMaxTrackedStations];
+uint32_t minLargest[kMaxTrackedStations];
+uint16_t samples[kMaxTrackedStations];
 
 uint32_t largestFreeBlock() {
   return heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
 }
 
 void beginChange() {
-  stationIndex = completedChanges % kTestStationCount;
+  stationIndex = completedChanges % trackedStations;
 
   phase = Phase::Connecting;
   phaseStartedAt = millis();
@@ -71,26 +82,49 @@ void printSummary() {
   Serial.printf("[storm] changes completed: %u of %u (%u connect failures)\n",
                 completedChanges, targetChanges, connectFailures);
 
-  if (completedChanges == 0) {
-    Serial.println("[storm] no completed changes - nothing to compare");
+  int32_t totalNet = 0;
+  uint16_t stationsCompared = 0;
+
+  for (size_t i = 0; i < trackedStations; i++) {
+    if (samples[i] == 0) {
+      continue;
+    }
+
+    const int32_t net = (int32_t)lastLargest[i] - (int32_t)firstLargest[i];
+    Serial.printf("[storm]   %-20s visits=%u first=%u last=%u min=%u net=%+d\n",
+                  kTestStations[i].name, samples[i], firstLargest[i],
+                  lastLargest[i], minLargest[i], net);
+
+    if (samples[i] >= 2) {
+      totalNet += net;
+      stationsCompared++;
+    }
+  }
+
+  if (stationsCompared == 0) {
+    Serial.println("[storm] not enough repeat visits to compare - run more changes");
     return;
   }
 
-  const int32_t net = (int32_t)lastLargestBlock - (int32_t)firstLargestBlock;
-  const int32_t perChange = net / (int32_t)completedChanges;
+  // The first visit to each station only establishes its baseline, so the
+  // changes that can actually show a loss are the ones after that.
+  const int32_t measuredChanges =
+      (int32_t)completedChanges - (int32_t)stationsCompared;
+  if (measuredChanges <= 0) {
+    Serial.println("[storm] not enough repeat visits to compare - run more changes");
+    return;
+  }
 
-  Serial.printf("[storm] largest free block: first=%u last=%u min=%u\n",
-                firstLargestBlock, lastLargestBlock, minLargestBlock);
-  Serial.printf("[storm] net %+d bytes over %u changes = %+d bytes/change\n",
-                net, completedChanges, perChange);
-  Serial.printf("[storm] stream drops during storm: %u\n",
-                AudioEngine::streamDrops() - dropsAtStart);
+  const int32_t perChange = totalNet / measuredChanges;
+
+  Serial.printf("[storm] net %+d bytes across %d measured changes = %+d bytes/change\n",
+                totalNet, measuredChanges, perChange);
+  Serial.printf("[storm] stream drops during storm: %u\n", AudioEngine::streamDrops());
 
   // The number the milestone turns on, converted into the unit that actually
   // matters: what a single evening of listening costs.
-  const int32_t perSession = perChange * 60;
   Serial.printf("[storm] projected over a 60-change session: %+d bytes\n",
-                perSession);
+                perChange * 60);
 
   if (-perChange <= kPassBytesPerChange) {
     Serial.println("[storm] verdict: PASS - no meaningful per-change loss");
@@ -112,22 +146,25 @@ void finish() {
 
 // Called once per completed change, after the dwell.
 void recordChange() {
-  completedChanges++;
-  lastLargestBlock = largestFreeBlock();
+  const uint32_t largest = largestFreeBlock();
+  const size_t i = stationIndex;
 
-  if (firstLargestBlock == 0) {
-    firstLargestBlock = lastLargestBlock;
-    minLargestBlock = lastLargestBlock;
-  } else if (lastLargestBlock < minLargestBlock) {
-    minLargestBlock = lastLargestBlock;
+  if (samples[i] == 0) {
+    firstLargest[i] = largest;
+    minLargest[i] = largest;
+  } else if (largest < minLargest[i]) {
+    minLargest[i] = largest;
   }
+  lastLargest[i] = largest;
+  samples[i]++;
+
+  completedChanges++;
 
   Serial.printf(
-      "[storm] %u/%u %s connect=%ums heap=%u largest=%u delta=%+d drops=%u\n",
-      completedChanges, targetChanges, kTestStations[stationIndex].name,
-      connectMs, ESP.getFreeHeap(), lastLargestBlock,
-      (int32_t)lastLargestBlock - (int32_t)firstLargestBlock,
-      AudioEngine::streamDrops() - dropsAtStart);
+      "[storm] %u/%u %s connect=%ums heap=%u largest=%u vs-own-first=%+d drops=%u\n",
+      completedChanges, targetChanges, kTestStations[i].name, connectMs,
+      ESP.getFreeHeap(), largest, (int32_t)largest - (int32_t)firstLargest[i],
+      AudioEngine::streamDrops());
 
   if (completedChanges >= targetChanges) {
     finish();
@@ -146,17 +183,24 @@ void start(uint16_t changes) {
     return;
   }
 
+  trackedStations = kTestStationCount < kMaxTrackedStations ? kTestStationCount
+                                                            : kMaxTrackedStations;
+
   targetChanges = changes;
   completedChanges = 0;
   connectFailures = 0;
-  firstLargestBlock = 0;
-  lastLargestBlock = 0;
-  minLargestBlock = 0;
-  dropsAtStart = AudioEngine::streamDrops();
+
+  for (size_t i = 0; i < kMaxTrackedStations; i++) {
+    firstLargest[i] = 0;
+    lastLargest[i] = 0;
+    minLargest[i] = 0;
+    samples[i] = 0;
+  }
 
   Serial.printf(
       "[storm] starting %u station changes across %u stations, %u ms dwell\n",
-      changes, (unsigned)kTestStationCount, kDwellMs);
+      changes, (unsigned)trackedStations, kDwellMs);
+  Serial.println("[storm] playback keys are ignored until it finishes - press x to abort");
 
   beginChange();
 }
@@ -181,6 +225,8 @@ void update() {
       if (AudioEngine::connectAttempts() != attemptsAtRequest &&
           AudioEngine::state() == AudioEngine::State::Playing) {
         connectMs = millis() - phaseStartedAt;
+        // The dwell is timed from here, so every station gets the same 8 s of
+        // steady-state playing regardless of how long its handshake took.
         phase = Phase::Dwelling;
         phaseStartedAt = millis();
         break;

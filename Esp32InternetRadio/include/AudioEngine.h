@@ -21,9 +21,10 @@ constexpr size_t kMaxUrlLength = 192;
 // which is why the storm driver in M2 waits on this rather than on playUrl()
 // returning.
 enum class State : uint8_t {
-  Idle,        // nothing requested, or explicitly stopped
-  Playing,     // connected and decoding
-  Reconnecting // a stream was requested but is not up; a retry is scheduled
+  Idle,         // nothing requested, or explicitly stopped
+  Connecting,   // connecttohost() is in progress on the audio task
+  Playing,      // connected and decoding
+  Reconnecting  // a stream was requested but is not up; a retry is scheduled
 };
 
 // Creates the command queue and starts the audio task. Call once from setup().
