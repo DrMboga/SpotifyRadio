@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <Audio.h>
 
+#include "Log.h"
 #include "Pins.h"
 
 namespace {
@@ -74,7 +75,7 @@ void scheduleRetry() {
   streamState = AudioEngine::State::Reconnecting;
   retryAtMs = millis() + nextRetryDelayMs;
 
-  Serial.printf("[audio] reconnect in %u ms\n", nextRetryDelayMs);
+  Log::printf("[audio] reconnect in %u ms\n", nextRetryDelayMs);
 
   nextRetryDelayMs *= 2;
   if (nextRetryDelayMs > kMaxRetryDelayMs) {
@@ -96,7 +97,7 @@ void attemptConnect() {
   streamState = AudioEngine::State::Connecting;
 
   connectAttemptCount++;
-  Serial.printf("[audio] connecting to %s\n", desiredUrl);
+  Log::printf("[audio] connecting to %s\n", desiredUrl);
 
   if (audio.connecttohost(desiredUrl)) {
     streamState = AudioEngine::State::Playing;
@@ -106,7 +107,7 @@ void attemptConnect() {
   }
 
   connectFailureCount++;
-  Serial.println("[audio] connect failed");
+  Log::println("[audio] connect failed");
   scheduleRetry();
 }
 
@@ -126,7 +127,7 @@ void handleCommand(const Command& command) {
       desiredUrl[0] = '\0';
       streamState = AudioEngine::State::Idle;
       audio.stopSong();
-      Serial.println("[audio] stopped");
+      Log::println("[audio] stopped");
       break;
   }
 }
@@ -139,7 +140,7 @@ void superviseStream() {
     case AudioEngine::State::Playing:
       if (!audio.isRunning() && hasElapsed(playingSinceMs, kDropGraceMs)) {
         streamDropCount++;
-        Serial.println("[audio] stream dropped");
+        Log::println("[audio] stream dropped");
         scheduleRetry();
       }
       break;
@@ -169,14 +170,14 @@ void audioTask(void*) {
   if (!audio.setPinout(kPinI2sBclk, kPinI2sLrck, kPinI2sData)) {
     // Worth shouting about: a silent DAC otherwise looks identical to a
     // muted one, and the rest of the log stays perfectly healthy.
-    Serial.println("[audio] setPinout FAILED - I2S driver did not start");
+    Log::println("[audio] setPinout FAILED - I2S driver did not start");
   }
 
   audio.setVolume(kFixedGain);
 
   // Read the gain back rather than echoing what we passed in, so the log
   // reflects what the library actually stored.
-  Serial.printf("[audio] i2s bclk=%u lrck=%u data=%u, gain=%u/%u\n",
+  Log::printf("[audio] i2s bclk=%u lrck=%u data=%u, gain=%u/%u\n",
                 kPinI2sBclk, kPinI2sLrck, kPinI2sData, audio.getVolume(),
                 audio.maxVolume());
 
@@ -207,15 +208,15 @@ bool enqueue(const Command& command) {
 // M1/M2 they only reach the serial monitor; M4 routes the station and title
 // lines to the display instead.
 
-void audio_info(const char* info) { Serial.printf("[audio] %s\n", info); }
+void audio_info(const char* info) { Log::printf("[audio] %s\n", info); }
 
-void audio_showstation(const char* info) { Serial.printf("[station] %s\n", info); }
+void audio_showstation(const char* info) { Log::printf("[station] %s\n", info); }
 
 // ICY metadata — `Artist - Title`, pushed by the server whenever the track
 // changes. M4 draws this on the bottom line of the screen (§6).
-void audio_showstreamtitle(const char* info) { Serial.printf("[title] %s\n", info); }
+void audio_showstreamtitle(const char* info) { Log::printf("[title] %s\n", info); }
 
-void audio_bitrate(const char* info) { Serial.printf("[bitrate] %s\n", info); }
+void audio_bitrate(const char* info) { Log::printf("[bitrate] %s\n", info); }
 
 // --- Public API -------------------------------------------------------------
 
@@ -225,7 +226,7 @@ void begin() {
   commandQueue = xQueueCreate(kQueueDepth, sizeof(Command));
 
   if (commandQueue == nullptr) {
-    Serial.println("[audio] failed to create command queue");
+    Log::println("[audio] failed to create command queue");
     return;
   }
 

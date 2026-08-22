@@ -18,6 +18,7 @@
 #include <esp_heap_caps.h>
 
 #include "AudioEngine.h"
+#include "Log.h"
 #include "Secrets.h"
 #include "SwitchStorm.h"
 #include "TestStations.h"
@@ -31,7 +32,7 @@ constexpr uint32_t kWifiTimeoutMs = 30000;
 constexpr uint32_t kReportIntervalMs = 30000;
 
 bool connectWifi() {
-  Serial.printf("[wifi] connecting to %s", WIFI_SSID);
+  Log::printf("[wifi] connecting to %s", WIFI_SSID);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -40,17 +41,17 @@ bool connectWifi() {
 
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - startedAt > kWifiTimeoutMs) {
-      Serial.println();
-      Serial.println("[wifi] timed out");
+      Log::println();
+      Log::println("[wifi] timed out");
       return false;
     }
 
     delay(250);
-    Serial.print(".");
+    Log::print(".");
   }
 
-  Serial.println();
-  Serial.printf("[wifi] connected, ip=%s rssi=%d dBm\n",
+  Log::println();
+  Log::printf("[wifi] connected, ip=%s rssi=%d dBm\n",
                 WiFi.localIP().toString().c_str(), WiFi.RSSI());
   return true;
 }
@@ -60,7 +61,7 @@ void printStatus() {
   uint8_t vuRight = 0;
   AudioEngine::vuLevel(vuLeft, vuRight);
 
-  Serial.printf(
+  Log::printf(
       "[stat] playing=%d vu=%u/%u heap=%u min=%u largest=%u buf=%u/%u "
       "stack_free=%u connects=%u fails=%u drops=%u rssi=%d\n",
       AudioEngine::isPlaying() ? 1 : 0, vuLeft, vuRight, ESP.getFreeHeap(),
@@ -86,27 +87,27 @@ void reportStatusPeriodically() {
 }
 
 void printHelp() {
-  Serial.println("[cmd] 1-9  play station        s  stop");
-  Serial.println("[cmd] n    next station        h  heap now");
-  Serial.printf("[cmd] t    switch storm (%u changes)   x  abort storm\n",
+  Log::println("[cmd] 1-9  play station        s  stop");
+  Log::println("[cmd] n    next station        h  heap now");
+  Log::printf("[cmd] t    switch storm (%u changes)   x  abort storm\n",
                 kStormChanges);
-  Serial.println("[cmd] l    list stations       ?  this help");
+  Log::println("[cmd] l    list stations       ?  this help");
 }
 
 void listStations() {
   for (size_t i = 0; i < kTestStationCount; i++) {
-    Serial.printf("[cmd] %u  %-20s %s\n", (unsigned)(i + 1),
+    Log::printf("[cmd] %u  %-20s %s\n", (unsigned)(i + 1),
                   kTestStations[i].name, kTestStations[i].url);
   }
 }
 
 void playStation(size_t index) {
   if (index >= kTestStationCount) {
-    Serial.printf("[cmd] no station %u\n", (unsigned)(index + 1));
+    Log::printf("[cmd] no station %u\n", (unsigned)(index + 1));
     return;
   }
 
-  Serial.printf("[cmd] play %s\n", kTestStations[index].name);
+  Log::printf("[cmd] play %s\n", kTestStations[index].name);
   AudioEngine::playUrl(kTestStations[index].url);
 }
 
@@ -121,7 +122,7 @@ void handleSerialCommand(char key) {
   // and the dwell it was timing is gone. Refuse rather than quietly produce a
   // wrong number.
   if (SwitchStorm::isRunning() && (key == 's' || key == 'n' || (key >= '1' && key <= '9'))) {
-    Serial.println("[cmd] storm running - press x to abort it first");
+    Log::println("[cmd] storm running - press x to abort it first");
     return;
   }
 
@@ -138,7 +139,7 @@ void handleSerialCommand(char key) {
       break;
 
     case 's':
-      Serial.println("[cmd] stop");
+      Log::println("[cmd] stop");
       AudioEngine::stop();
       break;
 
@@ -177,10 +178,11 @@ void pollSerial() {
 
 void setup() {
   Serial.begin(115200);
+  Log::begin();
   delay(1000);
 
-  Serial.println();
-  Serial.println("ESP32 internet radio - M2 stream robustness");
+  Log::println();
+  Log::println("ESP32 internet radio - M2 stream robustness");
 
   AudioEngine::begin();
 

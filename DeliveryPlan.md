@@ -158,6 +158,31 @@ one stream all evening.
 **Done when:** 60 consecutive station changes end with the largest free block where they started, a
 three-hour hold on one station stays flat, and a dropped stream reconnects without a power cycle.
 
+### Switch storm — passed, August 2026
+
+60/60 changes, **0 connect failures, 0 stream drops**, across four stations spanning both codecs, TLS
+and plain HTTP, and 48/128/256 kbps. Largest free block per station, 15 visits each:
+
+| Station | 1st-half mean | 2nd-half mean | Drift |
+|---|--:|--:|--:|
+| ROCK ANTENNE 80er (HTTPS MP3 128) | 28,075 | 28,020 | −55 |
+| WDR 4 (HTTPS MP3 128, redirects) | 27,490 | 27,636 | +146 |
+| Radio X London (HTTPS AAC 48) | 29,684 | 29,684 | 0 |
+| ELDORADIO (HTTP MP3 256) | 65,524 | 66,036 | +512 |
+
+No trend in either direction. **The heap does not fragment across station changes on this board**, which
+is the question M2 existed to answer.
+
+Two measurement lessons, both learned by getting a wrong answer first:
+
+- **The largest free block is quantised to 1024 bytes.** Every reading in a whole run came from the set
+  {26612, 27636, 28660, 29684, 30708}. A verdict threshold finer than that step measures its own
+  rounding — the first version used 32 bytes/change and called this dead-flat run MARGINAL.
+- **A station's first visit is not a baseline.** Right after boot the heap is at its least fragmented,
+  so the first sample reads high (30,708 here, never seen again) and every later sample looks like a
+  loss. The warm-up visit is now discarded, and the verdict comes from first-half versus second-half
+  means rather than two endpoints.
+
 **Explicitly not required:** surviving days of uptime, or riding out a router reboot. See **D17**.
 
 **If it fails:** work down the ladder in **§9.1** in order — buffer size, easier streams, verify the core

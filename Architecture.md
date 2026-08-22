@@ -426,6 +426,18 @@ happens the answer is the power switch.
 That is why M2 leads with a 60-change switch storm rather than an overnight soak, and why M7 re-runs the
 same profile in the finished cabinet with the display and UART also running.
 
+**Measured at M2 (August 2026): no fragmentation.** 60 changes across four stations drifted by −55 to
++512 bytes per station, in both directions — see `DeliveryPlan.md` M2. Two things to know before
+reading any such measurement, because both produced a wrong answer first:
+
+- The largest free block is **quantised to 1024 bytes**, so any threshold finer than 1 KB is measuring
+  rounding rather than the heap.
+- **Discard each station's first sample.** The heap is least fragmented immediately after boot, so a
+  first reading runs about 2 KB high and makes a flat run look like a slow leak.
+
+And compare a station only against *itself*: the bench stations sit up to 43 KB apart because a plain
+HTTP stream pays no TLS cost, which swamps any real signal.
+
 ## 8. Decisions
 
 | # | Decision | Rationale / consequence |
