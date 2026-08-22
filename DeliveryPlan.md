@@ -181,22 +181,33 @@ The database covers only two of those four countries (**§5.1**), so MD has two 
 candidates by the §5.3 formula rather than raw likes, filter to the genres of interest, and emit a
 ranked table per country and genre.
 
-**MD-2 — source USA, Russia and metal from outside `RadioStationInfos`.** Neither country has a single
-station row, and only two rows anywhere carry a `Metal` tag (**§5.1**). The `Countries` table does hold
-a valid MyTuner entry URL for both, so re-running the v1 scrape against those two is *possible* — but
-**[radio-browser.info](https://www.radio-browser.info) is the better source** and should be tried first:
-it is an open community API built for exactly this, returns country, genre tags, codec, bitrate and vote
-counts as structured JSON, and already tracks whether each stream last checked OK. No browser
-automation, no DOM to keep up with, and it covers metal properly where MyTuner's German and British
-listings do not.
+**MD-2 — fill what the database cannot supply.** ✅ *Done, August 2026.* The v1 scraper was re-run for
+**Russia** (184 rows, complete) and **USA** (10,573 enumerated, 529 detailed before being stopped — see
+the `StationProcessed` warning in **§5.1**). Because the US slice is an arbitrary 3.6 %, the well-known
+US rock/metal and pop stations were researched separately and verified by probe; iHeart's public API
+(`us.api.iheart.com/api/v2/content/liveStations?callLetters=…`) resolves real endpoints, where guessing
+StreamTheWorld mount names does not. **SomaFM and WSOU cover the metal gap** the database never could —
+only two of its rows carry a `Metal` tag.
 
-Either way the output is candidate rows in the same table, going through the same probe as everything
-else.
+**MD-3 — probe every candidate, from both sources.** ✅ `Tools/StationMining/probe.mjs`. Follows
+redirects, records the `Content-Type` (the only reliable codec signal — 45 % of URLs reveal nothing) and
+the ICY headers. **451 of 502 ranked candidates verified alive.** Three traps, each of which produced a
+confidently wrong answer first:
 
-**MD-3 — probe every candidate, from both sources.** Follow redirects, record the final URL, the
-`Content-Type` (the only reliable codec signal — 45 % of URLs reveal nothing), and the ICY headers
-`icy-name` and `icy-br`. Flag dead links; the database is ~5 months old and link rot is expected. Where
-a station exposes both `…/stream/mp3` and `…/stream/aacp`, keep the MP3 one (**§5.2**).
+- A live stream never ends, so curl always hits its time limit and exits non-zero. Treating that as
+  failure marks *every working station* dead — it briefly looked like the US broadcasters were
+  geo-blocking Germany. Judge the response headers, ignore the exit code.
+- HLS manifests are served as `application/vnd.apple.mpegurl`, which contains `mpeg` and classifies as
+  playable MP3 unless playlists are tested first. ESP32-audioI2S cannot follow HLS.
+- The big broadcasters set a session cookie on their redirect hop and stall without it.
+
+Record each server's `icy-name` beside the catalogue name: where they disagree the URL points at a
+different station than the label claims, which is how the URL circulating as KNAC.com was caught
+identifying itself as *J-Pop Powerplay Kawaii*.
+
+**MD-3b — refine the surviving URLs** (`refine.mjs`, **§5.4**). Strip tracking parameters and re-probe;
+swap `aacp` for its `mp3` sibling; rewrite ARD stations to `dispatcher.rndfnk.com`. Without this, 26
+stations exceed `kMaxUrlLength` and `playUrl()` rejects them silently. Median URL afterwards: 47 bytes.
 
 **MD-4 — migrate the 14 existing slots**: export button, frequency, name, URL and the base64 logo from
 the `RadioStation` table into `stations.csv` + 92×92 PNGs. Free, real, already-curated content, and it
@@ -205,6 +216,9 @@ exercises the M3 pipeline before anything is hand-picked.
 The output of MD-3 is a list of stations **confirmed to be playing right now**. Picking from it, and
 cropping the logos, is a manual step — deliberately, because "is this station any good" is not a
 question a script can answer.
+
+**Tools** live in `Tools/StationMining/`: `rank.mjs` (§5.3 scoring) → `probe.mjs` → `refine.mjs` →
+`shortlist.mjs`, with the verified output in `verified-stations.json` and `shortlist.md`.
 
 **Done when:** there is a ranked, probe-verified candidate table covering all four countries, and a
 `stations.csv` + logo set for the 14 v1 slots that M3 can load unmodified.

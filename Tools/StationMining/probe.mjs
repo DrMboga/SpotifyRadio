@@ -23,7 +23,7 @@ const execFileAsync = promisify(execFile);
 // Overridable: a slow redirect chain (iHeart hands out a token then bounces
 // again) can need longer than the default.
 const TIMEOUT_SECONDS = Number(process.env.PROBE_TIMEOUT || 8);
-const CONCURRENCY = 6;
+const CONCURRENCY = Number(process.env.PROBE_CONCURRENCY || 6);
 
 // Codec comes from Content-Type, which is the one field servers get right.
 // §5.2 prefers MP3; D15 says AAC has to work too, so both are "ok" — anything

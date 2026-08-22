@@ -201,8 +201,9 @@ August 2026:
 | …with a logo URL | 1044 (remote URLs, not stored images) |
 | Scheme, of the 874 | **758 https / 116 http** → 87 % HTTPS |
 | Codec guessed from the URL | 436 mp3 · 42 aac · 3 hls · 2 ogg · **391 unknown** |
-| `Countries` rows (the scraper's *worklist* of places) | **139**, each with its MyTuner entry URL — including United States and Russia |
-| …of those 139 actually scraped into `RadioStationInfos` | **3** — United Kingdom 578, Germany 449, Luxembourg 17 |
+| `Countries` rows (the scraper's *worklist* of places) | **139**, each with its MyTuner entry URL |
+| …of those 139 scraped into `RadioStationInfos` | **5**, after the August 2026 Russia/USA run |
+| Rows per country | UK 578 · Germany 449 · **Russia 184** · Luxembourg 17 · **United States 10,573** |
 | Rows carrying a non-zero `Rating` | 284 of 1044 — **760 are `0`, meaning unrated, not bad** |
 | `Likes` / `Dislikes` | present on every row; likes run 0–1056, long-tailed |
 | `Genres` | free text, pipe-separated — 103 rows tagged `Rock`, 56 `Classic Rock`, 270 `Pop Music`, **2 `Metal`** |
@@ -219,6 +220,13 @@ Two things this database is good for:
 Caveats that matter: the data is ~5 months old, so expect link rot; 45 % of URLs reveal no codec, so the
 only reliable source of truth is the `Content-Type` header at connect time. Both are why M3 starts with
 a validation pass rather than a hand-written CSV.
+
+⚠️ **Filter every query on `StationProcessed = 1`.** The USA run enumerated all 10,573 stations but was
+stopped after detailing **529** of them; the remaining 10,044 rows are names and detail URLs with no
+stream URL, rating or genre. They also **resume by themselves**: `MyTunerCachingBackgroundService` calls
+`CheckForUncachedStations` on startup, so merely launching the v1 backend for any reason restarts that
+scrape. Processed rows with a usable stream URL: Germany 424 · UK 438 · **USA 382** · **Russia 115** ·
+Luxembourg 12.
 
 **Two tables carry a country, and they mean different things** — worth stating plainly, because the
 database looks globally stocked at a glance and is not:
@@ -275,6 +283,44 @@ enters as a mild tiebreak, never as the primary key.
 
 Applied after filtering by country and genre, never before: a top-ranked Luxembourgish talk station is
 not a better pick than a mid-ranked German rock station.
+
+**And the genre filter has to speak two languages.** MyTuner changed its taxonomy between the original
+UK/German scrape and the August 2026 Russia/USA one, and the vocabularies barely overlap:
+
+| Old (UK, Germany) | New (Russia, USA) |
+|---|---|
+| `Pop Music` — 289 rows, 0 new | `Pop / Top 40` — 0 old rows, 94 new |
+| `Alternative Rock` — 21 rows, 0 new | `Alternative / Indie` — 0 old rows, 42 new |
+| `Classic Rock` | `Classic Rock` (one of the few that survived) |
+
+A filter written for either vocabulary alone silently drops half the catalogue — and silently is the
+problem: the query returns rows, just not the right ones. Match both.
+
+### 5.4 URL hygiene: what the firmware will actually accept
+
+A URL that plays in a browser is not automatically one this radio can use, and both failure modes are
+silent.
+
+**192 bytes is a hard cap.** `AudioEngine::kMaxUrlLength` is 192 and `playUrl()` returns `false` past it,
+so an over-long URL is a station that never plays and never says why. **26 of the scraped URLs are over
+the cap**, the longest 1707 characters — MyTuner stores the URL with every tracking parameter the player
+page attached.
+
+**Most of that query string is disposable, but not all of it.** Aggregator tags, consent blobs, listener
+ids and cache-busters strip cleanly. Timestamped auth tokens do not — and a URL that works today because
+it carries a fresh token is a station that dies next month. So the rule is *strip, then re-probe*: keep
+the shortened URL only if it still plays, and fall back to the original if the token turned out to be
+load-bearing.
+
+**German public radio needs its canonical host.** ARD stations are scraped as token-issued edge hosts
+(`f131.rndfnk.com/ard/rbb/fritz/live/mp3/128/stream.mp3?token=…&tvf=…`), which are both over the cap and
+token-dependent. The canonical form is `https://dispatcher.rndfnk.com/{broadcaster}/{station}/mp3/mid` —
+around 50 characters, no token, same audio. That recovered Bayern 1 and 3, Fritz, radioeins, Inforadio,
+rbb 88.8 and Antenne Brandenburg. Radio Bremen and MDR use their own hosts
+(`icecast.radiobremen.de`, `mdr-…sslcast.mdr.de`) in the same spirit.
+
+After this pass the whole verified set has a **median URL of 47 characters** against the 192 cap, which
+also means `stations.csv` stays small enough to parse into RAM at boot (§5).
 
 ## 6. Screen
 
