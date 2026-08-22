@@ -1,19 +1,24 @@
 # Delivery Plan — ESP32 Internet Radio
 
-Incremental path from the current scaffold (a WiFi + HTTPS connectivity test that prints
-`Received: 512585 bytes`) to a finished radio. Design decisions referenced as **D1–D16** live in
+Incremental path from the original scaffold (a WiFi + HTTPS connectivity test that printed
+`Received: 512585 bytes`) to a finished radio. Design decisions referenced as **D1–D17** live in
 [`Architecture.md`](Architecture.md).
 
 Each milestone is independently testable and ends in a state you could stop at. Nothing outside
-`Esp32InternetRadio/` and the repo-root docs is touched (**D11**).
+`Esp32InternetRadio/`, `Tools/` and the repo-root docs is touched (**D11**).
+
+**Where things stand (August 2026): M0, M1 and M2 are done, MD is done bar the final station picks.**
+The board plays internet radio over HTTPS through a PCM5102A, holds its heap flat across both heavy
+station switching and long single-stream play, and there is a probe-verified catalogue of 451 stations
+to choose from. Next up is **M3**, which needs a shortlist picked out of `Tools/StationMining/`.
 
 ```
-M0 docs + secrets
+M0 ✅ docs + secrets
       │
       ▼
-M1 first sound ──▶ M2 stream robustness ──▶ M3 station catalogue ──▶ M4 display
+M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 station catalogue ──▶ M4 display
       │                                          ▲                       │
-      └── MD data mining (laptop, parallel) ─────┘    M5 Pico UART ◀─────┘
+      └── MD ✅ data mining (laptop, parallel) ──┘    M5 Pico UART ◀─────┘
                                                           │
                                                           ▼
                                                   M6 install in cabinet
@@ -131,9 +136,14 @@ before touching firmware — `pio run -e tone-test` reaches step 4 in one comman
 
 ---
 
-## M2 — Stream robustness — **go/no-go for the whole hardware choice**
+## M2 — Stream robustness ✅ — **go/no-go for the whole hardware choice**
 
-*Same breadboard. This is the riskiest milestone in the project; everything after it assumes it passed.*
+*Same breadboard. This was the riskiest milestone in the project; everything after it assumed it passed.*
+
+**Status: passed, August 2026.** The 60-change switch storm and a 98-minute TLS hold both came out flat,
+with zero connect failures and zero stream drops across either. **A no-PSRAM WROOM-32 can run this
+radio** — the open question the whole ESP32 plan rested on, and the reason §9.1's fallback ladder
+exists. No rung of it was needed.
 
 The question is not "does HTTPS play" — M1 answered that. It is whether a no-PSRAM WROOM survives **a
 listening session**, and a session is defined by the usage profile in **§7.3**, not by uptime: 2–3 hours,
@@ -157,6 +167,15 @@ one stream all evening.
 
 **Done when:** 60 consecutive station changes end with the largest free block where they started, a
 three-hour hold on one station stays flat, and a dropped stream reconnects without a power cycle.
+
+**Outcome:** the first two are met (details below). The third was never exercised — across 158 minutes
+of running, **not one stream drop occurred**, so the reconnect ladder is implemented and reasoned about
+but unproven in the field. M7's cabinet soak is the next chance to see it fire; if it still has not,
+force one by blocking the stream at the router.
+
+The hold ran **98 minutes rather than three hours**, stopped deliberately. Min free heap had been static
+for 70 of them, and the only question left open — the 274 s decode-error period below — cannot be
+answered by more of the same station.
 
 ### Switch storm — passed, August 2026
 
@@ -218,6 +237,11 @@ samples made it look tighter than it is.
 A period this clean is structural, and most likely on the station's side rather than the network's. The
 test is whether another station shows a different period or none, which is what `decerr=` is for — and
 more of the same station will not answer it.
+
+**Carried forward as an open item.** Cheap to settle: 30 minutes on WDR 4 with the current firmware,
+comparing `decerr=`. If the period follows the radio it is local and worth chasing; if it changes or
+vanishes it belongs to ROCK ANTENNE, and the answer is §5.2's — prefer a different endpoint. Fold it
+into M3 rather than making a separate session of it.
 
 Two measurement lessons, both learned by getting a wrong answer first:
 

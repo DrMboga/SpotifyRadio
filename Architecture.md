@@ -486,8 +486,9 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
 
 - **Status/error indicator placement** on a layout that is already full (§6).
 - **Partition table** — pending the real logo set measurement (**D6**).
-- **Reconnect policy**: how long to retry a dead stream, what the screen shows meanwhile, and whether a
-  failed slot falls back to silence. Scoped by **D17** — stream drops must self-heal, WiFi loss need
-  not.
+- **Reconnect policy** — the retry ladder is settled and implemented at M2: 1 s doubling to 30 s, no
+  attempt limit, cancelled only by an explicit stop. **Untested in the field**: 158 minutes of M2
+  produced no drop at all. What the *screen* shows during a retry is still open (M4/M7), as is whether a
+  permanently failed slot falls back to silence.
 - **Boot behaviour** before WiFi is up: splash screen, and what happens if the network never arrives.
 - **AAC** — counted at M3, decided then (**D15**).
