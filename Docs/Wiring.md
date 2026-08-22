@@ -65,15 +65,15 @@ Everything above describes the **Raspberry Pi 4 build**. The sections below repl
 the button ladder, the capacitance tuner and the ST7735 itself are unchanged — only the far end of the
 TFT and UART wiring moves.
 
-> **Status.** The three I2S pins are **built and verified** (M1) — first sound came out of the
-> MAX98357A below. The TFT and UART blocks are still proposed and get wired at M4/M5; the as-built map
-> is confirmed at M6. Mirrors `Architecture.md` §3.1 and `Esp32InternetRadio/include/Pins.h` — correct
-> all three together if reality differs.
+> **Status.** The three I2S pins are **built and verified** (M1) — music plays out of the PCM5102A
+> below into headphones. The TFT and UART blocks are still proposed and get wired at M4/M5; the
+> as-built map is confirmed at M6. Mirrors `Architecture.md` §3.1 and
+> `Esp32InternetRadio/include/Pins.h` — correct all three together if reality differs.
 
 Strapping pins (0, 2, 12, 15) and flash pins (6–11) are avoided. GPIO 16/17 are deliberately left free
 so a WROVER swap stays a `platformio.ini` change.
 
-## I2S audio — PCM5102A
+## I2S audio — PCM5102A (verified working, M1)
 
 | PCM5102A Pin | Function | ESP32 Pin |
 |---|---|---|
@@ -99,39 +99,17 @@ assume. On the module used at M1 all four were already correct. If `XSMT` does r
 to `L` before strapping it high: the pad is a hard short to ground, so wiring it to 3.3 V would short
 the regulator.
 
-> ⚠️ The PCM5102A module used at M1 never worked — every input measured correct and it produced ~5 mV
-> at `LOUT`/`ROUT`. Nothing in this table is known to be wrong; see `DeliveryPlan.md` M1 for the full
-> elimination trail, and use `pio run -e tone-test` to retest a replacement board in isolation.
+> ⚠️ **The first module tried at M1 was simply dead** — every input in the tables above measured
+> correct, and it still produced ~5 mV at `LOUT`/`ROUT`. A second board of the same type, on the same
+> wiring and the same firmware, played straight away. Keep a spare, and when a board is silent use
+> `pio run -e tone-test` (440 Hz sine, no WiFi, no audio library) to judge the board on its own before
+> suspecting anything else. Full elimination trail in `DeliveryPlan.md` M1.
 
 The mono mix already exists in the cabinet, so there is nothing to build: a 3.5 mm male-to-male cable
 from this board's own jack goes to the same summing network the Pi fed — two 2.2 kΩ resistors into a
 47 kΩ shunt and an audio transformer whose secondary drives the SABA amplifier. The PCM5102A's
 2.1 Vrms full scale is about 5× the Pi's ~0.4 Vrms, so the fixed software gain has to come down roughly
 14 dB to match (`kFixedGain` ≈ 9). See also [`SabaCircuit.md`](SabaCircuit.md).
-
-## I2S audio — MAX98357A (verified working, M1)
-
-The same three I2S pins, a different output part. This is what actually produced first sound; the
-PCM5102A module on hand accepts valid I2S and outputs ~5 mV (see `DeliveryPlan.md` M1).
-
-| MAX98357A Pin | Function | ESP32 Pin |
-|---|---|---|
-| VIN | Power Supply | VIN (5 V) |
-| GND | Ground | GND |
-| BCLK | I2S Bit Clock | GPIO 26 |
-| LRC | I2S Word Select | GPIO 25 |
-| DIN | I2S Data | GPIO 22 |
-| **SD** | Shutdown / channel select | **3.3 V** — must be pulled high or the amp stays shut down |
-| GAIN | Gain select | leave floating = 9 dB |
-| `+` / `−` | Speaker out | test speaker, 4–8 Ω |
-
-Note `SD` is not just an enable: its voltage also picks the channel. Pulled to 3.3 V through the
-onboard pull-up it plays (L+R)/2, which is what a mono radio wants.
-
-**This is not a drop-in replacement for the PCM5102A in the cabinet.** The MAX98357A is a class-D
-amplifier, so `+`/`−` is a bridged PWM pair with no ground reference — it cannot feed the 2.2 kΩ mono
-mixer and transformer above, and it would have to drive the SABA's speaker directly, bypassing the
-SABA amplifier and its volume pot. Open decision, `Architecture.md` **D16**.
 
 ## TFT
 

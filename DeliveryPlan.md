@@ -54,8 +54,9 @@ display and no JSON parsing. A custom partition table is therefore an **M1 probl
 
 *Breadboard only: ESP32 + I2S DAC. No UART, no TFT, no station data.*
 
-**Status: done, August 2026.** Music plays over HTTPS. The DAC that produced it was a **MAX98357A**,
-not the PCM5102A the design assumed — see *What actually happened* below.
+**Status: done, August 2026.** Music plays over HTTPS out of a **PCM5102A** into headphones — the
+design's intended output stage, at the design's intended pinout. Getting there cost a detour through a
+dead DAC module; see *What actually happened* below.
 
 - Wire the DAC per the pin map (**§3.1**), including the `SCK`/`FMT`/`XSMT` straps.
 - Replace the HTTP byte-counter spike with ESP32-audioI2S (**D2**): `setPinout()` +
@@ -99,10 +100,10 @@ must not move after M6.
 These are the numbers M2's soak is compared against. The largest-free-block figure is the one that
 matters (**§7.3**) — a slow decline in it over hours is the failure mode, not the average free heap.
 
-### What actually happened — the PCM5102A never converted
+### What actually happened — a dead PCM5102A module
 
-The firmware was right on the first flash; the DAC was not. The elimination order is worth recording,
-because M6 will re-run parts of it:
+The firmware was right on the first flash; the DAC board was not. The elimination order is worth
+recording, because M6 re-runs parts of it against the cabinet wiring:
 
 1. **The ESP32 side was proven independently of the DAC.** A `vu=` readout taken from the library's
    per-sample VU meter — sampled *before* the gain stage, so it cannot be faked by a volume setting —
@@ -113,16 +114,20 @@ because M6 will re-run parts of it:
 3. **Output at `LOUT`/`ROUT` was 4–5 mV** against AGND, unloaded, where ~1 V was expected.
 4. `src/ToneTest.cpp` (env `tone-test`) removed WiFi, TLS, the MP3 decoder and ESP32-audioI2S entirely
    and fed the I2S peripheral a generated 440 Hz sine. Still silent.
-5. A **MAX98357A** on the same three pins played immediately.
+5. A **MAX98357A** on the same three pins played immediately — proving the ESP32 side conclusively.
+6. **A second PCM5102A module** — same type, same wiring, same binary — played immediately too, into
+   headphones from its line output.
 
-So the fault is that specific PCM5102A module. Still open: reflowing its hand-fitted header — the board
-ships with bare plated holes, and an unsoldered pin reads a healthy 1.6 V from the breadboard side while
-the chip sees nothing — then replacing it.
+So the fault was that one board, and nothing in the design or the firmware. The likely mechanism is its
+hand-fitted header: the module ships with bare plated holes, and an unsoldered pin reads a healthy
+1.6 V from the breadboard side while the chip sees nothing.
 
-**This does not settle which part the radio ships with.** The MAX98357A is a mono class-D *amplifier*,
-not a line-level DAC: its output is a bridged PWM pair with no ground reference, so it cannot feed the
-SABA's existing 2.2 kΩ mono mixer and transformer the way a PCM5102A can. It is a proven bench
-reference; the cabinet decision is open (**D16**).
+**The output stage is therefore settled as the PCM5102A** (**D16**), and the MAX98357A leaves the
+project — it is a mono class-D *amplifier*, not a line-level DAC, and its bridged PWM output has no
+ground reference to feed the SABA's 2.2 kΩ mixer and transformer.
+
+Two things carry forward: **keep a spare PCM5102A**, and when a stage goes silent, work down this list
+before touching firmware — `pio run -e tone-test` reaches step 4 in one command.
 
 ---
 
@@ -235,8 +240,9 @@ one stream connection.
   interaction with **§9.1** rung 4: switching the build to ESP-IDF later would also disturb the flash
   layout, so if that rung was needed, do it before locking this.
   Repartitioning wipes LittleFS, so this comes before final assembly, not after.
-- Mix `LOUT`/`ROUT` to mono through the resistor pair and inject into the SABA amplifier; set the fixed
-  software gain for a clean level (**D12**, `Docs/SabaCircuit.md`).
+- Plug the PCM5102A's 3.5 mm output into the summing network already in the cabinet — the resistor
+  pair and transformer the Pi fed are reused unchanged — and set the fixed software gain for a clean
+  level (**D12**, `Docs/SabaCircuit.md`).
 - Rewire the TFT from the Pi's SPI header to the ESP32; remove the Pi 4.
 - Mount and power the ESP32 from the radio's supply.
 - Write `Docs/Esp32Wiring.md` with the **as-built** pin map, and correct **§3.1** if reality differed.

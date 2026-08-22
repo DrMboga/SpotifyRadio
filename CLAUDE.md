@@ -60,10 +60,10 @@ Station data changes need only `uploadfs`; firmware changes need `upload`. They 
   the stream buffer that absorbs network jitter — so every KB saved elsewhere buys stability. When
   something is marginal, work down the ladder in `Architecture.md` §9.1; a WROVER is its last rung and
   has been ruled out for now.
-- **The output stage part is not settled.** M1 got first sound from a MAX98357A after the PCM5102A
-  module failed to convert; they are not interchangeable in the cabinet (`Architecture.md` D16). Use
-  `pio run -e tone-test` — a 440 Hz sine with no WiFi and no audio library — before suspecting the
-  firmware for any silence.
+- **The output stage is a PCM5102A** (`Architecture.md` D16, closed at M1). The first module was dead —
+  valid I2S in, ~5 mV out — and a second one of the same type worked on the same wiring and binary, so
+  keep a spare. Before suspecting the firmware for any silence, run `pio run -e tone-test`: a 440 Hz
+  sine with no WiFi and no audio library, which isolates the board in one command.
 - **Never block the audio task.** PNG decode and TLS handshakes both stall long enough to underrun the
   stream, and both happen at station change. Audio runs pinned to core 1, everything else on core 0,
   joined by a command queue (`Architecture.md` §7.1). A "network glitch" at station change is usually

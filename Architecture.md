@@ -79,9 +79,9 @@ remaining milestones and corrected here as the single source of truth. Avoids st
 
 | Function | ESP32 pin | Other end |
 |---|---|---|
-| I2S BCLK | GPIO 26 | PCM5102A `BCK` · MAX98357A `BCLK` |
-| I2S LRCK / WS | GPIO 25 | PCM5102A `LCK` · MAX98357A `LRC` |
-| I2S DATA | GPIO 22 | PCM5102A `DIN` · MAX98357A `DIN` |
+| I2S BCLK | GPIO 26 | PCM5102A `BCK` |
+| I2S LRCK / WS | GPIO 25 | PCM5102A `LCK` |
+| I2S DATA | GPIO 22 | PCM5102A `DIN` |
 | TFT SCK | GPIO 18 (VSPI) | ST7735 `SCK` |
 | TFT MOSI | GPIO 23 (VSPI) | ST7735 `SDA` |
 | TFT CS | GPIO 5 | ST7735 `CS` |
@@ -112,10 +112,12 @@ the only thing that moves is level — the PCM5102A's 2.1 Vrms full scale is rou
 ~0.4 Vrms, about +14 dB, which the fixed software gain absorbs (**D12**; `kFixedGain` ≈ 9 on the
 library's 0–21 square curve reproduces the Pi's level).
 
-**Verified at M1:** the I2S pinout above works. First sound came from a **MAX98357A** wired to the same
-`GPIO 26 / 25 / 22`, plus its `SD` pin pulled to 3.3 V to enable it, driving a test speaker directly.
-The PCM5102A module on hand accepts valid I2S and outputs ~5 mV; see `DeliveryPlan.md` M1 for the
-elimination trail. Which part ships in the cabinet is now an open decision (**D16**).
+**Verified at M1:** the I2S pinout above works and the **PCM5102A is the output stage** — music plays
+out of its line output into headphones, over HTTPS, from the real firmware. The first module tried was
+simply a bad board: it accepted valid I2S on all three pins and converted nothing. A second module of
+the same type, on the same wiring and the same binary, played immediately. See `DeliveryPlan.md` M1 for
+the elimination trail — worth keeping, because it is also the procedure for bringing up the replacement
+in the cabinet at M6.
 
 Volume stays analog: the SABA's own potentiometer. Software gain is a fixed compile-time constant tuned
 once for a clean level into the amplifier — there is no spare control input for a digital volume, and
@@ -328,7 +330,7 @@ why M2 is a soak test with heap logging, and why M7 soaks again in the finished 
 | D13 | TLS with **`setInsecure()`** — no certificate verification | The payload is public audio; there is nothing to steal and no credentials in flight. A baked-in CA bundle costs RAM and flash *and* eventually expires, which would silently kill every station at once on a radio sitting in a cabinet. The scaffold already does this. |
 | D14 | **Audio pinned to core 1**, everything else on core 0, joined by a command queue | PNG decode and TLS handshake both block for long enough to underrun the stream, and both happen exactly at station change. See §7.1. |
 | D15 | **AAC is required**, alongside MP3 | Resolved by evidence rather than deferred. The aggregate pool looks 91 % MP3, but the 14 stations actually curated for v1 tell a different story: 3 are explicitly AAC (`…/stream/aacp` ×2, `SAM03AAC226_SC`) and 2 more almost certainly are (Global's `media-ssl.musicradio.com` endpoints) — roughly a third of real picks. Dropping AAC would cut ROCK ANTENNE, which is the demo station. Mitigated by the §5.2 variant rule, so AAC is the exception rather than the common path. |
-| D16 | **The output stage part is reopened**: PCM5102A (line-level stereo DAC) vs MAX98357A (mono class-D amp with built-in DAC). Decided at M6. | M1 proved the I2S pinout and the entire software chain using a **MAX98357A**, after the PCM5102A module on hand turned out to accept valid I2S and convert nothing (see `DeliveryPlan.md` M1). They are **not interchangeable in the cabinet**: the PCM5102A gives a ground-referenced line output that drops straight into the SABA's existing 2.2 kΩ mono mixer and transformer (§3.1), whereas the MAX98357A's bridged PWM output has no ground reference and would have to drive the speaker directly, bypassing the SABA amplifier — a different architecture, and one that loses the analog volume pot. The PCM5102A path stays the design intent; the MAX98357A is the proven bench reference and the fallback. |
+| D16 | **Output stage settled: PCM5102A**, line-level stereo DAC into the SABA's existing mono mixer. Closed at M1. | Briefly reopened when the first PCM5102A module produced ~5 mV from valid I2S; a MAX98357A was wired to the same three pins purely to prove the ESP32 side, and it played. A **second PCM5102A** then played too, so the first board was faulty and nothing about the design was wrong. The MAX98357A is out of the project: as a mono class-D *amplifier* its output is a bridged PWM pair with no ground reference, so it cannot feed the SABA's 2.2 kΩ mixer and transformer (§3.1) — it would have to drive the speaker directly, bypassing the SABA amplifier and losing the analog volume pot. Practical consequences: keep a spare PCM5102A, and treat "valid I2S in, no audio out" as a suspect board before suspecting firmware. |
 
 ## 9. Open items and the WROOM fallback ladder
 
@@ -354,9 +356,6 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
 
 ### 9.2 Still undecided
 
-- **Output stage**: PCM5102A line-out into the existing mono mixer, or MAX98357A straight to the
-  speaker (**D16**). Also whether the failed PCM5102A module is a bad solder joint on its hand-fitted
-  header or a dead part.
 - **Status/error indicator placement** on a layout that is already full (§6).
 - **Partition table** — pending the real logo set measurement (**D6**).
 - **Reconnect policy**: how long to retry a dead stream, what the screen shows meanwhile, and whether a
