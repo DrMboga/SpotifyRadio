@@ -64,6 +64,7 @@ uint32_t playingSinceMs = 0;
 volatile uint32_t connectAttemptCount = 0;
 volatile uint32_t connectFailureCount = 0;
 volatile uint32_t streamDropCount = 0;
+volatile uint32_t decodeErrorCount = 0;
 
 // millis() wraps after ~49 days. Comparing a *difference* against a bound is
 // correct across the wrap; comparing the timestamps directly is not.
@@ -263,6 +264,8 @@ uint32_t connectAttempts() { return connectAttemptCount; }
 uint32_t connectFailures() { return connectFailureCount; }
 
 uint32_t streamDrops() { return streamDropCount; }
+
+uint32_t decodeErrors() { return decodeErrorCount; }
 
 void vuLevel(uint8_t& left, uint8_t& right) {
   const uint16_t vu = audio.getVUlevel();

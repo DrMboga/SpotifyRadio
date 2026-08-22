@@ -69,7 +69,8 @@ void printStatus() {
       heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL),
       AudioEngine::streamBufferFilled(), AudioEngine::streamBufferSize(),
       AudioEngine::taskStackFreeBytes(), AudioEngine::connectAttempts(),
-      AudioEngine::connectFailures(), AudioEngine::streamDrops(), WiFi.RSSI());
+      AudioEngine::connectFailures(), AudioEngine::streamDrops(),
+      AudioEngine::decodeErrors(), WiFi.RSSI());
 }
 
 // The three-hour hold half of M2 reads these lines. Largest free block is the

@@ -53,6 +53,13 @@ uint32_t connectAttempts();  // including retries
 uint32_t connectFailures();  // connecttohost() returned false
 uint32_t streamDrops();      // was Playing, then the server went away
 
+// Frames the decoder threw out. A short burst of these is a corrupted stretch
+// of stream - usually packet loss - that the library resyncs past on its own
+// without the connection ever dropping, so it never reaches streamDrops(). It
+// is audible as a brief glitch, which makes it the thing to count over a long
+// soak rather than something to scroll for.
+uint32_t decodeErrors();
+
 // Level of the decoded PCM, left and right, 0..127 each. Sampled in the output
 // path just before the gain stage, so a non-zero changing value proves the
 // decoder is running and feeding I2S regardless of what the DAC does with it.
