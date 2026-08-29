@@ -9,7 +9,7 @@ L | 93 | Germany | Best of Rock.FM - Metal | https://www.best-of-rock.fm/metal/ 
 L | 94 | Germany | ROCK ANTENNE Coversongs | https://www.rockantenne.de/rockhoeren/streams/coversongs | https://stream.rockantenne.de/coversongs/stream/mp3 | RA_C.png
 L | 95 | Germany | ROCK FM Metal | https://www.rockfm.de/webradio/metal | https://stream.regenbogen2.de/metal/aac-128/homepage | RFM_M.png
 L | 96 | Germany | ROCK ANTENNE Hair Metal | https://www.rockantenne.de/rockhoeren/streams/hair-metal | https://stream.rockantenne.de/hair-metal/stream/mp3 | RA_HRM.png
-L | 97 | Germany | ROCK ANTENNE Hard Rock | https://www.rockantenne.de/rockhoeren/streams/hard-rock | https://stream.rockantenne.de/rock-antenne-hard-rock/stream/mp3 | HA_HR.png
+L | 97 | Germany | ROCK ANTENNE Hard Rock | https://www.rockantenne.de/rockhoeren/streams/hard-rock | https://stream.rockantenne.de/rock-antenne-hard-rock/stream/mp3 | RA_HR.png
 L | 98 | Germany | Radio Bob 2000-er rock | https://www.radiobob.de/ | https://streams.radiobob.de/2000er/mp3-192/ | RB_2000.png
 L | 99 | Germany | Radio Bob Metallica | https://www.radiobob.de/ | https://streams.radiobob.de/metallica/mp3-192/ | RB_MET.png
 L | 100-101 | Germany | Best of rock: Rammstein | https://www.best-of-rock.fm/rammstein/ | https://bestofrockfm.stream.vip/rammstein/aac-64/radioplayer | BOR_RAMM.png
@@ -22,33 +22,32 @@ M | 91 | USA | 94.1 WJJO | https://player.listenlive.co/72051/en/songhistory | h
 M | 92 | Netherlands | Pinguin On the rocks | https://pinguinradio.com/player/pinguinrock| https://streams.pinguinradio.com/PinguinOnTheRocks192.mp3 | pinguinrock.png
 M | 93 | Netherlands | Pinguin Aardschok | https://pinguinradio.com/player/pinguinaardschok| https://streams.pinguinradio.com/Aardschok192.mp3 | pinguinaardschok.png
 M | 94 | Russia | Ultra 100.5 (Радио Ультра) | https://radioultra.ru/| https://nashe1.hostingradio.ru/ultra-128.mp3 | RadioUltra.png
-M | 95 | USA | 99.7 The Blitz | https://theblitz.com/ | ? | BLITZ.png
-M | 96 | USA | 101.5FM/101.7FM – KWUL – ST. LOUIS |	https://kwulfradio.com/ | https://stream.radioloft.net:8000/kwulf | -
-M | 97 | UK | TotalRock | https://totalrock.com/ | https://s3.citrus3.com:8056/stream?ver=914784 | TotalRock.png
+M | 95 | USA | 99.7 The Blitz | https://theblitz.com/ | https://d25j5qm9y8ulag.cloudfront.net/574/49ac6850db46b3df097df2fa05e569d3/49ac6850db46b3df097df2fa05e569d3_803176390.aac?sid=48 | BLITZ.png
+M | 96 | Luxembourg | Eldoradio | https://www.eldo.lu/ | http://sc.bce.lu/eldo | Eldoradio.png
+M | 97 | UK | TotalRock | https://totalrock.com/ | https://s3.citrus3.com:8056/stream | TotalRock.png
 M | 98 | USA | WSOU 89.5 Pirate Radio |	https://www.wsou.net/stream-live.html |	https://stream.surfernetwork.com/1fvoynxxaqduv | WSOU.png
 M | 99 | USA | 95.1 WSNJ | - | https://stream.aiir.com/yiwebuefmmwuv | WSNJ.png
 M | 100-101 | UK | Radio X - London | https://www.radiox.co.uk/ | https://media-ssl.musicradio.com/RadioXLondon | RadioX.png
 M | 102-103 | Russia | NASHE Radio (Moscow) | https://www.nashe.ru/ | https://nashe1.hostingradio.ru/nashe-128.mp3 | Nashe.png
 M | 104-105 | Russia | Radio MAXIMUM | https://maximum.ru/ | https://maximum.hostingradio.ru/maximum96.aacp | Maximum.png
-K | 87-88 | Netherlands | Pinguin fiesta | https://pinguinradio.com/player/pinguinfiesta | https://s4.radio.co/s9f9f14f9b/listen | PinguinFiesta
-K | 89 | Netherlands | Pinguin groove | https://pinguinradio.com/player/pinguingroove | https://samcloud.spacial.com/api/listen?sid=98587&m=sc&rid=174412?ngsw-bypass | PinguinGroove.png
-K | 90 | Netherlands | Pinguin vintage | https://pinguinradio.com/player/pinguinvintage | https://samcloud.spacial.com/api/listen?sid=131111&rid=275910&f=mp3,any&br=192000,any&m=sc&t=ssl | PinguinVintage.png
-K | 91 | Netherlands | Pinguin pop | https://pinguinradio.com/player/pinguinpop | https://samcloud.spacial.com/api/listen?sid=98586&m=sc&rid=174409?ngsw-bypass | PinguinPop.png
-K | 92 | Netherlands | Pinguin classic | https://pinguinradio.com/player/pinguinclassic | https://streams.pinguinradio.com/PinguinClassics192.mp3?ngsw-bypass | PinguinClassic.png
+K | 87-88 | Netherlands | Pinguin fiesta | https://pinguinradio.com/player/pinguinfiesta | https://s4.radio.co/s9f9f14f9b/listen | PinguinFiesta.png
+K | 89 | Netherlands | Pinguin groove | https://pinguinradio.com/player/pinguingroove | https://samcloud.spacial.com/api/listen?sid=98587&m=sc&rid=174412 | PinguinGroove.png
+K | 90 | Netherlands | Pinguin vintage | https://pinguinradio.com/player/pinguinvintage | https://samcloud.spacial.com/api/listen?sid=131111&rid=275910&m=sc | PinguinVintage.png
+K | 91 | Netherlands | Pinguin pop | https://pinguinradio.com/player/pinguinpop | https://samcloud.spacial.com/api/listen?sid=98586&m=sc&rid=174409 | PinguinPop.png
+K | 92 | Netherlands | Pinguin classic | https://pinguinradio.com/player/pinguinclassic | https://streams.pinguinradio.com/PinguinClassics192.mp3 | PinguinClassic.png
 K | 93 | USA | 181.FM The Beatles Channel |	https://player.181fm.com/?station=181-beatles |	http://listen.181fm.com/181-beatles_128k.mp3 | RadioBeatles.png
 K | 94 | USA | 181.FM Power 181 (Top 40) |https://player.181fm.com/?station=181-power |	http://listen.181fm.com/181-power_128k.mp3 | Radio181.png
 K | 95 | USA | Biggest LIttle Radio | https://www.biggestlittleradio.com/index.html | https://26343.live.streamtheworld.com/SAM06AAC012_SC | BiggestLittleRadio.png
 K | 96 | Germany | SUNSHINE LIVE | https://www.sunshine-live.de/ | https://stream.sunshine-live.de/live/mp3-192/homepage/ | SunshineLive.png
-K | 97 | Germany | 104.6 RTL Das Beste der 80er | https://www.104.6rtl.com/channel/80er | https://stream.104.6rtl.com/rtl-80er/mp3-128/mytuner-radio.com/ | RTL.png
+K | 97 | Germany | 104.6 RTL Das Beste der 80er | https://www.104.6rtl.com/channel/80er | https://stream.104.6rtl.com/rtl-80er/mp3-128/ | RTL.png
 K | 98 | Luxembourg | L'essentiel Radio | https://www.lessentielradio.lu/# | https://lessentielradio.ice.infomaniak.ch/lessentielradio-128.mp3 | Lesentinel.png
-K | 98 | Luxembourg | Eldoradio | https://www.eldo.lu/ | http://sc.bce.lu/eldo | Eldoradio.png
 K | 99 | Luxembourg | Radio LRB | https://www.lrb.lu/ |	http://zeus.lrb.lu:8000/lrb.live | LRB.png
 K | 100-101 | Germany | Radio Frei | https://www.radio-frei.de/ | http://streaming.fueralle.org:8000/Radio-F.R.E.I | FREI.png
-K | 102-103 | Germany | Deutschlandfunk Kultur | https://www.deutschlandfunkkultur.de/ | https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3?aggregator=mytuner-mobi | DRK.png
-K | 104-105 | Germany | Radio F 94.5 - Made in Germany | https://www.radiof.de/ | https://edge81.streamonkey.net/fhn-radiofmadeingermany?aggregator=mytuner-radio | RadioF.png
+K | 102-103 | Germany | Deutschlandfunk Kultur | https://www.deutschlandfunkkultur.de/ | https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3 | DRK.png
+K | 104-105 | Germany | Radio F 94.5 - Made in Germany | https://www.radiof.de/ | https://edge81.streamonkey.net/fhn-radiofmadeingermany | RadioF.png
 U | 87-88 | Germany |  Radio Seefunk | https://radio-seefunk.imsueden.de/ | https://webradio.radio-seefunk.de/live64 | Seefunk.png
 U | 89 | Germany | Radio 91.2 | https://www.radio912.de/ | https://stream.lokalradio.nrw/4453z68 | RadioDortmund.png
-U | 90 | Germany | ENERGY Berlin | https://www.energy.de/berlin | https://frontend.streamonkey.net/energy-berlin/stream/mp3?aggregator=mytuner | Energy.png
+U | 90 | Germany | ENERGY Berlin | https://www.energy.de/berlin | https://frontend.streamonkey.net/energy-berlin/stream/mp3 | Energy.png
 U | 91 | Germany | ANTENNE BAYERN Live | https://www.antenne.de/webradio/live | https://stream.antenne.de/antenne/stream/mp3 | AB_Live.png
 U | 92 | Germany | ANTENNE BAYERN 90er Party | https://www.antenne.de/webradio/90er-party | https://stream.antenne.de/antenne-bayern-90er-party/stream/mp3 | AB_90Party.png
 U | 93 | Germany | ANTENNE BAYERN 90er Hits | https://www.antenne.de/webradio/90er-hits | https://stream.antenne.de/90er-hits/stream/mp3 | AB_90Hits.png
@@ -59,5 +58,5 @@ U | 97 | Germany | ANTENNE BAYERN Top 40 | https://www.antenne.de/webradio/top-4
 U | 98 | Germany | ANTENNE BAYERN Dance XXL | https://www.antenne.de/webradio/dance-xxl | https://stream.antenne.de/dance-xxl/stream/mp3 | AB_DanceXXL.png
 U | 99 | Germany | ANTENNE BAYERN Relax | https://www.antenne.de/webradio/relax | https://stream.antenne.de/relax/stream/mp3 | AB_Relax.png
 U | 100-101 | Germany | ANTENNE BAYERN Weihnachts-Classics | https://www.antenne.de/webradio/oldie-antenne-event-weihnachten | https://stream.antenne.de/oldie-antenne-event/stream/mp3 | AB_Weinachts.png
-U | 102-103 | Russia | Europa Plus | https://europaplus.ru/?region=msk | https://hls-01-regions.emgsound.ru/11_msk/playlist.m3u8 | EuropaPlus.png
-U | 103-104 | Russia | DFM Радио 101.2 FM (DFM Radio) | https://dfm.ru/ |	https://dfm.hostingradio.ru/dfm96.aacp | DFM.png
+U | 102-103 | Russia | Europa Plus | https://europaplus.ru/?region=msk | https://ep128.hostingradio.ru:8030/ep128 | EuropaPlus.png
+U | 104-105 | Russia | DFM Радио 101.2 FM (DFM Radio) | https://dfm.ru/ |	https://dfm.hostingradio.ru/dfm96.aacp | DFM.png

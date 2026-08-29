@@ -1,0 +1,5 @@
+# The LittleFS payload is uploaded byte-for-byte by `pio run -t uploadfs` and
+# parsed by hand-rolled firmware that splits on '\n'. A CRLF checkout on Windows
+# would leave a trailing '\r' on the last field of every row — turning a logo
+# name into "RA_DR.png\r", which LittleFS cannot open. Keep it LF everywhere.
+Esp32InternetRadio/data/stations.csv text eol=lf

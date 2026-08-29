@@ -180,6 +180,10 @@ Rules:
 - Logos are **pre-cropped and pre-scaled to 92×92 PNG** as part of preparing the data set. There is no
   runtime scaler; a logo that is not 92×92 is a data error. Source artwork from MyTuner is typically
   square and much larger (512×512 is common), so scaling is part of the MD milestone, not the firmware.
+- **No quoting, so no field may contain a comma.** The parser is hand-rolled and splits on commas; a
+  comma in a name or a URL silently shifts every field after it. Real URLs do carry them — Pinguin
+  Vintage’s `f=mp3,any&br=192000,any` is one — so the strip pass in §5.4 is what keeps this true, and
+  `Tools/StationMining/build-data.mjs` refuses to emit a row that would break it.
 - Parsed once at boot into an in-memory index of 76 slots. 76 × (name + URL + filename) is a few KB —
   no need to keep the CSV open or re-read it.
 - Stream URLs may be `http://` or `https://`; HTTPS is expected to be the majority (**D3**). Where a
