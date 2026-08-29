@@ -57,6 +57,11 @@ pio run -e tone-test -t upload   # DAC bring-up: 440 Hz sine, no WiFi, no audio 
 
 Station data changes need only `uploadfs`; firmware changes need `upload`. They are independent.
 
+`data/` is generated — run `node Tools/StationMining/build-data.mjs` after editing
+`RadioStationsList.md` or dropping a logo into `Tools/StationMining/Assets/`, then `uploadfs`. The
+script converts each 92×92 PNG to a headerless `.565` file (raw little-endian RGB565); the board has
+no image decoder (**D5**, revised at M4).
+
 ### Key constraints — these are the things that bite
 
 - **No PSRAM, and no new hardware.** Making HTTPS streaming stable on this exact board is an explicit
@@ -64,6 +69,17 @@ Station data changes need only `uploadfs`; firmware changes need `upload`. They 
   the stream buffer that absorbs network jitter — so every KB saved elsewhere buys stability. When
   something is marginal, work down the ladder in `Architecture.md` §9.1; a WROVER is its last rung and
   has been ruled out for now.
+- **Free heap is not the constraint — the largest free block is, and there is no 45 KB one.** With an
+  HTTPS stream live it is 14–19 KB, and even after a stop it is only ~39 KB, because `stopSong()` does
+  not release the input ring buffer. This is what killed **D5**'s on-device PNG decoder at M4 (whose
+  `PNG` object is 45,604 contiguous bytes) and it will kill anything else that size. Logos are now
+  pre-rendered to raw RGB565 by `build-data.mjs`; there is no image decoder on the board.
+- **Static DRAM is 124,580 bytes, not the 532,480 `pio` reports.** `.data` + `.bss` live in
+  `dram0_0_seg`; the rest of what `pio` counts is address space the linker cannot use, so its RAM
+  percentage is measured against the wrong denominator and reads reassuring right up to a boot loop —
+  `assert failed: esp_startup_start_app_common port_common.c:81`, before `setup()` runs. `_bss_end`
+  against the end of `dram0_0_seg` in `.pio/build/*/firmware.map` is the number to check, not the
+  build summary.
 - **The output stage is a PCM5102A** (`Architecture.md` D16, closed at M1). The first module was dead —
   valid I2S in, ~5 mV out — and a second one of the same type worked on the same wiring and binary, so
   keep a spare. Before suspecting the firmware for any silence, run `pio run -e tone-test`: a 440 Hz

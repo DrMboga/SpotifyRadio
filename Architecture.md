@@ -352,7 +352,7 @@ which is dropped.
 ```
  (0,0)                                    (159,0)
    ┌────────────────────────────────────────┐
-   │                              87 MHz    │  frequency: x=100, y=2, white 0xFFFF
+   │                            L 92 MHz    │  frequency: x=100, y=2, white 0xFFFF
    │            ┌──────────┐                │
    │            │          │                │  logo: 92×92, y=13..104,
    │            │   LOGO   │                │        x centred = 33
@@ -364,6 +364,10 @@ which is dropped.
  (0,127)                                (159,127)
 ```
 
+- The frequency line is `"{bank} {frequency} MHz"`, which is what
+  `InternetRadioPlayerProcessor.Reset()` built. The bank letter matters: the same frequency exists
+  on all four banks, so without it the top-right corner cannot tell `L 92` from `U 92`. Nine
+  characters at `x=100` end at 154, inside the screen.
 - Font is the 5×7 bitmap from `RadioApp.Hardware/Helpers/Font5x7.cs` (6 px advance, clipped at the right
   edge). Port it rather than inventing a new one, so text metrics match.
 - **That font is ASCII-only, which makes it a rule about the data, not just the code.** It has no glyph
@@ -416,15 +420,55 @@ heap. Measured baseline (M0, the WiFi+HTTPS spike, statically allocated before W
 | TLS session (mbedTLS record buffers + state) | ~40 KB |
 | Active decoder — MP3 or AAC, never both at once (**D15**) | **measured at M3: 28.2 KB MP3, 25.1 KB AAC** — AAC is the cheaper of the two, not the dearer (§5.2) |
 | Stream ring buffer | whatever is left, and it is the thing that absorbs network jitter |
-| PNG decode line buffers (transient, station change only) | a few KB |
+| Logo band buffer, static (**D5 as revised at M4**) | 4,232 bytes — 23 of the 92 rows |
+| Image decoder | **none.** PNGdec needed 45,604 contiguous bytes and was removed at M4 |
+
+**There is no image decoder in that table, and its absence is the main thing M4 established.**
+PNGdec was the plan (**D5**) and does not fit. `PNGIMAGE` embeds zlib's 32 KB sliding window plus
+its inflate state, a 1 KB palette and a 2 KB file buffer, so `sizeof(PNG)` is 45,604 bytes however
+the object is created — and the board has a block that size only at boot. It was tried in all
+three places it could go, and the board rejected each in a different way:
+
+- **In `.bss` it boot-loops.** Static DRAM here is 124,580 bytes, not the 532,480 `pio` reports:
+  `.data` + `.bss` live in `dram0_0_seg` (`org 0x3ffbdb5c, len 0x1e6a4` in the map), and the rest
+  of what `pio` counts is address space the linker cannot use. 45,604 bytes of `.bss` left 27,040
+  free in that segment against M3's 73,320, and ESP-IDF could no longer allocate its main task
+  stack — `assert failed: esp_startup_start_app_common port_common.c:81`, before `setup()` ran.
+- **On the heap for the session it starves TLS.** Allocated once in `begin()` the board booted and
+  decoded a logo in 94 ms, but every connect then failed with `BIGNUM - Memory allocation failed`
+  at `heap=101304 largest=36852`. mbedTLS needs those 45 KB more than the screen does.
+- **Per decode it is unavailable when it is wanted.** With an HTTPS stream live the largest free
+  block is 14,324–19,444, and *even with the stream stopped* it is 38,900 — the input ring buffer
+  is not released by `stopSong()`. So the allocation succeeds at boot and on plain-HTTP stations
+  and nowhere else, and the catalogue is 87 % HTTPS (§5.1).
+
+The logos are therefore converted to raw RGB565 by `Tools/StationMining/build-data.mjs` and read a
+band at a time off LittleFS (**D5**). What is left on the device is a 4,232-byte static buffer and
+a file read. **TFT_eSPI costs 672 bytes** — it keeps no framebuffer — so M4's entire RAM cost is
+under 5 KB.
+
+Two things worth carrying forward from how this was found:
+
+> **`pio`'s RAM percentage is measured against the wrong denominator.** It divides by 532,480, the
+> whole DRAM address space. The number that decides whether the board boots is `_bss_end` against
+> the end of `dram0_0_seg`, and it is in `.pio/build/*/firmware.map`. A build reporting a
+> comfortable 18.3 % was 27 KB from the edge.
+>
+> **Free heap is not the constraint; the largest free block is.** Every failure above happened with
+> 74–124 KB free. §7.3 already said this about fragmentation across station changes; M4 is the same
+> lesson arriving as a single allocation that is simply too big to place.
+
+The price is paid in flash rather than RAM: the payload goes from 748 KB to **~1,208 KB of the
+1.87 MB LittleFS partition** (60 × 16,928 bytes, rounded up to 4 KB blocks), against 26 KB of
+application flash given back with the library. **D6** still holds with room to spare.
 
 Both decoders live in flash, but only one has a RAM working set at a time, so the budget to plan against
 is the **AAC** case. The §5.2 variant rule keeps the radio on the lighter MP3 path most of the time.
 
 The stream buffer is the shock absorber, so **every KB saved elsewhere buys stability**. Concretely:
 `setInsecure()` rather than a CA bundle (**D13**); one TLS connection at a time — fully stop the old
-stream before opening the next; no framebuffer (TFT_eSPI draws straight out, PNGdec decodes line by
-line); avoid `String` churn in the UART and CSV paths.
+stream before opening the next; no framebuffer and no image decoder (TFT_eSPI draws straight out, and
+the logos arrive pre-rendered a band at a time); avoid `String` churn in the UART and CSV paths.
 
 ### 7.3 The real risk, sized against how the radio is actually used
 
@@ -472,8 +516,8 @@ HTTP stream pays no TLS cost, which swamps any real signal.
 | D1 | **ESP32-WROOM-32** (AZ-Delivery DevKit C V4), 4 MB flash, **no PSRAM**. No new hardware. | Already bought and smoke-tested — the scaffold streamed 512 KB over HTTPS successfully. Explicit project constraint: make it work on this board. PSRAM is the *last* rung of the §9 ladder, not a plan. |
 | D2 | Audio via **ESP32-audioI2S** (schreibfaul1) | Native `https://` support, follows CDN redirects, gives ICY titles and reconnects for free. Supersedes an earlier choice of ESP8266Audio, which was made when the stream list was assumed HTTP-only and which would need a hand-written `WiFiClientSecure` injection to do TLS on ESP32. **Pinned to tag 3.0.12** — the last release supporting Arduino core 2.x / ESP-IDF 4.4, which is what `platform = espressif32` installs here. 3.1.0+ requires Arduino core 3.x and will not compile against this framework. |
 | D3 | **HTTPS is the norm** | Measured, not assumed: 758 of 874 usable candidate URLs (87 %) are HTTPS (§5.1). Costs ~40 KB of RAM for the TLS session, which is the whole reason §7 exists. Selecting for HTTP is not a viable lever — only 116 candidates are HTTP. |
-| D4 | Station data as **CSV + PNG on LittleFS** | Update stations with `pio run -t uploadfs`, no firmware rebuild. Costs ~40 KB flash for PNGdec. |
-| D5 | Logos decoded at runtime with **PNGdec** (bitbank2), pre-sized to 92×92 | Keeps the workflow "drop a PNG in `data/logos/`". No runtime scaling. |
+| D4 | Station data as **CSV + logos on LittleFS** | Update stations with `pio run -t uploadfs`, no firmware rebuild. The logos are `.565` rather than PNG since M4 — see the revised **D5** — so the payload is ~1.2 MB and the firmware carries no decoder. |
+| D5 | ~~Logos decoded at runtime with **PNGdec**~~ → **Logos pre-rendered to raw RGB565 by `build-data.mjs`; no decoder on the device.** Revised at M4. | The original kept the workflow "drop a PNG in `data/logos/`", and PNGdec's line callback avoided ever holding a whole frame. Both were true and it still could not work: the decoder object itself is 45,604 contiguous bytes, and the board has a block that size only at boot (§7.2 has the three failures). A `.565` file is 92×92 little-endian RGB565 and nothing else — 16,928 bytes, no header — read in four bands into a 4,232-byte static buffer, so the logo path allocates nothing and cannot fail for want of memory. **Costs ~1.2 MB of the 1.87 MB LittleFS partition** (up from 748 KB) and gives back 26 KB of flash. The workflow survives in a weaker form: the PNG still drops into `Tools/StationMining/Assets/`, but it now has to go through `node build-data.mjs` rather than straight into `data/logos/`. Drawing costs 67–174 ms depending on what the audio task is doing to the flash cache — slower than PNGdec's 93–108 ms, which is the honest price of the change. |
 | D6 | **Custom partition table**, `Esp32InternetRadio/partitions_radio.csv`: 2 MB `factory` app, 1.87 MB LittleFS, no OTA slot. Provisional until M3 measures the real logo set. | 4 MB must cover firmware + LittleFS (+ optionally an OTA slot). ⚠️ It landed at M1, not M6, exactly as feared: the M0 WiFi+HTTPS spike already filled 69.6 % of the default 1.25 MB app partition, and merely adding ESP32-audioI2S took that to **95.7 %** — before TFT_eSPI, PNGdec or ArduinoJson. That also settles D7. The filesystem partition keeps the `spiffs` *subtype* (the IDF 4.4 partition generator and PlatformIO's `uploadfs` both key off it) while being formatted LittleFS via `board_build.filesystem`. **Repartitioning wipes LittleFS**, so the numbers must stop moving before the radio is reassembled — see M6. |
 | D7 | **No OTA in v1**; USB reflash | Revisit at D6 time. If OTA is wanted, two ~1.3 MB app slots leave ~1.2 MB for logos. |
 | D8 | WiFi credentials in a **gitignored `include/Secrets.h`** with a committed `Secrets.h.example` | Simplest thing that works. Changing networks = edit + reflash. **The current scaffold has real credentials inline in `src/main.cpp` — fixing that is M0 and must land before the directory is committed.** |
@@ -511,7 +555,15 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
 
 ### 9.2 Still undecided
 
-- **Status/error indicator placement** on a layout that is already full (§6).
+- **Status/error indicator placement** on a layout that is already full (§6). M4 built the screen
+  without one, so a connect in progress, a retry and a dead slot are all still indistinguishable
+  from a station that simply has nothing to say.
+- ~~**Whether to keep decoding PNG on the device at all.**~~ **Closed at M4:** it cannot be done —
+  see §7.2 and the revised **D5**. Logos are pre-rendered to RGB565 by the build.
+- ~~**Logo draw time under load.**~~ **Closed at M4:** 67 ms when core 1 is blocked on a network
+  handshake, 133 ms while it decodes a steady MP3, 174 ms when both happen at once — the spread is
+  flash-cache contention between the two cores rather than CPU. **Inaudible**, confirmed by ear, which
+  is D14 earning its keep.
 - **Partition table** — pending the real logo set measurement (**D6**).
 - **Reconnect policy** — the retry ladder is settled and implemented at M2: 1 s doubling to 30 s, no
   attempt limit, cancelled only by an explicit stop. **Untested in the field**: 158 minutes of M2

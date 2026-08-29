@@ -7,18 +7,23 @@ Incremental path from the original scaffold (a WiFi + HTTPS connectivity test th
 Each milestone is independently testable and ends in a state you could stop at. Nothing outside
 `Esp32InternetRadio/`, `Tools/` and the repo-root docs is touched (**D11**).
 
-**Where things stand (August 2026): M0, M1, M2 and MD are done; M3 runs on the board.**
-The board plays internet radio over HTTPS through a PCM5102A and holds its heap flat across both heavy
-station switching and long single-stream play. All **76 dial slots are filled**, and the board parses
-them off LittleFS and plays any of them from a serial command. Both codecs are verified on the board
-(**D15**); only the empty-slot case is unproven, and it cannot be tested against a full catalogue. Next
-is **M4** and the screen, where the largest free block is the thing to watch.
+**Where things stand (August 2026): M0–M4 and MD are done.**
+The radio plays internet radio over HTTPS through a PCM5102A and draws the Pi version's screen —
+frequency, 92×92 logo, station name and live ICY titles, on an ST7735 driven from the serial console.
+All **76 dial slots are filled**, station changes on a live HTTPS stream draw the new logo with
+`fails=0`, the 60-change storm passes with the screen running, and **station changes are inaudible**.
+
+M4 cost **D5**: there is no image decoder on the board any more. PNGdec needs a 45,604-byte contiguous
+allocation and the ESP32 has one only at boot, so the logos are pre-rendered to raw RGB565 by
+`build-data.mjs` — see *The 45 KB that would not fit*.
+
+Next is **M5**: the Pico UART, which replaces the serial console with the real dial and buttons.
 
 ```
 M0 ✅ docs + secrets
       │
       ▼
-M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 catalogue ──▶ M4 display
+M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 ✅ catalogue ──▶ M4 ✅ display
       │                                          ▲                       │
       └── MD ✅ data mining (laptop, parallel) ──┘    M5 Pico UART ◀─────┘
                                                           │
@@ -449,6 +454,12 @@ So M4 must decode PNG **straight to the TFT via PNGdec's line callback**, never 
 That was always the sensible design; it is now the only one that works. Check the largest free block
 again once the display is in, because M4 adds TFT_eSPI's own buffers on top of this.
 
+> **What M4 found, recorded here because this paragraph sends you the wrong way.** The conclusion was
+> right about the *frame* and wrong about the *decoder*: PNGdec's own object is 45,604 contiguous
+> bytes, nearly three times the frame this section rules out, and the board has a block that size only
+> at boot. There is no on-device PNG decoding at all now — see **M4** and the revised **D5**. And
+> TFT_eSPI, the suspect named in the last sentence, turned out to cost 672 bytes.
+
 ### Two observations from the boot log, neither a fault
 
 - **Most connects cost two TLS handshakes.** `stream.rockantenne.de` 302s to a numbered edge host —
@@ -505,9 +516,15 @@ Ten names still clip, all from different networks, and **no two clipped forms co
 stay distinguishable on screen. The build lists the survivors after every run so the check is cheap to
 repeat when stations change.
 
+> **One, after M4.** Seeing the real screen prompted the same treatment for ROCK ANTENNE that ANTENNE
+> BAYERN got here, and then a pass over the rest — see M4.
+
 ---
 
-## M4 — Display
+## M4 — Display ✅
+
+**Status: done, August 2026.** The screen is a pixel-for-pixel port of the Pi layout, confirmed against
+photographs of the real panel, and a station change is inaudible.
 
 *Add the ST7735 to the breadboard; still driven by serial commands.*
 
@@ -515,18 +532,245 @@ repeat when stations change.
 - Port the 5×7 font from `RadioApp.Hardware/Helpers/Font5x7.cs` so text metrics match the Pi version.
 - Reproduce the layout exactly: frequency `(100,2)`, logo 92×92 at `y=13` centred, name `(21,107)`, song
   `(3,117)`; independent blank-and-redraw of the song line (**§6**, **D10**).
-- PNG logo decode with PNGdec (**D5**), on core 0 only — never on the audio core (**D14**).
-- **Decode through PNGdec's line callback, straight to the TFT — never into a full-image buffer.** M3
-  measured the largest free block swinging between 14,836 and 24,564 bytes, and a 92×92 RGB565 frame is
-  16,928 — inside that range, so the allocation would sometimes succeed and sometimes not. Re-check
-  `largest=` once TFT_eSPI's own buffers are in.
+- ~~PNG logo decode with PNGdec (**D5**), on core 0 only~~ — **superseded.** Logo drawing is still
+  core 0 only (**D14**), but there is no decoder: PNGdec needs 45,604 contiguous bytes the board does
+  not have, so the logos are pre-rendered to raw RGB565 by the build. **D5** was revised here.
+- ~~**Decode through PNGdec's line callback, never into a full-image buffer.**~~ The reasoning held —
+  M3 measured the largest free block at 14,836–24,564 and a 92×92 RGB565 frame is 16,928, inside that
+  range — but it aimed at the wrong object. The frame was never the problem; the *decoder* was.
+  Re-checking `largest=` was the right instruction and TFT_eSPI was the wrong suspect: it costs 672
+  bytes.
 - Empty-slot and paused states both render as frequency-only on black.
 - Ten station names are longer than the 23 characters that fit at `x=21`. None collide once clipped, but
-  this is the milestone where a real screen can say whether the clipping looks acceptable.
+  this is the milestone where a real screen can say whether the clipping looks acceptable. **It did, and
+  the answer was to shorten them** — see *Names, once there was a screen to read them on*; one clips now.
 
 **Done when:** switching slots over serial redraws logo, name and frequency correctly, live ICY titles
 appear on the bottom line and update as tracks change, and — the real test — **a station change produces
-no audible glitch** while the new logo is being decoded and drawn.
+no audible glitch** while the new logo is being decoded and drawn. ✅ **All three met.**
+
+### Built and running, August 2026
+
+On the board: boot, panel init, catalogue, WiFi, TLS, audio, station changes over serial, logos, and
+live ICY titles. It took three flashes to get there and the two failures are the interesting part —
+both are in *The 45 KB that would not fit* below.
+
+`Display` owns the panel and runs entirely on core 0 (**D14**). The layout constants are lifted from
+`DisplayManager.cs` including its off-by-one — the Pi centres the logo against `DisplayWidth = 0x9F`,
+the *last column* rather than the width, so the logo sits at `x=33` and not 34. Reproducing that is the
+job; "fixing" it would move the logo relative to four YouTube videos.
+
+The font is generated, not retyped: `Tools/gen-font5x7.py` parses the C# dictionary and emits
+`src/Font5x7.cpp`. 95 printable ASCII glyphs are kept; the 73 umlaut and Cyrillic entries are dropped,
+because §6 makes ASCII a rule about the *data* and `build-data.mjs` already enforces it on names. An
+ICY title is not under that rule, so anything outside 0x20–0x7E draws as `?` — one per UTF-8 byte.
+The bit order is the thing to get wrong here: bit 0 is the *leftmost* pixel, and reading the table
+MSB-first mirrors every glyph, which only the asymmetric characters would reveal.
+
+TFT_eSPI is configured entirely from `platformio.ini` (**D9**), so the pin numbers exist twice — as
+preprocessor macros there and as the `constexpr`s in `include/Pins.h` everything else uses. `static_assert`
+ties the two together, so a divergence fails the build instead of leaving the screen dark. `ST7735_BLACKTAB`
+is not a guess: it means no column/row offset and RGB order, which makes TFT_eSPI's rotation-1 MADCTL
+work out to **0xA0** with address windows of 0..159 / 0..127 — byte for byte what `DisplayManager` wrote
+to this same panel.
+
+The ICY title is the one piece of state that crosses cores the other way. ESP32-audioI2S raises
+`audio_showstreamtitle()` on the audio task, and drawing there would put a TFT write inside the decode
+loop, so the string is copied into a mutex-guarded buffer and collected by `loop()` on core 0. A station
+change publishes an *empty* title rather than merely dropping the flag, because the screen has to be told
+to blank the line — and it happens before the blocking connect, so the old track is not still up during
+the handshake.
+
+The logo path is a file read and four SPI pushes, with a 4,232-byte static band buffer and no image
+decoder at all — which is not what this milestone set out to build. See below.
+
+### The 45 KB that would not fit — and took D5 with it
+
+M3 closed by saying to re-check the largest free block once the display was in, because M4 adds
+"TFT_eSPI's own buffers" on top. It does not: **TFT_eSPI keeps no framebuffer and costs 672 bytes.**
+The cost is PNGdec, and it is 68× larger.
+
+`PNGIMAGE` embeds zlib's 32 KB sliding window plus its inflate state, a 1 KB palette and a 2 KB file
+buffer, so `sizeof(PNG)` is **45,604 bytes** however the object is created — three times the next
+largest symbol in the firmware. It was tried in all three places it could go, and the board rejected
+each in a different way.
+
+**1. In `.bss` — boot loop.** The reasoning was that a static object is carved out at link time and
+cannot fail, whereas a 45 KB `malloc` against M3's largest free block of 14,836–24,564 obviously can.
+Both halves are true; the conclusion was wrong. The board panicked before `setup()` ran and rebooted
+every 0.6 s:
+
+```
+assert failed: esp_startup_start_app_common port_common.c:81 (res == pdTRUE)
+```
+
+— `xTaskCreatePinnedToCore` failing to allocate the ESP-IDF main task's stack. **Static DRAM on this
+chip is 124,580 bytes, not the 532,480 `pio` prints:** `.data` + `.bss` live in `dram0_0_seg`
+(`org 0x3ffbdb5c, len 0x1e6a4` in the map file) and the rest of what `pio` counts is address space the
+linker cannot use. A build reporting a comfortable 18.3 % was 27 KB from the edge.
+
+| | `_bss_end` | free in `dram0_0_seg` |
+|---|---|---|
+| M3 | `0x3ffca398` | 73,320 |
+| M4, PNG in `.bss` | `0x3ffd5860` | **27,040 — will not boot** |
+| M4, PNG off `.bss` | `0x3ffca640` | 72,640 |
+
+**2. On the heap, held for the session — no TLS.** Allocated once in `begin()` before WiFi, it booted
+cleanly, the screen came up and a logo decoded in 94 ms. Then every connect failed:
+
+```
+[E][ssl_client.cpp:37] _handle_error(): (-16) BIGNUM - Memory allocation failed
+[stat] ... heap=101304 min=52216 largest=36852 ... connects=5 fails=5
+```
+
+**3. Per decode — available at boot and almost nowhere else.** The measurement that settled it:
+
+| moment | free heap | largest free block | 45 KB available? |
+|---|---|---|---|
+| boot, before WiFi | 249,244 | **110,580** | yes |
+| streaming plain HTTP (Eldoradio) | 116,324 | 57,332 | yes |
+| streaming HTTPS (Pinguin) | 74,432 | **19,444** | no |
+| after `s` (stop), buffer still held | 124,264 | **38,900** | no |
+
+The last row is the one that closes it. Sequencing the decode into the gap between teardown and
+connect would not have rescued it either — `stopSong()` does not release the 28 KB input ring buffer,
+so even a fully stopped radio is 7 KB short. And the catalogue is 87 % HTTPS (§5.1), so in normal use
+the logo would have been skipped on nearly every change. The board says so itself:
+`[tft] no room for the png decoder (45604 bytes, largest free block 16372) - logo skipped`.
+
+**So D5 changed.** `build-data.mjs` converts each 92×92 PNG to a headerless `.565` file — raw
+little-endian RGB565, 16,928 bytes — and the firmware reads it in four 23-row bands into a 4,232-byte
+static buffer. No allocation, no library, nothing that can fail for want of memory. The conversion is a
+~90-line PNG reader built on `node:zlib`, which keeps the script's no-dependency property; it handles
+exactly the 8-bit RGBA non-interlaced files in `Assets/` and throws on anything else.
+
+```
+firmware   RAM 10.5 % (55952 B, +4692 over M3)   Flash 60.4 % (1267461 B, −26 KB with PNGdec gone)
+littlefs   998 KB of content, ~1208 KB in 4 KB blocks, of 1920 KB — 63 %, up from 39 %
+```
+
+Two lessons worth more than the milestone. **`pio`'s RAM percentage divides by the wrong number** —
+check `_bss_end` in `.pio/build/*/firmware.map` instead. And **free heap is not the constraint, the
+largest free block is**: every failure above happened with 74–124 KB free. §7.3 already said that
+about fragmentation across station changes; this is the same lesson arriving as one allocation too big
+to place.
+
+### Measured on the board, with the screen running
+
+Four dial slots, two codecs, TLS and plain HTTP, driven over the serial console:
+
+| | M3 | M4 with the screen |
+|---|---|---|
+| Free heap while streaming HTTPS | ~75,300 | **69,908–74,240** |
+| Largest free block, same | 14,836–24,564 | **14,324–15,860** |
+| Stream buffer | 27,952 | 27,952 unchanged |
+| Audio task stack headroom | 3,836 | 4,508 |
+| Connect failures | 0 | **0** over 3 changes |
+
+So the screen costs **~1–5 KB of heap**, not the 45 KB the first design would have. The largest free
+block sits at the bottom of M3's range rather than below it.
+
+**Logo draw is 67–174 ms, and that is slower than PNGdec's 93–108** — worth stating plainly rather
+than filing under "faster because simpler". The spread is the interesting part, because it is not
+about the image:
+
+| what core 1 was doing | logo draw |
+|---|---|
+| blocked on a TLS handshake (network, not flash) | **67 ms** |
+| decoding a steady MP3 | **133 ms** |
+| station change — handshake *and* decode | **174 ms** |
+
+Same 16,928 bytes every time. Both cores fetch code through one flash cache and the MP3 decoder is not
+a small working set, so a LittleFS read competes with it for the cache rather than for CPU — the
+pixels themselves are ~5 ms at 27 MHz. Reading in four bands instead of 92 rows bought about 15 %,
+which says the SPI address windows were never the cost.
+
+**The 60-change switch storm still passes with the screen in it.**
+
+```
+[storm] changes completed: 60 of 60 (0 connect failures)
+[storm] stream drops during storm: 0
+[storm] mean drift across 4 stations, over 60 changes: -292 bytes
+```
+
+M2 measured −55 to +512 bytes per station without a display; −292 over an evening's worth of
+switching is the same answer, and well under the 1024-byte quantisation §7.3 warns the largest free
+block is measured in. **No fragmentation, and the screen did not introduce any** — which is what
+D17 asks of a session.
+
+One caveat on that run: the storm drives the four *bench* stations, which have no dial position and
+no logo, so each change repaints the name line but never touches the logo path — `logo=` stayed at
+the boot value of 79 ms for all 60. It measures the redraw and the TLS churn together, not the file
+read. Exercising 60 real slots would need a driver that walks the catalogue, and §7.3's reason for
+the bench set — comparing a station against *itself* — argues against changing it.
+
+### Carried into M5 and M7
+
+Nothing here blocks the milestone; the first two items are struck through because the bench answered
+them.
+
+1. ~~**No audible glitch at a station change.**~~ **Confirmed by ear.** 174 ms of core-0 flash traffic
+   against a ~1.7 s stream buffer is inaudible, which is **D14** doing exactly what it was written to
+   do: the decode-and-draw work never touches core 1.
+2. ~~**Does the layout match the Pi's?**~~ **Confirmed from photographs of the panel.** Logo centred at
+   `x=33`, frequency top right, name at `y=107`, title at `y=117`. The black-tab assumption was right —
+   no offset, no red/blue swap — so `ST7735_BLACKTAB` stands.
+3. ~~**Whether clipping at 23 characters looks acceptable.**~~ **Answered on the bench:** nine of the ten
+   were shortened instead. One is left, over by a single character.
+4. **A 60-change storm against real slots**, rather than the bench set — the run above repaints the
+   name line 60 times but never reads a logo, so the file-read path is unmeasured across a session.
+5. **The empty slot**, carried from M3 and still needing a data round trip: delete a row from
+   `RadioStationsList.md`, `node Tools/StationMining/build-data.mjs`, `pio run -t uploadfs`. It should
+   stop the audio and render frequency-only (§6) — M4 renders that state, so the check is cheap now.
+6. **The WDR 4 decode-error period** carried from M2, now that `decode=` is a real field.
+7. **Non-ASCII in ICY titles.** `Megaherz - Himmelsstürmer` arrived from ROCK ANTENNE within seconds of
+   the first boot. §6 makes ASCII a rule about the *station data*, which the build enforces, but a stream
+   title is not under that rule — the font answers `?` per byte, so that one drew as `Himmelsst??rmer`.
+   Legible, not pretty; worth deciding whether it deserves a UTF-8 → Latin-1 fold before M7.
+
+### Names, once there was a screen to read them on
+
+M3 shortened the ten ANTENNE BAYERN channels because the build script said they would clip, and left
+the other ten clippers alone on the grounds that no two collided. Photographs of the real screen
+changed that judgement: a name clipped mid-word looks like a bug even when it is unambiguous, and
+`ROCK ANTENNE Symphonic |Rock` tells you the network and not the station.
+
+**ROCK ANTENNE → RA**, the same treatment ANTENNE BAYERN got and for the same reason — a long shared
+prefix eating the distinguishing word. All seven channels, matching the `RA_*.png` the logo set already
+used: **RA Deutschrock**, **RA Heavy Metal**, **RA Symphonic Rock**, **RA Coversongs**, **RA Hair
+Metal**, **RA Hard Rock**, **RA Modern Metal**. Four of them were clipping; all seven now fit with room
+to spare.
+
+Then the rest, each trimmed of whatever it could spare rather than by a rule:
+
+| | was | now |
+|---|---|---|
+| L 92 | Best of Rock.FM - Hard rock | Best of Rock.FM - Hard |
+| L 104-105 | Radio Bob Ozzy Ousbourne | Radio Bob Ozzy |
+| K 93 | 181.FM The Beatles Channel | The Beatles Channel |
+| K 94 | 181.FM Power 181 (Top 40) | 181.FM Power (Top 40) |
+| K 97 | 104.6 RTL Das Beste der 80er | RTL Das Beste der 80er |
+| K 104-105 | Radio F 94.5 - Made in Germany | F 94.5 - Made in Germany |
+
+**The clipping list goes from ten names to one.** The survivor is `K 104-105`, at 24 characters — over
+by exactly one, so it draws as `F 94.5 - Made in German|y`. Dropping the dash would clear it.
+
+All of this is data: `node Tools/StationMining/build-data.mjs` then `pio run -t uploadfs`, no firmware
+reflash. The build reports the clipping list after every run, so the check stays cheap when stations
+change.
+
+`ROCK ANTENNE 80er` in `TestStations.cpp` keeps its full name deliberately. It is a compiled-in bench
+station rather than a dial slot, it never reaches the screen, and M2 recorded its per-station heap
+drift under that name — renaming it would break the link to a measurement that cannot be re-run.
+
+### Deliberately not built
+
+- **No status or error indicator.** A connect in progress, a retry and a dead slot all look like a
+  station with nothing to say. §9.2 keeps the placement open on a layout that is already full, and
+  guessing at it now would be the one part of the screen with no Pi original to port.
+- **No splash or boot screen.** `Display::begin()` paints black and stops. §9.2 lists boot behaviour as
+  undecided, and a WiFi failure still only reaches the serial log — which M7 was already going to fix.
+- **No UTF-8 handling for ICY titles**, per the item above.
 
 ---
 
