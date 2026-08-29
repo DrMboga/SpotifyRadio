@@ -139,8 +139,26 @@ pulling its interrupt pin low for ~10 ms before and after. Source of truth:
 - **`buttonIndex`**: `-1` no button, `0` Phono (unused), `1` L, `2` M, `3` K, `4` U.
 - **`frequency`**: integer 87–105, 19 discrete positions (`RadioIO/src/CapacitanceState.cpp`).
 - **`isPause`**: `1` = paused, `0` = playing.
-- **`State`** is a full snapshot, sent only while the ESP32 holds the request-state pin high. The ESP32
-  raises it once at boot to learn where the physical controls already are, then drops it.
+- **`State`** is a full snapshot — bank, play/pause *and* frequency — and it is how the radio comes up
+  already tuned to wherever the knobs are sitting rather than waiting for someone to touch one. The
+  ESP32 raises the request-state pin (its GPIO 33 → Pico **GP22**), the Pico answers, the ESP32 drops
+  the pin. Four things about it are not obvious from the message shape, and all four are frozen:
+
+  1. **It is level-triggered inside the Pico's 200 ms poll, not edge-triggered.** `RadioIO.cpp` reads
+     `gpio_get(REQUEST_STATE_PIN)` every pass and sends a fresh `State` *every time it is high*. Hold
+     the pin up for a second and roughly five snapshots arrive. Drop it as soon as one is parsed, and
+     tolerate duplicates regardless — they are idempotent, but they are not a fault.
+  2. **The Pico never initialises GP22.** `HardwareManager::init()` has no `gpio_init` for it, no
+     direction and no pull; the line reads low only because the RP2040 powers its pads up input-enabled
+     with a pull-down. That is silicon default rather than anything the firmware asks for, so the ESP32
+     should **drive GPIO 33 low explicitly and early in `setup()`** — it is high-Z until configured,
+     and a floating request line means the Pico streams `State` continuously.
+  3. **There is no acknowledgement.** The Pico cannot tell whether anyone read it, so the ESP32 needs a
+     retry: raise, wait, drop on the first `State`, raise again if none came.
+  4. **The Pi dropped the pin on *any* message it read while the request was outstanding**, not only on
+     a `State` (`UartIoListener.ReadUartMessage`), then dropped it again when the parse confirmed a
+     `StatusCommand`. That belt-and-braces ordering exists because a button press can be in flight when
+     the request goes up, and it is worth copying rather than rediscovering.
 
 Two consequences the ESP32 must handle, both because the Pico cannot be changed:
 

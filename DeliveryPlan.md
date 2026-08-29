@@ -780,13 +780,21 @@ drift under that name — renaming it would break the link to a measurement that
 
 - UART2 at 115200; **brace-counting frame reader** — the Pico sends no terminator (**§4**).
 - Parse the four commands with ArduinoJson; map `buttonIndex` → `L/M/K/U`, ignore `-1` and `0`.
-- Raise the request-state pin once at boot to pull a full `State` snapshot, then drop it.
+- **Boot-time state sync — raise the request-state pin (GPIO 33 → Pico GP22), take one `State`, drop
+  it.** This is what makes the radio come up already tuned to wherever the knobs are sitting instead of
+  playing `L 87` until someone touches a control, and `State` carries play/pause as well as bank and
+  frequency, so a radio switched off while paused comes back paused. **§4** now records the four frozen
+  details that make it work — the Pico re-sends every 200 ms while the pin is held (drop it on the
+  first snapshot, tolerate duplicates), it never initialises GP22 so the ESP32 must drive its side low
+  early rather than trust a floating line, there is no acknowledgement so it needs a retry, and the Pi
+  dropped the pin on any message read while the request was outstanding to survive a button press
+  arriving mid-handshake.
 - Debounce `NewFrequency` (~1 s settle) so spinning the dial does not open 19 streams (**§4**).
 - `PlayPause`: disconnect / reconnect at the live edge; paused renders frequency-only.
 
 **Done when:** the physical dial and the four toggle buttons drive station changes on the bench, the
-radio comes up already tuned to wherever the controls are sitting, and fast dial spins produce exactly
-one stream connection.
+radio comes up already tuned to wherever the controls are sitting — including paused if it was left
+paused — and fast dial spins produce exactly one stream connection.
 
 ---
 
