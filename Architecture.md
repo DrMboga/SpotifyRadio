@@ -258,13 +258,30 @@ probe — the point of the probe is that no URL reaches `stations.csv` unverifie
 
 Many networks expose the same programme on several endpoints — Rock Antenne and Antenne Bayern serve
 both `…/stream/mp3` and `…/stream/aacp`, and the v1 slot list contains both forms. When a station offers
-a choice, prefer **MP3 at ~128 kbps** over AAC: it is the lighter decoder on a board with no RAM to
-spare. This is a data-set rule, not a code rule — it costs nothing and shrinks the number of times the
-heavier path is exercised.
+a choice, prefer **MP3 at ~128 kbps** over AAC. This is a data-set rule, not a code rule.
 
-Note this replaces the earlier idea of preferring `http://` endpoints, which the numbers above killed:
-only 116 of 874 candidates are HTTP at all, and only 43 are HTTP *and* MP3. Too small and too arbitrary
-a pool to select from.
+⚠️ **The original reason for this rule — "AAC is the heavier decoder" — was measured at M3 and is wrong.**
+Taking the free-heap delta across decoder init on the board:
+
+| | before init | after init | decoder cost |
+|---|---|---|---|
+| AAC (`L 92`, 22.05 kHz, 59.8 kbps HE-AAC) | 107,372 | 82,300 | **25,072** |
+| MP3 (`L 96`, 44.1 kHz, 128 kbps) | 105,268 | 77,104 | **28,164** |
+
+AAC came out **3,092 bytes cheaper**, not dearer. One caveat keeps this from settling the question: the
+two streams differ in sample rate as well as codec, and decoder buffers scale with sample rate, so this
+is not a clean codec-vs-codec comparison. It is enough to retire the stated justification, not enough to
+reverse the rule.
+
+**The rule stands on a different footing.** MP3 endpoints in this catalogue are consistently the higher
+bitrate and the more widely served, and the shipped set is already 46 MP3 to 14 AAC, so nothing is
+gained by re-picking endpoints. **Both codecs are verified working on the board (D15)** — the choice is
+now a preference rather than a constraint, and an AAC-only station is no longer a reason to reject a
+candidate. If the question ever matters, measure both at the same sample rate.
+
+Note this rule replaced an earlier idea of preferring `http://` endpoints, which the numbers above
+killed: only 116 of 874 candidates are HTTP at all, and only 43 are HTTP *and* MP3. Too small and too
+arbitrary a pool to select from.
 
 ### 5.3 Ranking candidates: use the like ratio, not the like count
 
@@ -397,7 +414,7 @@ heap. Measured baseline (M0, the WiFi+HTTPS spike, statically allocated before W
 | Consumer | Approx. |
 |---|---|
 | TLS session (mbedTLS record buffers + state) | ~40 KB |
-| Active decoder — MP3 or AAC, never both at once (**D15**) | ~30 KB MP3, more for AAC |
+| Active decoder — MP3 or AAC, never both at once (**D15**) | **measured at M3: 28.2 KB MP3, 25.1 KB AAC** — AAC is the cheaper of the two, not the dearer (§5.2) |
 | Stream ring buffer | whatever is left, and it is the thing that absorbs network jitter |
 | PNG decode line buffers (transient, station change only) | a few KB |
 
@@ -501,4 +518,6 @@ Cheapest and least invasive first; each rung is a real lever, not a hope.
   produced no drop at all. What the *screen* shows during a retry is still open (M4/M7), as is whether a
   permanently failed slot falls back to silence.
 - **Boot behaviour** before WiFi is up: splash screen, and what happens if the network never arrives.
-- **AAC** — counted at M3, decided then (**D15**).
+- ~~**AAC** — counted at M3, decided then (**D15**).~~ **Closed at M3:** both decoders initialise and
+  play from the catalogue on the board. AAC cost 25.1 KB against MP3's 28.2 KB, so the §5.2 preference
+  for MP3 keeps its effect but loses its original reason.

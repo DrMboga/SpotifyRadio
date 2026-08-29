@@ -10,8 +10,9 @@ Each milestone is independently testable and ends in a state you could stop at. 
 **Where things stand (August 2026): M0, M1, M2 and MD are done; M3 runs on the board.**
 The board plays internet radio over HTTPS through a PCM5102A and holds its heap flat across both heavy
 station switching and long single-stream play. All **76 dial slots are filled**, and the board parses
-them off LittleFS and plays any of them from a serial command. Two M3 checks remain — the AAC path and
-an empty slot — then **M4** adds the screen, where the largest free block is now the thing to watch.
+them off LittleFS and plays any of them from a serial command. Both codecs are verified on the board
+(**D15**); only the empty-slot case is unproven, and it cannot be tested against a full catalogue. Next
+is **M4** and the screen, where the largest free block is the thing to watch.
 
 ```
 M0 ✅ docs + secrets
@@ -450,32 +451,35 @@ again once the display is in, because M4 adds TFT_eSPI's own buffers on top of t
 
 ### Two observations from the boot log, neither a fault
 
-- **Every connect costs two TLS handshakes.** `stream.rockantenne.de` 302s to
-  `s8-webradio.rockantenne.de`, so the catalogue URL pays 1431 ms + 1425 ms ≈ 2.9 s and two rounds of
-  buffer alloc/free per station change. Storing the resolved edge host would halve it — but `s1` and
-  `s8` are clearly load-balanced, so pinning one trades a slower change for a station that dies when
-  that edge goes away. **Not worth doing before M7**, and only then with a re-probe.
+- **Most connects cost two TLS handshakes.** `stream.rockantenne.de` 302s to a numbered edge host —
+  `s8-` once, `s2-` a few minutes later — so the catalogue URL pays roughly 1.4 s twice, plus two rounds
+  of buffer alloc/free, per station change. A direct-connecting station like Pinguin Aardschok pays one.
+
+  **Storing the resolved URL to skip the second handshake is now ruled out, not merely deferred.** `L 92`
+  resolves to a **209-character** URL — over `kMaxUrlLength` by 17 — carrying `skey:1788017261`, which is
+  a session key with a lifetime. It works today only because ESP32-audioI2S follows the redirect through
+  its own buffer rather than through `playUrl()`. Pinning it would exceed the cap *and* expire, which is
+  exactly the trap §5.4 describes. The redirect stays.
 - `[E][WiFiClient.cpp:320] setSocketOption(): fail on 0, errno: 9, "Bad file number"` appears before
   every TLS connect. It is the Arduino core setting a socket option before the socket exists — noise
   from a pinned dependency (**D2**), harmless, and not worth chasing.
 
-**Still open, both needing the board.** Uploading and slot selection are done — `L 87` played on boot
-and `[cat]` reported 76/76.
+**D15 is verified.** `L 92` initialised the AAC decoder (ADTS, MPEG-4 LC, 22.05 kHz) and `L 96` the MP3
+one, both playing from the catalogue, both with `fails=0`. The heap cost went the opposite way to the
+prediction — see §5.2, whose stated rationale this measurement retired.
 
-1. **D15 — the AAC path.** `L 92` (Best of Rock.FM Hard Rock, AAC 64k) against `L 96` (ROCK ANTENNE
-   Hair Metal, MP3). Both ship in the catalogue, so the M2 bench set is no longer the only codec
-   comparison. Watch `largest=` across the switch: AAC costs more decoder heap than MP3, and the block
-   is already down 45 % on M2.
-2. **The empty slot.** It **cannot be tested from the shipped catalogue** — every one of the 76 is
-   filled. Delete a row from `RadioStationsList.md`, `node Tools/StationMining/build-data.mjs`,
-   `pio run -t uploadfs`, and confirm the slot stops audio and prints `is empty` with no error.
+**One check still open, and it needs a data round trip.** The empty slot **cannot be tested from the
+shipped catalogue** — every one of the 76 is filled. Delete a row from `RadioStationsList.md`, run
+`node Tools/StationMining/build-data.mjs`, then `pio run -t uploadfs` (no firmware reflash), and confirm
+the slot stops audio and prints `is empty` with no error. **Reasonable to carry into M4**, which has to
+render the empty-slot state anyway and so exercises the same path.
 
 **Carried into M4 rather than held here:** the M2 decode-error period on WDR 4, now that `decode=` is a
 real field. Nothing about it blocks the display work, and M4's soak produces the same data anyway.
 
 **Done when:** typing a bank+frequency plays the right stream, unknown slots go quiet, both codecs work,
-and you know how many KB the full logo set occupies. **Three of the four are met** — only the AAC check
-and the empty slot remain.
+and you know how many KB the full logo set occupies. **Three of the four are met**; only the empty slot
+is unproven, and it is untestable without editing the data set.
 
 ### Station names are ASCII, and the build enforces it
 
