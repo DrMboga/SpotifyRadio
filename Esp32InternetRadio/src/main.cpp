@@ -1,14 +1,16 @@
-// M2 — stream robustness.
+// M3 — station catalogue.
 //
-// ESP32 + PCM5102A on a breadboard, nothing else. Connects to WiFi and drives
-// the audio task from single-key serial commands, so the whole selection path
-// is exercised without the Pico or the screen.
+// ESP32 + PCM5102A on a breadboard, nothing else. Connects to WiFi, parses
+// `data/stations.csv` off LittleFS into 4 banks × 19 dial positions, and drives
+// the audio task from the serial console — so the whole selection path is
+// exercised without the Pico or the screen. Typing `M 92` is what the toggle
+// button and the tuning capacitor will do at M5.
 //
-// M2 asks whether this board survives a listening *session* (Architecture.md
-// §7.3, D17): 2–3 hours, then switched off, and dominated by station changes —
-// 30–60 of them an evening. So the milestone's primary test is the switch
-// storm (`t`), not sitting on one stream. Reconnect-after-drop lives in
-// AudioEngine and needs no command: pull a stream's plug and it comes back.
+// M2's tooling is still here and still earns its place: the switch storm (`t`)
+// is the heap measurement (§7.3, D17), and it deliberately runs against the
+// four-station bench set rather than the catalogue — see TestStations.h.
+// Reconnect-after-drop lives in AudioEngine and needs no command: pull a
+// stream's plug and it comes back.
 //
 // This loop() runs on core 0 (-DARDUINO_RUNNING_CORE=0); the audio task owns
 // core 1. See Architecture.md §7.1 and D14.
@@ -20,6 +22,7 @@
 #include "AudioEngine.h"
 #include "Log.h"
 #include "Secrets.h"
+#include "StationCatalogue.h"
 #include "SwitchStorm.h"
 #include "TestStations.h"
 
@@ -56,12 +59,17 @@ bool connectWifi() {
   return true;
 }
 
-// WiFi.RSSI() returns 0 when esp_wifi_sta_get_ap_info() fails, which it does
-// intermittently and sometimes for a whole session - a 40-minute soak logged
-// rssi=0 on all 73 samples after reporting -61 dBm correctly at connect. Zero
-// is not a plausible signal strength, so it means "no reading", and printing it
-// throws away the last good one. Signal strength is the first thing to check
-// when decode errors show up, so hold on to it.
+// WiFi.RSSI() returns 0 when esp_wifi_sta_get_ap_info() fails. Zero is not a
+// plausible signal strength, so it means "no reading", and printing it throws
+// away the last good one. Signal strength is the first thing to check when
+// decode errors show up, so hold on to it.
+//
+// The soak that prompted this - "rssi=0 on all 73 samples" - turned out not to
+// be evidence of it. That field was printing decodeErrors(), which was
+// genuinely 0, because printStatus() passed one more argument than its format
+// string had specifiers (see the note there). This guard is still correct, but
+// until the format string was fixed its result never reached the log at all,
+// so the failure it defends against remains unobserved on this board.
 int8_t currentRssi() {
   static int8_t lastGood = 0;
 
@@ -77,9 +85,16 @@ void printStatus() {
   uint8_t vuRight = 0;
   AudioEngine::vuLevel(vuLeft, vuRight);
 
+  // Every field here has a matching specifier. It did not always: this line
+  // passed 14 arguments to 13 specifiers, so `rssi=` printed decodeErrors() and
+  // currentRssi() was discarded before it ever reached the log. That is what
+  // "a 40-minute soak logged rssi=0 on all 73 samples" actually was — the decode
+  // error count, which really was 0 — and not the WiFi.RSSI() fault it was
+  // recorded as. Nothing warned, because the build does not pass -Wall; it now
+  // does, via build_src_flags in platformio.ini.
   Log::printf(
       "[stat] playing=%d vu=%u/%u heap=%u min=%u largest=%u buf=%u/%u "
-      "stack_free=%u connects=%u fails=%u drops=%u rssi=%d\n",
+      "stack_free=%u connects=%u fails=%u drops=%u decode=%u rssi=%d\n",
       AudioEngine::isPlaying() ? 1 : 0, vuLeft, vuRight, ESP.getFreeHeap(),
       ESP.getMinFreeHeap(),
       heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL),
@@ -104,21 +119,82 @@ void reportStatusPeriodically() {
 }
 
 void printHelp() {
-  Log::println("[cmd] 1-9  play station        s  stop");
-  Log::println("[cmd] n    next station        h  heap now");
-  Log::printf("[cmd] t    switch storm (%u changes)   x  abort storm\n",
+  Log::println("[cmd] M 92  play a dial slot: bank L/M/K/U + frequency 87-105");
+  Log::println("[cmd] 1-9   play bench station     s  stop");
+  Log::println("[cmd] n     next bench station     h  heap now");
+  Log::printf("[cmd] t     switch storm (%u changes)   x  abort storm\n",
                 kStormChanges);
-  Log::println("[cmd] l    list stations       ?  this help");
+  Log::println("[cmd] l     list the catalogue      b  list bench stations");
+  Log::println("[cmd] ?     this help");
 }
 
-void listStations() {
+void listBenchStations() {
   for (size_t i = 0; i < kTestStationCount; i++) {
     Log::printf("[cmd] %u  %-20s %s\n", (unsigned)(i + 1),
                   kTestStations[i].name, kTestStations[i].url);
   }
 }
 
-void playStation(size_t index) {
+// Selects a dial slot, exactly as the Pico will at M5.
+//
+// An empty slot is not an error (§6): it stops audio and says so once. That is
+// the behaviour the real dial needs — 76 positions, and turning past an unfilled
+// one has to go quiet rather than keep the previous station playing or complain.
+void playSlot(char button, uint8_t frequency) {
+  const StationCatalogue::Station* station =
+      StationCatalogue::find(button, frequency);
+
+  if (station == nullptr) {
+    Log::printf("[cmd] %c %u is empty\n", (char)toupper((unsigned char)button),
+                (unsigned)frequency);
+    AudioEngine::stop();
+    return;
+  }
+
+  Log::printf("[cmd] %c %u  %s\n", (char)toupper((unsigned char)button),
+              (unsigned)frequency, station->name);
+
+  // playUrl() only fails on an over-long URL or a full queue. The catalogue
+  // already rejected the first at boot, so this is worth reporting rather than
+  // ignoring: it means commands are arriving faster than the audio task retires
+  // them, which is the debounce problem M5 has to solve for the tuning dial.
+  if (!AudioEngine::playUrl(station->url)) {
+    Log::println("[cmd] busy - command queue full, try again");
+  }
+}
+
+// Parses "M 92", "m92", "K105". Returns false if this is not a slot command,
+// leaving the caller to treat the line as something else.
+bool parseSlotCommand(const char* line) {
+  if (line[0] == '\0') {
+    return false;
+  }
+
+  const char* cursor = line + 1;
+  while (*cursor == ' ') {
+    cursor++;
+  }
+
+  char* end = nullptr;
+  const long frequency = strtol(cursor, &end, 10);
+
+  if (end == cursor || *end != '\0') {
+    return false;
+  }
+
+  if (frequency < StationCatalogue::kMinFrequency ||
+      frequency > StationCatalogue::kMaxFrequency) {
+    Log::printf("[cmd] frequency %ld is outside %u-%u\n", frequency,
+                (unsigned)StationCatalogue::kMinFrequency,
+                (unsigned)StationCatalogue::kMaxFrequency);
+    return true;  // recognised, just wrong — do not fall through to help
+  }
+
+  playSlot(line[0], (uint8_t)frequency);
+  return true;
+}
+
+void playBenchStation(size_t index) {
   if (index >= kTestStationCount) {
     Log::printf("[cmd] no station %u\n", (unsigned)(index + 1));
     return;
@@ -128,31 +204,54 @@ void playStation(size_t index) {
   AudioEngine::playUrl(kTestStations[index].url);
 }
 
-// Single characters rather than a line protocol: the storm has to keep being
-// driven from loop() while a command is typed, and nothing here is worth a
-// parser.
-void handleSerialCommand(char key) {
+// A slot command is two tokens ("M 92"), so the console reads lines rather than
+// single keys. Everything still returns immediately — the line is assembled a
+// character at a time across loop() passes, so the storm keeps being driven
+// while a command is half-typed.
+void handleCommandLine(char* line) {
   static size_t currentStation = 0;
+
+  if (line[0] == '\0') {
+    return;  // bare Enter, and the second half of a CRLF
+  }
+
+  const bool isPlaybackCommand =
+      line[1] != '\0' || line[0] == 's' || line[0] == 'n' ||
+      (line[0] >= '1' && line[0] <= '9');
 
   // A manual station change during a storm silently corrupts the run: the
   // measurement that follows is taken against a stream the storm did not open,
   // and the dwell it was timing is gone. Refuse rather than quietly produce a
   // wrong number.
-  if (SwitchStorm::isRunning() && (key == 's' || key == 'n' || (key >= '1' && key <= '9'))) {
+  if (SwitchStorm::isRunning() && isPlaybackCommand) {
     Log::println("[cmd] storm running - press x to abort it first");
     return;
   }
 
+  // Try the slot form first. It is the only multi-character command, so a line
+  // that is not one falls through to the single-key table below.
+  if (line[1] != '\0' && parseSlotCommand(line)) {
+    return;
+  }
+
+  if (line[1] != '\0') {
+    Log::printf("[cmd] don't understand \"%s\"\n", line);
+    printHelp();
+    return;
+  }
+
+  const char key = line[0];
+
   if (key >= '1' && key <= '9') {
     currentStation = (size_t)(key - '1');
-    playStation(currentStation);
+    playBenchStation(currentStation);
     return;
   }
 
   switch (key) {
     case 'n':
       currentStation = (currentStation + 1) % kTestStationCount;
-      playStation(currentStation);
+      playBenchStation(currentStation);
       break;
 
     case 's':
@@ -173,7 +272,11 @@ void handleSerialCommand(char key) {
       break;
 
     case 'l':
-      listStations();
+      StationCatalogue::list();
+      break;
+
+    case 'b':
+      listBenchStations();
       break;
 
     case '?':
@@ -181,13 +284,38 @@ void handleSerialCommand(char key) {
       break;
 
     default:
-      break;  // stray newlines from the monitor
+      Log::printf("[cmd] unknown key '%c'\n", key);
+      printHelp();
+      break;
   }
 }
 
+// Long enough for "M 105" many times over; a line that overruns it is line
+// noise on the UART, so the buffer resets rather than dispatching a truncated
+// command that might happen to parse.
+constexpr size_t kCommandBufferSize = 32;
+
 void pollSerial() {
+  static char buffer[kCommandBufferSize];
+  static size_t length = 0;
+
   while (Serial.available() > 0) {
-    handleSerialCommand((char)Serial.read());
+    const char c = (char)Serial.read();
+
+    if (c == '\n' || c == '\r') {
+      buffer[length] = '\0';
+      handleCommandLine(buffer);
+      length = 0;
+      continue;
+    }
+
+    if (length + 1 >= sizeof(buffer)) {
+      length = 0;
+      Log::println("[cmd] line too long, ignored");
+      continue;
+    }
+
+    buffer[length++] = c;
   }
 }
 
@@ -199,20 +327,41 @@ void setup() {
   delay(1000);
 
   Log::println();
-  Log::println("ESP32 internet radio - M2 stream robustness");
+  Log::println("ESP32 internet radio - M3 station catalogue");
 
   AudioEngine::begin();
 
+  // Before WiFi: the catalogue is a local file, and knowing whether it loaded
+  // is worth having even on a board that never gets online.
+  const bool catalogueLoaded = StationCatalogue::begin();
+
   if (!connectWifi()) {
-    // M7 gives this a real retry policy and a screen to say so. For M2, say it
+    // M7 gives this a real retry policy and a screen to say so. For M3, say it
     // and sit still rather than pretending to play.
     return;
   }
 
-  listStations();
   printHelp();
 
-  playStation(0);
+  if (!catalogueLoaded || StationCatalogue::filledSlots() == 0) {
+    // The bench stations are compiled in, so the board is still useful for the
+    // storm and for M2's measurements with no filesystem at all. Say which
+    // world we are in rather than looking like a catalogue full of empty slots.
+    Log::println("[cat] no catalogue - bench stations only (keys 1-9)");
+    listBenchStations();
+    playBenchStation(0);
+    return;
+  }
+
+  if (StationCatalogue::rejectedRows() > 0) {
+    Log::printf("[cat] %u rows were rejected - see the lines above\n",
+                (unsigned)StationCatalogue::rejectedRows());
+  }
+
+  // L 87 is the first filled slot in the shipped catalogue, and starting on a
+  // real station means the boot log shows a genuine connect rather than
+  // silence that has to be told apart from a fault.
+  playSlot('L', 87);
 }
 
 void loop() {

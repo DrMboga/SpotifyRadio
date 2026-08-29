@@ -2,11 +2,20 @@
 
 #include <stddef.h>
 
-// The M2 bench station list.
+// The bench station list — four stations, compiled in.
 //
-// Temporary: M3 replaces this with `data/stations.csv` on LittleFS (D4, §5).
-// It exists so the switch storm has real servers to hammer, and so manual
-// listening has something to switch between.
+// M3 was going to delete this in favour of `data/stations.csv` (D4, §5), and
+// the catalogue has indeed taken over playback. This stayed, for two reasons
+// that only became clear once the catalogue existed:
+//
+//   1. The switch storm measures a station against *itself* on an earlier visit
+//      (SwitchStorm.cpp), because the four bench stations sit up to 43 KB apart
+//      from each other. Run over the 60-station catalogue, 60 changes would
+//      give one sample each and the comparison would have nothing to compare.
+//   2. It is the fallback when LittleFS will not mount, which keeps the board
+//      diagnosable — and the storm runnable — with no filesystem at all.
+//
+// The four entries are chosen to spread the load rather than to sound good.
 //
 // The four entries are chosen to spread the load rather than to sound good —
 // two codecs, TLS and plain HTTP, four unrelated CDNs, 48/128/256 kbps. If a

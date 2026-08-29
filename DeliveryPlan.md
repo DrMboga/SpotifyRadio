@@ -236,13 +236,19 @@ So there is certainly a ~274.5 s quantum, and it is not fully explained.
 samples made it look tighter than it is.
 
 A period this clean is structural, and most likely on the station's side rather than the network's. The
-test is whether another station shows a different period or none, which is what `decerr=` is for — and
-more of the same station will not answer it.
+test is whether another station shows a different period or none, which is what the decode-error count
+is for — and more of the same station will not answer it.
 
-**Carried forward as an open item.** Cheap to settle: 30 minutes on WDR 4 with the current firmware,
-comparing `decerr=`. If the period follows the radio it is local and worth chasing; if it changes or
-vanishes it belongs to ROCK ANTENNE, and the answer is §5.2's — prefer a different endpoint. Fold it
-into M3 rather than making a separate session of it.
+**Carried forward as an open item.** Cheap to settle: 30 minutes on WDR 4, comparing `decode=`. If the
+period follows the radio it is local and worth chasing; if it changes or vanishes it belongs to ROCK
+ANTENNE, and the answer is §5.2's — prefer a different endpoint.
+
+⚠️ **This needs the M3 firmware, not the M2 firmware.** The count was never on the `[stat]` line: it
+was passed to `Log::printf` but no specifier consumed it, so it was printed under the label `rssi=`
+and the real signal strength was dropped. The burst *timings* above are unaffected — they were read
+from the timestamped `[audio]` lines, not from the counter — but any earlier reading of `rssi=` is a
+decode-error count, and any reading of a field called `decerr=` is a memory of one, because no build
+ever emitted that name. M3 adds `decode=` and fixes `rssi=`.
 
 Two measurement lessons, both learned by getting a wrong answer first:
 
@@ -374,8 +380,53 @@ from the headers; the tiebreak is whether the station’s own site points at it.
 - Verify an AAC station plays as well as an MP3 one (**D15**) — ROCK ANTENNE's `aacp` endpoint is the
   obvious test case, and its `mp3` sibling is the §5.2 comparison.
 
+### Built, August 2026 — not yet run on the board
+
+`StationCatalogue` mounts LittleFS, reads the CSV into **one ~7 KB allocation** and points 76 slots
+into it. One block rather than 228 small strings is the §7.3 choice: fragmentation is the risk, and
+228 allocations interleaved with the first TLS session is how the largest free block gets carved up.
+
+The firmware re-checks every rule `build-data.mjs` enforces, because the CSV is uploaded separately and
+can be edited without a recompile. A bad row is dropped with a reason on the log instead of
+half-working: wrong field count, button outside L/M/K/U, frequency outside 87–105, empty field, URL
+over `kMaxUrlLength`, duplicate slot. It also tolerates CRLF, which `.gitattributes` should prevent but
+an image built from another checkout would not.
+
+The console now reads lines instead of single keys, so `M 92` works; M2's keys all survive. A missing
+filesystem falls back to the compiled-in bench stations rather than looking like 76 empty slots — which
+is also why `TestStations.h` was not deleted, the other reason being that the switch storm compares a
+station against *itself* and would get one sample each across a 60-station catalogue.
+
+```
+firmware   RAM 9.6 % (51260 B, +1000 over M2)   Flash 59.4 % (1246009 B, +44.5 KB for LittleFS)
+littlefs   594.9 KB of content in the 1.87 MB partition — D6 confirmed, ~32 % used
+csv        76/76 rows accepted against the firmware's own rules, 0 rejected
+```
+
+**Still to do, and it needs the board** — there is no host compiler on this machine, so the parser is
+compile-verified under `-Wall -Wextra` but has never executed:
+
+1. `pio run -t upload` **and** `pio run -t uploadfs` — the data partition is a separate step, and
+   without it the catalogue falls back to bench stations.
+2. Type `M 92`, `L 87`, `U 105`; confirm the right station plays and `[cat]` reports 76/76 filled.
+3. **D15:** `L 96` (ROCK ANTENNE Hair Metal, MP3) against `L 92` (Best of Rock.FM Hard Rock, AAC 64k).
+   Both ship in the catalogue, so the M2 bench set is no longer the only codec comparison.
+4. An empty slot going quiet **cannot be tested from the shipped catalogue** — it is 76/76 full. Delete
+   a row from `RadioStationsList.md`, rebuild, `uploadfs`, and check the slot stops audio and reports
+   `is empty` without an error.
+5. Settle the M2 decode-error period on WDR 4, now that `decode=` is a real field (see the M2 note).
+
 **Done when:** typing a bank+frequency plays the right stream, unknown slots go quiet, both codecs work,
 and you know how many KB the full logo set occupies.
+
+### Two Cyrillic station names will not render at M4
+
+`M 94` and `U 104-105` carry Cyrillic in the name — *Ultra 100.5 (Радио Ультра)* and *DFM Радио 101.2
+FM*. M3 is byte-transparent and does not care, but §6's font is `Font5x7.cs` ported from v1 and it is
+ASCII-only. Either the names lose their Cyrillic — both already carry a Latin equivalent — or the font
+grows a Cyrillic page, which is a bigger change than it sounds, because the port exists precisely to
+keep the v1 metrics exact. **A data decision, not a code one, and cheaper to make before M4 than during
+it.**
 
 ---
 
