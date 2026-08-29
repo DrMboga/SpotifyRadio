@@ -48,15 +48,15 @@ K | 104-105 | Germany | Radio F 94.5 - Made in Germany | https://www.radiof.de/ 
 U | 87-88 | Germany |  Radio Seefunk | https://radio-seefunk.imsueden.de/ | https://webradio.radio-seefunk.de/live64 | Seefunk.png
 U | 89 | Germany | Radio 91.2 | https://www.radio912.de/ | https://stream.lokalradio.nrw/4453z68 | RadioDortmund.png
 U | 90 | Germany | ENERGY Berlin | https://www.energy.de/berlin | https://frontend.streamonkey.net/energy-berlin/stream/mp3 | Energy.png
-U | 91 | Germany | ANTENNE BAYERN Live | https://www.antenne.de/webradio/live | https://stream.antenne.de/antenne/stream/mp3 | AB_Live.png
-U | 92 | Germany | ANTENNE BAYERN 90er Party | https://www.antenne.de/webradio/90er-party | https://stream.antenne.de/antenne-bayern-90er-party/stream/mp3 | AB_90Party.png
-U | 93 | Germany | ANTENNE BAYERN 90er Hits | https://www.antenne.de/webradio/90er-hits | https://stream.antenne.de/90er-hits/stream/mp3 | AB_90Hits.png
-U | 94 | Germany | ANTENNE BAYERN 2000er Hits | https://www.antenne.de/webradio/2000er-hits | https://stream.antenne.de/2000er-hits/stream/mp3 | AB_2000Hits.png
-U | 95 | Germany | ANTENNE BAYERN Greatest Hits | https://www.antenne.de/webradio/greatest-hits | https://stream.antenne.de/greatest-hits/stream/mp3 | AB_GreatestHits.png
-U | 96 | Germany | ANTENNE BAYERN Workout Mix | https://www.antenne.de/webradio/workout-hits | https://stream.antenne.de/workout-hits/stream/mp3 | AB_Workout.png
-U | 97 | Germany | ANTENNE BAYERN Top 40 | https://www.antenne.de/webradio/top-40 | https://stream.antenne.de/top-40/stream/mp3 | AB_Top40.png
-U | 98 | Germany | ANTENNE BAYERN Dance XXL | https://www.antenne.de/webradio/dance-xxl | https://stream.antenne.de/dance-xxl/stream/mp3 | AB_DanceXXL.png
-U | 99 | Germany | ANTENNE BAYERN Relax | https://www.antenne.de/webradio/relax | https://stream.antenne.de/relax/stream/mp3 | AB_Relax.png
-U | 100-101 | Germany | ANTENNE BAYERN Weihnachts-Classics | https://www.antenne.de/webradio/oldie-antenne-event-weihnachten | https://stream.antenne.de/oldie-antenne-event/stream/mp3 | AB_Weinachts.png
+U | 91 | Germany | AB Live | https://www.antenne.de/webradio/live | https://stream.antenne.de/antenne/stream/mp3 | AB_Live.png
+U | 92 | Germany | AB 90er Party | https://www.antenne.de/webradio/90er-party | https://stream.antenne.de/antenne-bayern-90er-party/stream/mp3 | AB_90Party.png
+U | 93 | Germany | AB 90er Hits | https://www.antenne.de/webradio/90er-hits | https://stream.antenne.de/90er-hits/stream/mp3 | AB_90Hits.png
+U | 94 | Germany | AB 2000er Hits | https://www.antenne.de/webradio/2000er-hits | https://stream.antenne.de/2000er-hits/stream/mp3 | AB_2000Hits.png
+U | 95 | Germany | AB Greatest Hits | https://www.antenne.de/webradio/greatest-hits | https://stream.antenne.de/greatest-hits/stream/mp3 | AB_GreatestHits.png
+U | 96 | Germany | AB Workout Mix | https://www.antenne.de/webradio/workout-hits | https://stream.antenne.de/workout-hits/stream/mp3 | AB_Workout.png
+U | 97 | Germany | AB Top 40 | https://www.antenne.de/webradio/top-40 | https://stream.antenne.de/top-40/stream/mp3 | AB_Top40.png
+U | 98 | Germany | AB Dance XXL | https://www.antenne.de/webradio/dance-xxl | https://stream.antenne.de/dance-xxl/stream/mp3 | AB_DanceXXL.png
+U | 99 | Germany | AB Relax | https://www.antenne.de/webradio/relax | https://stream.antenne.de/relax/stream/mp3 | AB_Relax.png
+U | 100-101 | Germany | AB Weihnachts-Classics | https://www.antenne.de/webradio/oldie-antenne-event-weihnachten | https://stream.antenne.de/oldie-antenne-event/stream/mp3 | AB_Weinachts.png
 U | 102-103 | Russia | Europa Plus | https://europaplus.ru/?region=msk | https://ep128.hostingradio.ru:8030/ep128 | EuropaPlus.png
 U | 104-105 | Russia | DFM Radio 101.2 FM | https://dfm.ru/ |	https://dfm.hostingradio.ru/dfm96.aacp | DFM.png

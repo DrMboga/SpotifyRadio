@@ -431,13 +431,17 @@ than substituting one.
 `build-data.mjs` now **fails** on non-ASCII in a name and names the offending characters, because a
 line containing them looks perfectly ordinary in every editor. The catalogue is pure ASCII end to end.
 
-**Left open on purpose: 17 of 60 names are longer than the screen.** The name is drawn at `x=21` in a
-6 px-advance font on a 160 px screen, so 23 characters fit and the rest is clipped — which §6 defines
-as the behaviour, not a fault. But clipping takes the distinguishing half of exactly the names that
-need it: `ANTENNE BAYERN Weihnach|ts-Classics`, `ANTENNE BAYERN Greatest| Hits`, and five more Antenne
-Bayern channels that are identical for the first 15 characters. The build lists them all at the end of
-every run rather than deciding for you; **shortening them is a data edit, and M4 is where it is worth
-looking at one on the actual screen first.**
+**Names are shortened where the screen made them ambiguous.** The name is drawn at `x=21` in a
+6 px-advance font on a 160 px screen, so 23 characters fit and the rest is clipped — which §6 defines as
+the behaviour, not a fault. Clipping only matters when it removes the part that tells two stations
+apart, and it did: the ten Antenne Bayern channels are identical for their first 15 characters, so
+`ANTENNE BAYERN Greatest| Hits` and `ANTENNE BAYERN Workout |Mix` were about to render as the same
+line. They are now `AB Greatest Hits`, `AB Workout Mix` and so on, matching the `AB_*.png` the logo set
+already used.
+
+Ten names still clip, all from different networks, and **no two clipped forms collide** — all 60 names
+stay distinguishable on screen. The build lists the survivors after every run so the check is cheap to
+repeat when stations change.
 
 ---
 
