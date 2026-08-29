@@ -66,6 +66,26 @@ volatile uint32_t connectFailureCount = 0;
 volatile uint32_t streamDropCount = 0;
 volatile uint32_t decodeErrorCount = 0;
 
+// The ICY title, written by the audio task and read by core 0 (§7.1). The
+// counters above get away with being lock-free because they are single aligned
+// words; a 128-byte string does not, so this pair is guarded. The mutex is held
+// only for the copy, never across a Serial write or a redraw.
+SemaphoreHandle_t titleMutex = nullptr;
+char streamTitle[AudioEngine::kMaxStreamTitleLength] = {0};
+bool streamTitleIsNew = false;
+
+// Called from both cores.
+void setStreamTitle(const char* title) {
+  if (titleMutex == nullptr) {
+    return;
+  }
+
+  xSemaphoreTake(titleMutex, portMAX_DELAY);
+  strlcpy(streamTitle, title == nullptr ? "" : title, sizeof(streamTitle));
+  streamTitleIsNew = true;
+  xSemaphoreGive(titleMutex);
+}
+
 // millis() wraps after ~49 days. Comparing a *difference* against a bound is
 // correct across the wrap; comparing the timestamps directly is not.
 bool hasElapsed(uint32_t sinceMs, uint32_t intervalMs) {
@@ -119,6 +139,12 @@ void handleCommand(const Command& command) {
       // A deliberate station change starts the backoff ladder from the bottom
       // again, even if the previous station was in a long retry cycle.
       nextRetryDelayMs = kFirstRetryDelayMs;
+      // Publishing an empty title rather than merely dropping the flag: the
+      // screen has to be told to blank the bottom line, and this is the only
+      // point that knows the old station is going away. Doing it before the
+      // blocking connect clears the line while the handshake runs, instead of
+      // leaving the previous track up for another second and a half.
+      setStreamTitle("");
       attemptConnect();
       break;
 
@@ -128,6 +154,7 @@ void handleCommand(const Command& command) {
       desiredUrl[0] = '\0';
       streamState = AudioEngine::State::Idle;
       audio.stopSong();
+      setStreamTitle("");
       Log::println("[audio] stopped");
       break;
   }
@@ -214,8 +241,13 @@ void audio_info(const char* info) { Log::printf("[audio] %s\n", info); }
 void audio_showstation(const char* info) { Log::printf("[station] %s\n", info); }
 
 // ICY metadata — `Artist - Title`, pushed by the server whenever the track
-// changes. M4 draws this on the bottom line of the screen (§6).
-void audio_showstreamtitle(const char* info) { Log::printf("[title] %s\n", info); }
+// changes. This runs on the audio task, so it does the cheapest thing that can
+// work and hands the string over; the redraw happens on core 0 once loop()
+// collects it (§6, D14).
+void audio_showstreamtitle(const char* info) {
+  Log::printf("[title] %s\n", info);
+  setStreamTitle(info);
+}
 
 void audio_bitrate(const char* info) { Log::printf("[bitrate] %s\n", info); }
 
@@ -224,6 +256,7 @@ void audio_bitrate(const char* info) { Log::printf("[bitrate] %s\n", info); }
 namespace AudioEngine {
 
 void begin() {
+  titleMutex = xSemaphoreCreateMutex();
   commandQueue = xQueueCreate(kQueueDepth, sizeof(Command));
 
   if (commandQueue == nullptr) {
@@ -256,6 +289,22 @@ bool stop() {
 }
 
 bool isPlaying() { return audio.isRunning(); }
+
+bool takeStreamTitle(char* out, size_t outSize) {
+  if (out == nullptr || outSize == 0 || titleMutex == nullptr) {
+    return false;
+  }
+
+  xSemaphoreTake(titleMutex, portMAX_DELAY);
+  const bool isNew = streamTitleIsNew;
+  if (isNew) {
+    strlcpy(out, streamTitle, outSize);
+    streamTitleIsNew = false;
+  }
+  xSemaphoreGive(titleMutex);
+
+  return isNew;
+}
 
 State state() { return streamState; }
 

@@ -3,3 +3,10 @@
 # would leave a trailing '\r' on the last field of every row — turning a logo
 # name into "RA_DR.png\r", which LittleFS cannot open. Keep it LF everywhere.
 Esp32InternetRadio/data/stations.csv text eol=lf
+
+# The logos are raw RGB565 pixel dumps, not text. Git's binary detection would
+# almost certainly get this right on its own — 16,928 bytes of image data will
+# contain NULs — but "almost certainly" is how the line above became necessary,
+# and a single logo mangled by CRLF conversion would be a torn picture on the
+# screen with nothing in any log to explain it.
+Esp32InternetRadio/data/logos/*.565 binary

@@ -1,77 +1,77 @@
 button,frequency,name,url,logo
-L,87,ROCK ANTENNE Deutschrock,https://stream.rockantenne.de/deutschrock/stream/mp3,RA_DR.png
-L,88,ROCK ANTENNE Deutschrock,https://stream.rockantenne.de/deutschrock/stream/mp3,RA_DR.png
-L,89,ROCK ANTENNE Heavy Metal,https://stream.rockantenne.de/heavy-metal/stream/mp3,RA_HM.png
-L,90,ROCK ANTENNE Symphonic Rock,https://s1-webradio.rockantenne.de/symphonic-rock/stream/mp3,RA_SR.png
-L,91,Radio Bob Metal,https://streams.radiobob.de/bob-metal/mp3-192/,RB_M.png
-L,92,Best of Rock.FM - Hard rock,https://bestofrockfm.stream.vip/hardrock/aac-64/radioplayer,BOR_HR.png
-L,93,Best of Rock.FM - Metal,https://bestofrockfm.stream.vip/metal/aac-64/radioplayer,BOR_M.png
-L,94,ROCK ANTENNE Coversongs,https://stream.rockantenne.de/coversongs/stream/mp3,RA_C.png
-L,95,ROCK FM Metal,https://stream.regenbogen2.de/metal/aac-128/homepage,RFM_M.png
-L,96,ROCK ANTENNE Hair Metal,https://stream.rockantenne.de/hair-metal/stream/mp3,RA_HRM.png
-L,97,ROCK ANTENNE Hard Rock,https://stream.rockantenne.de/rock-antenne-hard-rock/stream/mp3,RA_HR.png
-L,98,Radio Bob 2000-er rock,https://streams.radiobob.de/2000er/mp3-192/,RB_2000.png
-L,99,Radio Bob Metallica,https://streams.radiobob.de/metallica/mp3-192/,RB_MET.png
-L,100,Best of rock: Rammstein,https://bestofrockfm.stream.vip/rammstein/aac-64/radioplayer,BOR_RAMM.png
-L,101,Best of rock: Rammstein,https://bestofrockfm.stream.vip/rammstein/aac-64/radioplayer,BOR_RAMM.png
-L,102,Radio Bob Iron Maiden,https://streams.radiobob.de/bob-ironmaiden/mp3-192/,RB_IM.png
-L,103,Radio Bob Iron Maiden,https://streams.radiobob.de/bob-ironmaiden/mp3-192/,RB_IM.png
-L,104,Radio Bob Ozzy Ousbourne,https://streams.radiobob.de/ozzyosbourne/mp3-192,RB_OZZY.png
-L,105,Radio Bob Ozzy Ousbourne,https://streams.radiobob.de/ozzyosbourne/mp3-192,RB_OZZY.png
-M,87,ROCK ANTENNE Modern Metal,https://stream.rockantenne.de/modern-metal/stream/mp3,RA_MM.png
-M,88,ROCK ANTENNE Modern Metal,https://stream.rockantenne.de/modern-metal/stream/mp3,RA_MM.png
-M,89,Power Rock 93.9 KTG,https://server01.nkstreaming.com:8103/stream,WKTG.png
-M,90,Pure Rock KNAC,https://s6.autopo.st/proxy/ggjdvxin?mp=/stream,KNAG.png
-M,91,94.1 WJJO,https://26153.live.streamtheworld.com/WJJOFMAAC.aac,WJJOFM.png
-M,92,Pinguin On the rocks,https://streams.pinguinradio.com/PinguinOnTheRocks192.mp3,pinguinrock.png
-M,93,Pinguin Aardschok,https://streams.pinguinradio.com/Aardschok192.mp3,pinguinaardschok.png
-M,94,Radio Ultra 100.5,https://nashe1.hostingradio.ru/ultra-128.mp3,RadioUltra.png
-M,95,99.7 The Blitz,https://d25j5qm9y8ulag.cloudfront.net/574/49ac6850db46b3df097df2fa05e569d3/49ac6850db46b3df097df2fa05e569d3_803176390.aac?sid=48,BLITZ.png
-M,96,Eldoradio,http://sc.bce.lu/eldo,Eldoradio.png
-M,97,TotalRock,https://s3.citrus3.com:8056/stream,TotalRock.png
-M,98,WSOU 89.5 Pirate Radio,https://stream.surfernetwork.com/1fvoynxxaqduv,WSOU.png
-M,99,95.1 WSNJ,https://stream.aiir.com/yiwebuefmmwuv,WSNJ.png
-M,100,Radio X - London,https://media-ssl.musicradio.com/RadioXLondon,RadioX.png
-M,101,Radio X - London,https://media-ssl.musicradio.com/RadioXLondon,RadioX.png
-M,102,NASHE Radio (Moscow),https://nashe1.hostingradio.ru/nashe-128.mp3,Nashe.png
-M,103,NASHE Radio (Moscow),https://nashe1.hostingradio.ru/nashe-128.mp3,Nashe.png
-M,104,Radio MAXIMUM,https://maximum.hostingradio.ru/maximum96.aacp,Maximum.png
-M,105,Radio MAXIMUM,https://maximum.hostingradio.ru/maximum96.aacp,Maximum.png
-K,87,Pinguin fiesta,https://s4.radio.co/s9f9f14f9b/listen,PinguinFiesta.png
-K,88,Pinguin fiesta,https://s4.radio.co/s9f9f14f9b/listen,PinguinFiesta.png
-K,89,Pinguin groove,https://samcloud.spacial.com/api/listen?sid=98587&m=sc&rid=174412,PinguinGroove.png
-K,90,Pinguin vintage,https://samcloud.spacial.com/api/listen?sid=131111&rid=275910&m=sc,PinguinVintage.png
-K,91,Pinguin pop,https://samcloud.spacial.com/api/listen?sid=98586&m=sc&rid=174409,PinguinPop.png
-K,92,Pinguin classic,https://streams.pinguinradio.com/PinguinClassics192.mp3,PinguinClassic.png
-K,93,181.FM The Beatles Channel,http://listen.181fm.com/181-beatles_128k.mp3,RadioBeatles.png
-K,94,181.FM Power 181 (Top 40),http://listen.181fm.com/181-power_128k.mp3,Radio181.png
-K,95,Biggest LIttle Radio,https://26343.live.streamtheworld.com/SAM06AAC012_SC,BiggestLittleRadio.png
-K,96,SUNSHINE LIVE,https://stream.sunshine-live.de/live/mp3-192/homepage/,SunshineLive.png
-K,97,104.6 RTL Das Beste der 80er,https://stream.104.6rtl.com/rtl-80er/mp3-128/,RTL.png
-K,98,L'essentiel Radio,https://lessentielradio.ice.infomaniak.ch/lessentielradio-128.mp3,Lesentinel.png
-K,99,Radio LRB,http://zeus.lrb.lu:8000/lrb.live,LRB.png
-K,100,Radio Frei,http://streaming.fueralle.org:8000/Radio-F.R.E.I,FREI.png
-K,101,Radio Frei,http://streaming.fueralle.org:8000/Radio-F.R.E.I,FREI.png
-K,102,Deutschlandfunk Kultur,https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3,DRK.png
-K,103,Deutschlandfunk Kultur,https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3,DRK.png
-K,104,Radio F 94.5 - Made in Germany,https://edge81.streamonkey.net/fhn-radiofmadeingermany,RadioF.png
-K,105,Radio F 94.5 - Made in Germany,https://edge81.streamonkey.net/fhn-radiofmadeingermany,RadioF.png
-U,87,Radio Seefunk,https://webradio.radio-seefunk.de/live64,Seefunk.png
-U,88,Radio Seefunk,https://webradio.radio-seefunk.de/live64,Seefunk.png
-U,89,Radio 91.2,https://stream.lokalradio.nrw/4453z68,RadioDortmund.png
-U,90,ENERGY Berlin,https://frontend.streamonkey.net/energy-berlin/stream/mp3,Energy.png
-U,91,AB Live,https://stream.antenne.de/antenne/stream/mp3,AB_Live.png
-U,92,AB 90er Party,https://stream.antenne.de/antenne-bayern-90er-party/stream/mp3,AB_90Party.png
-U,93,AB 90er Hits,https://stream.antenne.de/90er-hits/stream/mp3,AB_90Hits.png
-U,94,AB 2000er Hits,https://stream.antenne.de/2000er-hits/stream/mp3,AB_2000Hits.png
-U,95,AB Greatest Hits,https://stream.antenne.de/greatest-hits/stream/mp3,AB_GreatestHits.png
-U,96,AB Workout Mix,https://stream.antenne.de/workout-hits/stream/mp3,AB_Workout.png
-U,97,AB Top 40,https://stream.antenne.de/top-40/stream/mp3,AB_Top40.png
-U,98,AB Dance XXL,https://stream.antenne.de/dance-xxl/stream/mp3,AB_DanceXXL.png
-U,99,AB Relax,https://stream.antenne.de/relax/stream/mp3,AB_Relax.png
-U,100,AB Weihnachts-Classics,https://stream.antenne.de/oldie-antenne-event/stream/mp3,AB_Weinachts.png
-U,101,AB Weihnachts-Classics,https://stream.antenne.de/oldie-antenne-event/stream/mp3,AB_Weinachts.png
-U,102,Europa Plus,https://ep128.hostingradio.ru:8030/ep128,EuropaPlus.png
-U,103,Europa Plus,https://ep128.hostingradio.ru:8030/ep128,EuropaPlus.png
-U,104,DFM Radio 101.2 FM,https://dfm.hostingradio.ru/dfm96.aacp,DFM.png
-U,105,DFM Radio 101.2 FM,https://dfm.hostingradio.ru/dfm96.aacp,DFM.png
+L,87,ROCK ANTENNE Deutschrock,https://stream.rockantenne.de/deutschrock/stream/mp3,RA_DR.565
+L,88,ROCK ANTENNE Deutschrock,https://stream.rockantenne.de/deutschrock/stream/mp3,RA_DR.565
+L,89,ROCK ANTENNE Heavy Metal,https://stream.rockantenne.de/heavy-metal/stream/mp3,RA_HM.565
+L,90,ROCK ANTENNE Symphonic Rock,https://s1-webradio.rockantenne.de/symphonic-rock/stream/mp3,RA_SR.565
+L,91,Radio Bob Metal,https://streams.radiobob.de/bob-metal/mp3-192/,RB_M.565
+L,92,Best of Rock.FM - Hard rock,https://bestofrockfm.stream.vip/hardrock/aac-64/radioplayer,BOR_HR.565
+L,93,Best of Rock.FM - Metal,https://bestofrockfm.stream.vip/metal/aac-64/radioplayer,BOR_M.565
+L,94,ROCK ANTENNE Coversongs,https://stream.rockantenne.de/coversongs/stream/mp3,RA_C.565
+L,95,ROCK FM Metal,https://stream.regenbogen2.de/metal/aac-128/homepage,RFM_M.565
+L,96,ROCK ANTENNE Hair Metal,https://stream.rockantenne.de/hair-metal/stream/mp3,RA_HRM.565
+L,97,ROCK ANTENNE Hard Rock,https://stream.rockantenne.de/rock-antenne-hard-rock/stream/mp3,RA_HR.565
+L,98,Radio Bob 2000-er rock,https://streams.radiobob.de/2000er/mp3-192/,RB_2000.565
+L,99,Radio Bob Metallica,https://streams.radiobob.de/metallica/mp3-192/,RB_MET.565
+L,100,Best of rock: Rammstein,https://bestofrockfm.stream.vip/rammstein/aac-64/radioplayer,BOR_RAMM.565
+L,101,Best of rock: Rammstein,https://bestofrockfm.stream.vip/rammstein/aac-64/radioplayer,BOR_RAMM.565
+L,102,Radio Bob Iron Maiden,https://streams.radiobob.de/bob-ironmaiden/mp3-192/,RB_IM.565
+L,103,Radio Bob Iron Maiden,https://streams.radiobob.de/bob-ironmaiden/mp3-192/,RB_IM.565
+L,104,Radio Bob Ozzy Ousbourne,https://streams.radiobob.de/ozzyosbourne/mp3-192,RB_OZZY.565
+L,105,Radio Bob Ozzy Ousbourne,https://streams.radiobob.de/ozzyosbourne/mp3-192,RB_OZZY.565
+M,87,ROCK ANTENNE Modern Metal,https://stream.rockantenne.de/modern-metal/stream/mp3,RA_MM.565
+M,88,ROCK ANTENNE Modern Metal,https://stream.rockantenne.de/modern-metal/stream/mp3,RA_MM.565
+M,89,Power Rock 93.9 KTG,https://server01.nkstreaming.com:8103/stream,WKTG.565
+M,90,Pure Rock KNAC,https://s6.autopo.st/proxy/ggjdvxin?mp=/stream,KNAG.565
+M,91,94.1 WJJO,https://26153.live.streamtheworld.com/WJJOFMAAC.aac,WJJOFM.565
+M,92,Pinguin On the rocks,https://streams.pinguinradio.com/PinguinOnTheRocks192.mp3,pinguinrock.565
+M,93,Pinguin Aardschok,https://streams.pinguinradio.com/Aardschok192.mp3,pinguinaardschok.565
+M,94,Radio Ultra 100.5,https://nashe1.hostingradio.ru/ultra-128.mp3,RadioUltra.565
+M,95,99.7 The Blitz,https://d25j5qm9y8ulag.cloudfront.net/574/49ac6850db46b3df097df2fa05e569d3/49ac6850db46b3df097df2fa05e569d3_803176390.aac?sid=48,BLITZ.565
+M,96,Eldoradio,http://sc.bce.lu/eldo,Eldoradio.565
+M,97,TotalRock,https://s3.citrus3.com:8056/stream,TotalRock.565
+M,98,WSOU 89.5 Pirate Radio,https://stream.surfernetwork.com/1fvoynxxaqduv,WSOU.565
+M,99,95.1 WSNJ,https://stream.aiir.com/yiwebuefmmwuv,WSNJ.565
+M,100,Radio X - London,https://media-ssl.musicradio.com/RadioXLondon,RadioX.565
+M,101,Radio X - London,https://media-ssl.musicradio.com/RadioXLondon,RadioX.565
+M,102,NASHE Radio (Moscow),https://nashe1.hostingradio.ru/nashe-128.mp3,Nashe.565
+M,103,NASHE Radio (Moscow),https://nashe1.hostingradio.ru/nashe-128.mp3,Nashe.565
+M,104,Radio MAXIMUM,https://maximum.hostingradio.ru/maximum96.aacp,Maximum.565
+M,105,Radio MAXIMUM,https://maximum.hostingradio.ru/maximum96.aacp,Maximum.565
+K,87,Pinguin fiesta,https://s4.radio.co/s9f9f14f9b/listen,PinguinFiesta.565
+K,88,Pinguin fiesta,https://s4.radio.co/s9f9f14f9b/listen,PinguinFiesta.565
+K,89,Pinguin groove,https://samcloud.spacial.com/api/listen?sid=98587&m=sc&rid=174412,PinguinGroove.565
+K,90,Pinguin vintage,https://samcloud.spacial.com/api/listen?sid=131111&rid=275910&m=sc,PinguinVintage.565
+K,91,Pinguin pop,https://samcloud.spacial.com/api/listen?sid=98586&m=sc&rid=174409,PinguinPop.565
+K,92,Pinguin classic,https://streams.pinguinradio.com/PinguinClassics192.mp3,PinguinClassic.565
+K,93,181.FM The Beatles Channel,http://listen.181fm.com/181-beatles_128k.mp3,RadioBeatles.565
+K,94,181.FM Power 181 (Top 40),http://listen.181fm.com/181-power_128k.mp3,Radio181.565
+K,95,Biggest LIttle Radio,https://26343.live.streamtheworld.com/SAM06AAC012_SC,BiggestLittleRadio.565
+K,96,SUNSHINE LIVE,https://stream.sunshine-live.de/live/mp3-192/homepage/,SunshineLive.565
+K,97,104.6 RTL Das Beste der 80er,https://stream.104.6rtl.com/rtl-80er/mp3-128/,RTL.565
+K,98,L'essentiel Radio,https://lessentielradio.ice.infomaniak.ch/lessentielradio-128.mp3,Lesentinel.565
+K,99,Radio LRB,http://zeus.lrb.lu:8000/lrb.live,LRB.565
+K,100,Radio Frei,http://streaming.fueralle.org:8000/Radio-F.R.E.I,FREI.565
+K,101,Radio Frei,http://streaming.fueralle.org:8000/Radio-F.R.E.I,FREI.565
+K,102,Deutschlandfunk Kultur,https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3,DRK.565
+K,103,Deutschlandfunk Kultur,https://st02.sslstream.dlf.de/dlf/02/128/mp3/stream.mp3,DRK.565
+K,104,Radio F 94.5 - Made in Germany,https://edge81.streamonkey.net/fhn-radiofmadeingermany,RadioF.565
+K,105,Radio F 94.5 - Made in Germany,https://edge81.streamonkey.net/fhn-radiofmadeingermany,RadioF.565
+U,87,Radio Seefunk,https://webradio.radio-seefunk.de/live64,Seefunk.565
+U,88,Radio Seefunk,https://webradio.radio-seefunk.de/live64,Seefunk.565
+U,89,Radio 91.2,https://stream.lokalradio.nrw/4453z68,RadioDortmund.565
+U,90,ENERGY Berlin,https://frontend.streamonkey.net/energy-berlin/stream/mp3,Energy.565
+U,91,AB Live,https://stream.antenne.de/antenne/stream/mp3,AB_Live.565
+U,92,AB 90er Party,https://stream.antenne.de/antenne-bayern-90er-party/stream/mp3,AB_90Party.565
+U,93,AB 90er Hits,https://stream.antenne.de/90er-hits/stream/mp3,AB_90Hits.565
+U,94,AB 2000er Hits,https://stream.antenne.de/2000er-hits/stream/mp3,AB_2000Hits.565
+U,95,AB Greatest Hits,https://stream.antenne.de/greatest-hits/stream/mp3,AB_GreatestHits.565
+U,96,AB Workout Mix,https://stream.antenne.de/workout-hits/stream/mp3,AB_Workout.565
+U,97,AB Top 40,https://stream.antenne.de/top-40/stream/mp3,AB_Top40.565
+U,98,AB Dance XXL,https://stream.antenne.de/dance-xxl/stream/mp3,AB_DanceXXL.565
+U,99,AB Relax,https://stream.antenne.de/relax/stream/mp3,AB_Relax.565
+U,100,AB Weihnachts-Classics,https://stream.antenne.de/oldie-antenne-event/stream/mp3,AB_Weinachts.565
+U,101,AB Weihnachts-Classics,https://stream.antenne.de/oldie-antenne-event/stream/mp3,AB_Weinachts.565
+U,102,Europa Plus,https://ep128.hostingradio.ru:8030/ep128,EuropaPlus.565
+U,103,Europa Plus,https://ep128.hostingradio.ru:8030/ep128,EuropaPlus.565
+U,104,DFM Radio 101.2 FM,https://dfm.hostingradio.ru/dfm96.aacp,DFM.565
+U,105,DFM Radio 101.2 FM,https://dfm.hostingradio.ru/dfm96.aacp,DFM.565

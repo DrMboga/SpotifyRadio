@@ -42,6 +42,28 @@ bool playUrl(const char* url);
 // disconnecting (§6). Also cancels reconnect supervision.
 bool stop();
 
+// Longest ICY title kept. Only about 26 characters reach the screen at x=3
+// (§6), but the whole line is held so the truncation stays a display decision
+// rather than something baked in on the audio side.
+constexpr size_t kMaxStreamTitleLength = 128;
+
+// Takes the most recent ICY title, if one has arrived since the last call.
+// Returns false and leaves `out` untouched when there is nothing new, so the
+// caller can poll it every pass of loop() and only redraw when it says true.
+//
+// This is the one piece of state that flows core 1 -> core 0. ESP32-audioI2S
+// raises audio_showstreamtitle() on the audio task, and drawing from there
+// would put a TFT write inside the decode loop — the exact stall D14 exists to
+// prevent. So the title is copied into a mutex-protected buffer and collected
+// from loop() instead.
+//
+// A station change clears any title not yet collected: an ICY line that arrived
+// while the previous stream was being torn down belongs to the previous
+// station, and drawing it under the new station's name would be wrong for as
+// long as the new one took to announce a track — which for some streams is the
+// whole song.
+bool takeStreamTitle(char* out, size_t outSize);
+
 // Diagnostics, safe to read from core 0.
 bool isPlaying();
 State state();

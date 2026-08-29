@@ -5,6 +5,19 @@
 // Reads  Tools/StationMining/RadioStationsList.md  (+ Assets/)
 // Writes Esp32InternetRadio/data/stations.csv      (+ data/logos/)
 //
+// M4: the logos are converted here rather than copied. `Assets/` holds the
+// PNGs a human works with; `data/logos/` gets `.565` files, which are nothing
+// but 92x92 little-endian RGB565 pixels — 16,928 bytes, no header, ready to be
+// read a row at a time and pushed straight at the panel.
+//
+// That is a change to D5, and it was forced by the board rather than chosen.
+// PNGdec needs a 45,604-byte contiguous allocation for zlib's sliding window,
+// and the ESP32 only has one at boot: with an HTTPS stream live the largest
+// free block measures 16,372–19,444, and even with the stream stopped it is
+// 38,900. Decoding on the device therefore worked at boot and nowhere else.
+// Doing it here costs flash and gives up "drop a PNG in data/logos/" — the
+// PNG still drops into Assets/, it just has to go through this script.
+//
 // The markdown table is the source of truth a human edits; data/ is generated
 // and should never be hand-edited. Frequency ranges ("100-101") expand to one
 // CSV row per dial position, because the firmware indexes 4 banks x 19 slots
@@ -16,8 +29,9 @@
 // hand-rolled and splits on commas — there is no quoting). --force downgrades
 // those to warnings and drops the offending rows.
 
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync, rmSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +43,7 @@ const OUT_LOGOS = path.join(OUT, 'logos');
 
 const MAX_URL = 192;          // AudioEngine::kMaxUrlLength — playUrl() returns false past it
 const LOGO_PX = 92;           // no runtime scaler; anything else is a data error
+const LOGO_BYTES = LOGO_PX * LOGO_PX * 2;   // Display.cpp checks the file is exactly this
 const BUTTONS = ['L', 'M', 'K', 'U'];
 const FREQ_MIN = 87, FREQ_MAX = 105;
 
@@ -52,6 +67,94 @@ function pngSize(file) {
   if (b.slice(0, 8).toString('hex') !== '89504e470d0a1a0a') return null;
   return { w: b.readUInt32BE(16), h: b.readUInt32BE(20), bytes: b.length };
 }
+
+// --- PNG -> RGB565 ----------------------------------------------------------
+// Deliberately not a PNG library. This script has no dependencies and installs
+// nothing, which is worth keeping for a tool that runs once a season; and the
+// input is not "PNG" in general but the 60 files in Assets/, every one of them
+// 92x92, 8-bit, colour type 6, non-interlaced. So this handles exactly that and
+// throws on anything else, rather than silently mis-rendering it.
+//
+// node:zlib does the only genuinely hard part. What is left is un-filtering:
+// each row is prefixed with one filter byte, and PNG filters are defined
+// against the reconstructed bytes to the left and above, not the raw ones.
+function pngToRgb565(file) {
+  const b = readFileSync(file);
+  const width = b.readUInt32BE(16), height = b.readUInt32BE(20);
+  const depth = b[24], colorType = b[25], interlace = b[28];
+
+  if (depth !== 8 || colorType !== 6 || interlace !== 0) {
+    throw new Error(`${path.basename(file)}: need 8-bit RGBA non-interlaced, got `
+                    + `depth=${depth} colour=${colorType} interlace=${interlace}`);
+  }
+
+  // IDAT is allowed to be split across any number of chunks.
+  const parts = [];
+  for (let at = 8; at + 8 <= b.length;) {
+    const length = b.readUInt32BE(at);
+    const type = b.toString('ascii', at + 4, at + 8);
+    if (type === 'IDAT') parts.push(b.subarray(at + 8, at + 8 + length));
+    if (type === 'IEND') break;
+    at += length + 12;   // length + type + data + CRC
+  }
+
+  const raw = zlib.inflateSync(Buffer.concat(parts));
+  const bpp = 4, stride = width * bpp;
+
+  if (raw.length !== (stride + 1) * height) {
+    throw new Error(`${path.basename(file)}: inflated to ${raw.length} bytes, expected ${(stride + 1) * height}`);
+  }
+
+  const out = Buffer.alloc(width * height * 2);
+  const line = Buffer.alloc(stride), prev = Buffer.alloc(stride);
+
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    raw.copy(line, 0, y * (stride + 1) + 1, (y + 1) * (stride + 1));
+
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? line[x - bpp] : 0;   // left
+      const bb = prev[x];                       // above
+      const c = x >= bpp ? prev[x - bpp] : 0;   // above-left
+      let value = line[x];
+
+      if (filter === 1) value += a;
+      else if (filter === 2) value += bb;
+      else if (filter === 3) value += (a + bb) >> 1;
+      else if (filter === 4) {
+        const p = a + bb - c;
+        const pa = Math.abs(p - a), pb = Math.abs(p - bb), pc = Math.abs(p - c);
+        value += (pa <= pb && pa <= pc) ? a : (pb <= pc ? bb : c);
+      } else if (filter !== 0) {
+        throw new Error(`${path.basename(file)}: row ${y} has filter ${filter}`);
+      }
+
+      line[x] = value & 0xff;
+    }
+
+    for (let x = 0; x < width; x++) {
+      // §6 draws on black and the firmware has no alpha channel to give the
+      // panel, so transparency is composited here, once, instead of every
+      // station change.
+      const alpha = line[x * bpp + 3];
+      const r = Math.round(line[x * bpp] * alpha / 255);
+      const g = Math.round(line[x * bpp + 1] * alpha / 255);
+      const bl = Math.round(line[x * bpp + 2] * alpha / 255);
+
+      // Little-endian, because the ESP32 is and Display.cpp reads the bytes
+      // straight into a uint16_t row with no swapping.
+      out.writeUInt16LE(((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (bl >> 3), (y * width + x) * 2);
+    }
+
+    line.copy(prev);
+  }
+
+  return out;
+}
+
+// The name that reaches the CSV, and therefore LittleFS: the .png in the table
+// is the source asset, the .565 beside it is what the radio opens.
+const rgb565Name = (logo) => logo.replace(/\.png$/i, '.565');
 
 // --- parse the markdown table -----------------------------------------------
 const rows = [];
@@ -140,22 +243,40 @@ const lines = ['button,frequency,name,url,logo'];
 for (const button of BUTTONS) {
   for (let f = FREQ_MIN; f <= FREQ_MAX; f++) {
     const row = slots.get(button + f);
-    if (row) lines.push(`${button},${f},${row.name},${row.url},${row.logo}`);
+    if (row) lines.push(`${button},${f},${row.name},${row.url},${rgb565Name(row.logo)}`);
   }
 }
 writeFileSync(path.join(OUT, 'stations.csv'), lines.join('\n') + '\n');
 
 let logoBytes = 0;
 for (const logo of logosUsed) {
-  copyFileSync(path.join(ASSETS, logo), path.join(OUT_LOGOS, logo));
-  logoBytes += pngSize(path.join(ASSETS, logo)).bytes;
+  const pixels = pngToRgb565(path.join(ASSETS, logo));
+
+  // Every logo is the same size by construction, and Display.cpp rejects a
+  // file that is not exactly this — the only check a headerless format can
+  // offer, so it is worth being sure of on this side too.
+  if (pixels.length !== LOGO_BYTES) {
+    console.error(`${logo}: converted to ${pixels.length} bytes, expected ${LOGO_BYTES}`);
+    process.exit(1);
+  }
+
+  writeFileSync(path.join(OUT_LOGOS, rgb565Name(logo)), pixels);
+  logoBytes += pixels.length;
 }
 
 // --- report -----------------------------------------------------------------
 const csvBytes = readFileSync(path.join(OUT, 'stations.csv')).length;
 console.log(`stations.csv   ${slots.size}/76 slots filled, ${lines.length - 1} rows, ${csvBytes} bytes`);
-console.log(`logos/         ${logosUsed.size} files, ${(logoBytes / 1024).toFixed(1)} KB  (largest ${(Math.max(...[...logosUsed].map((l) => pngSize(path.join(ASSETS, l)).bytes)) / 1024).toFixed(1)} KB)`);
-console.log(`LittleFS total ${((logoBytes + csvBytes) / 1024).toFixed(1)} KB  → the D6 partition input`);
+const pngBytes = [...logosUsed].reduce((sum, l) => sum + pngSize(path.join(ASSETS, l)).bytes, 0);
+console.log(`logos/         ${logosUsed.size} .565 files, ${(logoBytes / 1024).toFixed(1)} KB  (${LOGO_BYTES} bytes each, from ${(pngBytes / 1024).toFixed(1)} KB of PNG)`);
+
+// LittleFS rounds every file up to a 4 KB block, and with 60-odd files that
+// overhead is not a rounding error — M3 measured 748 KB on the board against
+// 595 KB of content. Report what the partition will actually hold.
+const BLOCK = 4096;
+const blocks = (n) => Math.ceil(n / BLOCK) * BLOCK;
+const onFlash = logosUsed.size * blocks(LOGO_BYTES) + blocks(csvBytes);
+console.log(`LittleFS total ${((logoBytes + csvBytes) / 1024).toFixed(1)} KB of content, ~${(onFlash / 1024).toFixed(1)} KB in 4 KB blocks  → the D6 partition input`);
 
 const urls = [...new Set([...slots.values()].map((r) => r.url))];
 const lens = urls.map((u) => u.length).sort((a, b) => a - b);

@@ -4,6 +4,7 @@
 #include <esp_heap_caps.h>
 
 #include "AudioEngine.h"
+#include "Display.h"
 #include "Log.h"
 #include "TestStations.h"
 
@@ -82,6 +83,13 @@ void beginChange() {
   phaseStartedAt = millis();
   connectMs = 0;
   attemptsAtRequest = AudioEngine::connectAttempts();
+
+  // The storm measures what one station change costs the heap, and from M4
+  // on a station change includes a screen redraw — so the redraw has to be
+  // in the loop, or the number stops describing the operation it is named
+  // after. Bench stations have no dial position and no logo, so this is the
+  // name line only; the PNG decoder is exercised from the `r` command.
+  Display::showBenchStation(kTestStations[stationIndex].name);
 
   AudioEngine::playUrl(kTestStations[stationIndex].url);
 }
