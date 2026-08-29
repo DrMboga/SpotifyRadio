@@ -349,6 +349,12 @@ which is dropped.
 
 - Font is the 5×7 bitmap from `RadioApp.Hardware/Helpers/Font5x7.cs` (6 px advance, clipped at the right
   edge). Port it rather than inventing a new one, so text metrics match.
+- **That font is ASCII-only, which makes it a rule about the data, not just the code.** It has no glyph
+  above U+007F, so a station name carrying one draws as rubbish — and the CSV parser is byte-transparent,
+  so nothing complains until the screen does. `Tools/StationMining/build-data.mjs` fails the build on it.
+- At `x=21` with a 6 px advance on a 160 px screen, **23 characters fit** and the rest is clipped. That is
+  the intended behaviour, but it does cut the distinguishing half off the longer names, so the build
+  reports every name that will clip.
 - The song line is refreshed independently by blanking `y = 117..127` and redrawing — the Pi version's
   `CleanRadioSongInfoNotification`. If the stream sends no ICY title, the line stays empty.
 - **Empty slot:** black screen, frequency only. No audio.

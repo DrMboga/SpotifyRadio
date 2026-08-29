@@ -21,7 +21,7 @@ M | 90 | USA | Pure Rock KNAC | https://www.knac.fm/listen-live/ | https://s6.au
 M | 91 | USA | 94.1 WJJO | https://player.listenlive.co/72051/en/songhistory | https://26153.live.streamtheworld.com/WJJOFMAAC.aac | WJJOFM.png
 M | 92 | Netherlands | Pinguin On the rocks | https://pinguinradio.com/player/pinguinrock| https://streams.pinguinradio.com/PinguinOnTheRocks192.mp3 | pinguinrock.png
 M | 93 | Netherlands | Pinguin Aardschok | https://pinguinradio.com/player/pinguinaardschok| https://streams.pinguinradio.com/Aardschok192.mp3 | pinguinaardschok.png
-M | 94 | Russia | Ultra 100.5 (Радио Ультра) | https://radioultra.ru/| https://nashe1.hostingradio.ru/ultra-128.mp3 | RadioUltra.png
+M | 94 | Russia | Radio Ultra 100.5 | https://radioultra.ru/| https://nashe1.hostingradio.ru/ultra-128.mp3 | RadioUltra.png
 M | 95 | USA | 99.7 The Blitz | https://theblitz.com/ | https://d25j5qm9y8ulag.cloudfront.net/574/49ac6850db46b3df097df2fa05e569d3/49ac6850db46b3df097df2fa05e569d3_803176390.aac?sid=48 | BLITZ.png
 M | 96 | Luxembourg | Eldoradio | https://www.eldo.lu/ | http://sc.bce.lu/eldo | Eldoradio.png
 M | 97 | UK | TotalRock | https://totalrock.com/ | https://s3.citrus3.com:8056/stream | TotalRock.png
@@ -59,4 +59,4 @@ U | 98 | Germany | ANTENNE BAYERN Dance XXL | https://www.antenne.de/webradio/da
 U | 99 | Germany | ANTENNE BAYERN Relax | https://www.antenne.de/webradio/relax | https://stream.antenne.de/relax/stream/mp3 | AB_Relax.png
 U | 100-101 | Germany | ANTENNE BAYERN Weihnachts-Classics | https://www.antenne.de/webradio/oldie-antenne-event-weihnachten | https://stream.antenne.de/oldie-antenne-event/stream/mp3 | AB_Weinachts.png
 U | 102-103 | Russia | Europa Plus | https://europaplus.ru/?region=msk | https://ep128.hostingradio.ru:8030/ep128 | EuropaPlus.png
-U | 104-105 | Russia | DFM Радио 101.2 FM (DFM Radio) | https://dfm.ru/ |	https://dfm.hostingradio.ru/dfm96.aacp | DFM.png
+U | 104-105 | Russia | DFM Radio 101.2 FM | https://dfm.ru/ |	https://dfm.hostingradio.ru/dfm96.aacp | DFM.png

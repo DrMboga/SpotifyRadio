@@ -32,9 +32,20 @@ const LOGO_PX = 92;           // no runtime scaler; anything else is a data erro
 const BUTTONS = ['L', 'M', 'K', 'U'];
 const FREQ_MIN = 87, FREQ_MAX = 105;
 
+// §6: the station name is drawn at x=21 in the 5×7 font ported from
+// RadioApp.Hardware/Helpers/Font5x7.cs — 6 px advance, clipped at the right
+// edge of a 160 px screen. That font has no glyphs above U+007F, so a name
+// carrying any is a data error rather than a rendering compromise, and it is
+// worth failing on here: the CSV parser is byte-transparent, so the fault would
+// otherwise stay invisible until M4 draws it.
+const NAME_X = 21, SCREEN_W = 160, GLYPH_ADVANCE = 6;
+const NAME_FITS = Math.floor((SCREEN_W - NAME_X) / GLYPH_ADVANCE);  // 23
+
 const force = process.argv.includes('--force');
 const problems = [];
+const advisories = [];
 const warn = (row, message) => problems.push(`${TABLE.replace(REPO + path.sep, '')}:${row.line}  ${row.button} ${row.freq}  ${message}`);
+const advise = (row, message) => advisories.push(`${row.button} ${row.freq}`.padEnd(10) + message);
 
 function pngSize(file) {
   const b = readFileSync(file);
@@ -68,8 +79,29 @@ for (const row of rows) {
   if (/\.m3u8?($|\?)/.test(row.url)) { warn(row, `HLS/playlist URL — ESP32-audioI2S cannot follow it — ${row.name}`); continue; }
 
   // No quoting in the firmware parser, so a comma anywhere is unrepresentable.
-  for (const [field, value] of [['name', row.name], ['url', row.url], ['logo', row.logo]]) {
-    if (value.includes(',')) { warn(row, `comma in ${field} — the CSV parser cannot represent it`); }
+  // Drop the row rather than only warning: emitted, it would shift every field
+  // after it and the firmware would reject the whole line anyway.
+  const commaIn = [['name', row.name], ['url', row.url], ['logo', row.logo]]
+    .find(([, value]) => value.includes(','));
+  if (commaIn) {
+    warn(row, `comma in ${commaIn[0]} — the CSV parser cannot represent it`);
+    continue;
+  }
+
+  // The 5×7 font is ASCII-only (§6). Name the offending characters: "non-ASCII"
+  // alone sends you hunting through a line that looks fine in every editor.
+  const nonAscii = [...row.name].filter((c) => c.codePointAt(0) > 0x7f);
+  if (nonAscii.length) {
+    const shown = [...new Set(nonAscii)].join('');
+    warn(row, `non-ASCII in name (${shown}) — the 5x7 font cannot draw it — ${row.name}`);
+    continue;
+  }
+
+  // Clipping is the defined behaviour, not a fault (§6), so this is advice
+  // rather than an error — but a name whose distinguishing half falls off the
+  // right edge is worth seeing before M4 rather than during it.
+  if (row.name.length > NAME_FITS) {
+    advise(row, `name clips at ${NAME_FITS} chars: "${row.name.slice(0, NAME_FITS)}|${row.name.slice(NAME_FITS)}"`);
   }
 
   if (!row.logo || row.logo === '-') { warn(row, `no logo — ${row.name}`); continue; }
@@ -133,4 +165,11 @@ for (const button of BUTTONS) {
   const empty = [];
   for (let f = FREQ_MIN; f <= FREQ_MAX; f++) if (!slots.has(button + f)) empty.push(f);
   console.log(`bank ${button}         ${19 - empty.length}/19 filled${empty.length ? `, empty: ${empty.join(', ')}` : ''}`);
+}
+
+// Printed after the summary, not before it: these do not stop a build, and
+// burying the numbers above under 17 lines of advice is how advice gets ignored.
+if (advisories.length) {
+  console.log(`\n${advisories.length} name(s) will clip on the 160 px screen (§6 — this is defined behaviour, not an error):`);
+  advisories.forEach((a) => console.log('  ' + a));
 }

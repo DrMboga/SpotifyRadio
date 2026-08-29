@@ -419,14 +419,25 @@ compile-verified under `-Wall -Wextra` but has never executed:
 **Done when:** typing a bank+frequency plays the right stream, unknown slots go quiet, both codecs work,
 and you know how many KB the full logo set occupies.
 
-### Two Cyrillic station names will not render at M4
+### Station names are ASCII, and the build enforces it
 
-`M 94` and `U 104-105` carry Cyrillic in the name — *Ultra 100.5 (Радио Ультра)* and *DFM Радио 101.2
-FM*. M3 is byte-transparent and does not care, but §6's font is `Font5x7.cs` ported from v1 and it is
-ASCII-only. Either the names lose their Cyrillic — both already carry a Latin equivalent — or the font
-grows a Cyrillic page, which is a bigger change than it sounds, because the port exists precisely to
-keep the v1 metrics exact. **A data decision, not a code one, and cheaper to make before M4 than during
-it.**
+Two names carried Cyrillic — *Ultra 100.5 (Радио Ультра)* and *DFM Радио 101.2 FM (DFM Radio)*. The
+catalogue parser is byte-transparent and did not care, but §6's font is `Font5x7.cs` ported from v1 and
+has no glyphs above U+007F, so both would have drawn as rubbish at M4. Renamed to **Radio Ultra 100.5**
+and **DFM Radio 101.2 FM**; each already carried its Latin form in parentheses, so nothing was lost but
+the duplication. The font keeps the v1 metrics exactly, which is the whole point of porting it rather
+than substituting one.
+
+`build-data.mjs` now **fails** on non-ASCII in a name and names the offending characters, because a
+line containing them looks perfectly ordinary in every editor. The catalogue is pure ASCII end to end.
+
+**Left open on purpose: 17 of 60 names are longer than the screen.** The name is drawn at `x=21` in a
+6 px-advance font on a 160 px screen, so 23 characters fit and the rest is clipped — which §6 defines
+as the behaviour, not a fault. But clipping takes the distinguishing half of exactly the names that
+need it: `ANTENNE BAYERN Weihnach|ts-Classics`, `ANTENNE BAYERN Greatest| Hits`, and five more Antenne
+Bayern channels that are identical for the first 15 characters. The build lists them all at the end of
+every run rather than deciding for you; **shortening them is a data edit, and M4 is where it is worth
+looking at one on the actual screen first.**
 
 ---
 
