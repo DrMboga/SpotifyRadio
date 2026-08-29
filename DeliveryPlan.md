@@ -7,17 +7,17 @@ Incremental path from the original scaffold (a WiFi + HTTPS connectivity test th
 Each milestone is independently testable and ends in a state you could stop at. Nothing outside
 `Esp32InternetRadio/`, `Tools/` and the repo-root docs is touched (**D11**).
 
-**Where things stand (August 2026): M0, M1, M2 and MD are done.**
+**Where things stand (August 2026): M0, M1, M2 and MD are done; M3 runs on the board.**
 The board plays internet radio over HTTPS through a PCM5102A and holds its heap flat across both heavy
-station switching and long single-stream play. All **76 dial slots are filled** and every stream in
-them re-probed alive, so `Esp32InternetRadio/data/` is ready to upload. Next up is **M3**, which now
-starts from a complete catalogue rather than a shortlist.
+station switching and long single-stream play. All **76 dial slots are filled**, and the board parses
+them off LittleFS and plays any of them from a serial command. Two M3 checks remain — the AAC path and
+an empty slot — then **M4** adds the screen, where the largest free block is now the thing to watch.
 
 ```
 M0 ✅ docs + secrets
       │
       ▼
-M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 station catalogue ──▶ M4 display
+M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 catalogue ──▶ M4 display
       │                                          ▲                       │
       └── MD ✅ data mining (laptop, parallel) ──┘    M5 Pico UART ◀─────┘
                                                           │
@@ -380,7 +380,7 @@ from the headers; the tiebreak is whether the station’s own site points at it.
 - Verify an AAC station plays as well as an MP3 one (**D15**) — ROCK ANTENNE's `aacp` endpoint is the
   obvious test case, and its `mp3` sibling is the §5.2 comparison.
 
-### Built, August 2026 — not yet run on the board
+### Built, August 2026
 
 `StationCatalogue` mounts LittleFS, reads the CSV into **one ~7 KB allocation** and points 76 slots
 into it. One block rather than 228 small strings is the §7.3 choice: fragmentation is the risk, and
@@ -403,21 +403,68 @@ littlefs   594.9 KB of content in the 1.87 MB partition — D6 confirmed, ~32 % 
 csv        76/76 rows accepted against the firmware's own rules, 0 rejected
 ```
 
-**Still to do, and it needs the board** — there is no host compiler on this machine, so the parser is
-compile-verified under `-Wall -Wextra` but has never executed:
+### Measured on the board, August 2026 — it runs
 
-1. `pio run -t upload` **and** `pio run -t uploadfs` — the data partition is a separate step, and
-   without it the catalogue falls back to bench stations.
-2. Type `M 92`, `L 87`, `U 105`; confirm the right station plays and `[cat]` reports 76/76 filled.
-3. **D15:** `L 96` (ROCK ANTENNE Hair Metal, MP3) against `L 92` (Best of Rock.FM Hard Rock, AAC 64k).
-   Both ship in the catalogue, so the M2 bench set is no longer the only codec comparison.
-4. An empty slot going quiet **cannot be tested from the shipped catalogue** — it is 76/76 full. Delete
-   a row from `RadioStationsList.md`, rebuild, `uploadfs`, and check the slot stops audio and reports
-   `is empty` without an error.
-5. Settle the M2 decode-error period on WDR 4, now that `decode=` is a real field (see the M2 note).
+First execution of the parser, and it was clean: `76/76 slots filled, 0 rows rejected`. `L 87` played
+on boot, ICY titles arrived, and the two fields the M2 firmware got wrong now report properly —
+`decode=0` exists at all, and `rssi=-56` is a signal strength rather than the decode count.
+
+| | M2 baseline | M3 on the board | Δ |
+|---|---|---|---|
+| Free heap while streaming | ~85,000 | ~75,300 | −9,700 |
+| **Largest free block** | **26,600–28,700** | **14,836–16,372** | **−12,000 (−45 %)** |
+| Free heap after MP3 decoder init | 88,400 | 77,296 | −11,100 |
+| Stream buffer | 27,951 | 27,952 | unchanged |
+| Audio task stack headroom | 4,716 | 3,836 | −880 |
+
+The −9,700 of total heap is the ~6.7 KB catalogue blob plus LittleFS mount buffers, which is the price
+of the milestone and was expected. **The largest free block fell further than the total did**, which was
+not — one 6.7 KB allocation plus the filesystem's own caches cost twice their size in contiguous space.
+
+**LittleFS reports 765,952 of 1,966,080 bytes used — 39 %, not the 30 % the file sizes predict.** 61
+files rounded up to 4 KB blocks is 741,376 bytes against 608,992 of actual content, and metadata
+accounts for the remaining 24 KB. **748 KB is the real D6 number**, not 594.7 KB; the partition still
+holds comfortably, but the overhead is 25 % and scales with file *count*, so it is worth re-checking if
+the logo set ever grows.
+
+### This sets a hard constraint on M4
+
+A 92×92 RGB565 framebuffer is **16,928 bytes**. The largest free block is **14,836–16,372**. A full-image
+buffer no longer fits, and would fail *intermittently* — sometimes above the threshold, sometimes below —
+which is the worst way for it to fail.
+
+So M4 must decode PNG **straight to the TFT via PNGdec's line callback**, never into an image buffer.
+That was always the sensible design; it is now the only one that works. Check the largest free block
+again once the display is in, because M4 adds TFT_eSPI's own buffers on top of this.
+
+### Two observations from the boot log, neither a fault
+
+- **Every connect costs two TLS handshakes.** `stream.rockantenne.de` 302s to
+  `s8-webradio.rockantenne.de`, so the catalogue URL pays 1431 ms + 1425 ms ≈ 2.9 s and two rounds of
+  buffer alloc/free per station change. Storing the resolved edge host would halve it — but `s1` and
+  `s8` are clearly load-balanced, so pinning one trades a slower change for a station that dies when
+  that edge goes away. **Not worth doing before M7**, and only then with a re-probe.
+- `[E][WiFiClient.cpp:320] setSocketOption(): fail on 0, errno: 9, "Bad file number"` appears before
+  every TLS connect. It is the Arduino core setting a socket option before the socket exists — noise
+  from a pinned dependency (**D2**), harmless, and not worth chasing.
+
+**Still open, both needing the board.** Uploading and slot selection are done — `L 87` played on boot
+and `[cat]` reported 76/76.
+
+1. **D15 — the AAC path.** `L 92` (Best of Rock.FM Hard Rock, AAC 64k) against `L 96` (ROCK ANTENNE
+   Hair Metal, MP3). Both ship in the catalogue, so the M2 bench set is no longer the only codec
+   comparison. Watch `largest=` across the switch: AAC costs more decoder heap than MP3, and the block
+   is already down 45 % on M2.
+2. **The empty slot.** It **cannot be tested from the shipped catalogue** — every one of the 76 is
+   filled. Delete a row from `RadioStationsList.md`, `node Tools/StationMining/build-data.mjs`,
+   `pio run -t uploadfs`, and confirm the slot stops audio and prints `is empty` with no error.
+
+**Carried into M4 rather than held here:** the M2 decode-error period on WDR 4, now that `decode=` is a
+real field. Nothing about it blocks the display work, and M4's soak produces the same data anyway.
 
 **Done when:** typing a bank+frequency plays the right stream, unknown slots go quiet, both codecs work,
-and you know how many KB the full logo set occupies.
+and you know how many KB the full logo set occupies. **Three of the four are met** — only the AAC check
+and the empty slot remain.
 
 ### Station names are ASCII, and the build enforces it
 
@@ -454,7 +501,12 @@ repeat when stations change.
 - Reproduce the layout exactly: frequency `(100,2)`, logo 92×92 at `y=13` centred, name `(21,107)`, song
   `(3,117)`; independent blank-and-redraw of the song line (**§6**, **D10**).
 - PNG logo decode with PNGdec (**D5**), on core 0 only — never on the audio core (**D14**).
+- **Decode through PNGdec's line callback, straight to the TFT — never into a full-image buffer.** M3
+  measured the largest free block at 14,836–16,372 bytes and a 92×92 RGB565 frame is 16,928, so such a
+  buffer would fail, and fail *intermittently*. Re-check `largest=` once TFT_eSPI's own buffers are in.
 - Empty-slot and paused states both render as frequency-only on black.
+- Ten station names are longer than the 23 characters that fit at `x=21`. None collide once clipped, but
+  this is the milestone where a real screen can say whether the clipping looks acceptable.
 
 **Done when:** switching slots over serial redraws logo, name and frequency correctly, live ICY titles
 appear on the bottom line and update as tracks change, and — the real test — **a station change produces
