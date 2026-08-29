@@ -412,14 +412,23 @@ on boot, ICY titles arrived, and the two fields the M2 firmware got wrong now re
 | | M2 baseline | M3 on the board | Δ |
 |---|---|---|---|
 | Free heap while streaming | ~85,000 | ~75,300 | −9,700 |
-| **Largest free block** | **26,600–28,700** | **14,836–16,372** | **−12,000 (−45 %)** |
+| **Largest free block** | **26,600–28,700** | **14,836–24,564** | **−4,100 to −11,800** |
 | Free heap after MP3 decoder init | 88,400 | 77,296 | −11,100 |
 | Stream buffer | 27,951 | 27,952 | unchanged |
 | Audio task stack headroom | 4,716 | 3,836 | −880 |
 
 The −9,700 of total heap is the ~6.7 KB catalogue blob plus LittleFS mount buffers, which is the price
-of the milestone and was expected. **The largest free block fell further than the total did**, which was
-not — one 6.7 KB allocation plus the filesystem's own caches cost twice their size in contiguous space.
+of the milestone and was expected.
+
+**Nothing accumulates across station changes.** After eleven of them the heap read 81,560 — *higher*
+than the 75,216 measured 90 seconds after boot — with `fails=0` and the largest free block back up to
+24,564. Eleven TLS teardowns therefore left no lasting fragmentation, which is the §7.3 question and a
+good answer to it. `drops=2` over the same span means D17's reconnect fired twice and recovered without
+intervention.
+
+What does vary, a lot, is the largest free block: **14,836 to 24,564** depending on codec, bitrate and
+how recently a stream was torn down. That spread is what constrains M4 below, and it is worth
+remembering that the low end came from the quietest possible moment — one stream, just after boot.
 
 **LittleFS reports 765,952 of 1,966,080 bytes used — 39 %, not the 30 % the file sizes predict.** 61
 files rounded up to 4 KB blocks is 741,376 bytes against 608,992 of actual content, and metadata
@@ -429,9 +438,11 @@ the logo set ever grows.
 
 ### This sets a hard constraint on M4
 
-A 92×92 RGB565 framebuffer is **16,928 bytes**. The largest free block is **14,836–16,372**. A full-image
-buffer no longer fits, and would fail *intermittently* — sometimes above the threshold, sometimes below —
-which is the worst way for it to fail.
+A 92×92 RGB565 framebuffer is **16,928 bytes**. The largest free block ranges **14,836–24,564** across
+boot and eleven station changes. **16,928 sits inside that range** — so such a buffer would succeed some
+of the time and fail the rest, which is the worst way for it to fail. The first three samples, all taken
+within 90 s of boot, read 14,836–16,372 and made this look like a fixed ceiling; it is not, and the
+variance is the finding.
 
 So M4 must decode PNG **straight to the TFT via PNGdec's line callback**, never into an image buffer.
 That was always the sensible design; it is now the only one that works. Check the largest free block
@@ -502,8 +513,9 @@ repeat when stations change.
   `(3,117)`; independent blank-and-redraw of the song line (**§6**, **D10**).
 - PNG logo decode with PNGdec (**D5**), on core 0 only — never on the audio core (**D14**).
 - **Decode through PNGdec's line callback, straight to the TFT — never into a full-image buffer.** M3
-  measured the largest free block at 14,836–16,372 bytes and a 92×92 RGB565 frame is 16,928, so such a
-  buffer would fail, and fail *intermittently*. Re-check `largest=` once TFT_eSPI's own buffers are in.
+  measured the largest free block swinging between 14,836 and 24,564 bytes, and a 92×92 RGB565 frame is
+  16,928 — inside that range, so the allocation would sometimes succeed and sometimes not. Re-check
+  `largest=` once TFT_eSPI's own buffers are in.
 - Empty-slot and paused states both render as frequency-only on black.
 - Ten station names are longer than the 23 characters that fit at `x=21`. None collide once clipped, but
   this is the milestone where a real screen can say whether the clipping looks acceptable.
