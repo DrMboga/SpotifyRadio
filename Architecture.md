@@ -73,9 +73,9 @@ and a logo. Empty slots are legal and common.
 
 ### 3.1 ESP32 pin map
 
-The I2S trio is wired and verified (M1). The rest is still proposed — to be validated during the
-remaining milestones and corrected here as the single source of truth. Avoids strapping pins
-(0, 2, 12, 15) and flash pins (6–11).
+The I2S trio is wired and verified (M1), the TFT at M4, and the Pico link at M5. Only the ESP32's UART2
+TX is unproven, because nothing on the Pico reads it. Avoids strapping pins (0, 2, 12, 15) and flash
+pins (6–11).
 
 | Function | ESP32 pin | Other end |
 |---|---|---|
@@ -87,10 +87,10 @@ remaining milestones and corrected here as the single source of truth. Avoids st
 | TFT CS | GPIO 5 | ST7735 `CS` |
 | TFT D/C (RS) | GPIO 21 | ST7735 `RS` |
 | TFT RESET | GPIO 4 | ST7735 `RES` |
-| UART2 RX | GPIO 27 | Pico `GP4` (TX) |
+| UART2 RX | GPIO 27 | Pico `GP4` (TX) — verified M5 |
 | UART2 TX | GPIO 14 | Pico `GP5` (RX) — wired but unused |
-| Pico data-ready interrupt | GPIO 34 (input-only) | Pico `GP14` (out) |
-| Request-state out | GPIO 33 | Pico `GP22` (in) |
+| Pico data-ready interrupt | GPIO 34 (input-only) | Pico `GP14` (out) — verified M5 |
+| Request-state out | GPIO 33 | Pico `GP22` (in) — verified M5 |
 
 Notes:
 
@@ -144,10 +144,18 @@ pulling its interrupt pin low for ~10 ms before and after. Source of truth:
   ESP32 raises the request-state pin (its GPIO 33 → Pico **GP22**), the Pico answers, the ESP32 drops
   the pin. Four things about it are not obvious from the message shape, and all four are frozen:
 
-  1. **It is level-triggered inside the Pico's 200 ms poll, not edge-triggered.** `RadioIO.cpp` reads
-     `gpio_get(REQUEST_STATE_PIN)` every pass and sends a fresh `State` *every time it is high*. Hold
-     the pin up for a second and roughly five snapshots arrive. Drop it as soon as one is parsed, and
-     tolerate duplicates regardless — they are idempotent, but they are not a fault.
+  1. **It is level-triggered inside the Pico's poll, not edge-triggered.** `RadioIO.cpp` reads
+     `gpio_get(REQUEST_STATE_PIN)` every pass and sends a fresh `State` *every time it is high*. Drop
+     it as soon as one is parsed, and tolerate duplicates regardless — they are idempotent, but they
+     are not a fault.
+
+     **That poll is ~650 ms, not the 200 ms it looks like.** `sleep_ms(200)` at the bottom of the loop
+     is only part of it: every pass also calls `CapacitanceState::updateState()`, and measuring the
+     tuning capacitor ends in a `sleep_ms(400)` discharge plus the charge time itself. Measured at M5
+     on the bench — consecutive `NewFrequency` messages from a dial parked on a threshold arrive
+     0.60–0.65 s apart, 28 of them over 75 s. So holding the pin up for a second buys **one snapshot,
+     not five**, which is why the ESP32 holds for 1500 ms per attempt and retries. This number also
+     sets the debounce floor below.
   2. **The Pico never initialises GP22.** `HardwareManager::init()` has no `gpio_init` for it, no
      direction and no pull; the line reads low only because the RP2040 powers its pads up input-enabled
      with a pull-down. That is silicon default rather than anything the firmware asks for, so the ESP32
@@ -163,13 +171,59 @@ pulling its interrupt pin low for ~10 ms before and after. Source of truth:
 Two consequences the ESP32 must handle, both because the Pico cannot be changed:
 
 1. **No message terminator.** Frame by counting braces (or by an idle-gap timeout), not by `readStringUntil('\n')`.
-2. **The dial streams `NewFrequency` while turning.** Debounce before acting — the Pi version used a
-   ~1 s settle timer (`PlayerProcessorDebounceFrequencyService`). Without it, spinning the dial from 87
-   to 105 would try to open 19 streams.
+2. **The dial streams `NewFrequency` while turning.** Debounce before acting, or spinning from 87 to
+   105 tries to open 19 streams.
 
-The data-ready interrupt pin is available but likely unnecessary: polling `Serial2.available()` in the
-main loop is simpler and the ESP32 has nothing better to do. Keep the pin wired; treat using it as an
-optimisation, not a requirement.
+   **Use a trailing-edge settle timer, not the Pi's throttle.** This document previously credited
+   `PlayerProcessorDebounceFrequencyService` with "a ~1 s settle timer". It is neither: it is a
+   **500 ms leading-edge throttle** — it acts on the *first* reading and mutes the next 500 ms — so on
+   the Pico's real cadence it would act on very nearly every message the dial produced. It also does
+   not solve the problem the *stationary* dial has, which turned out to be the bigger one: a knob
+   parked on a capacitance threshold reports 95, 94, 95, 94 indefinitely, and a leading-edge throttle
+   changes station on each one.
+
+   The ESP32 waits for the reading to hold still instead (`RadioController`), and it needs **two**
+   settle times rather than one. The reason is in the gaps between messages, which are not arbitrary:
+
+   | Gap between consecutive `NewFrequency` | What it is |
+   |---|---|
+   | 0.61 s | one Pico pass — the dial crossed a threshold on the next sample |
+   | 1.22 s, 1.84 s | two or three passes — still one continuous turn, just a wider threshold |
+   | ≥3 s | the dial actually stopped |
+
+   Measured over a real sweep at M5, and the two populations do not overlap: nothing between 1.84 s and
+   3.05 s was ever observed. But a single 1 s settle expires inside the 1.22 and 1.84 s gaps, so it
+   splits one sweep of the knob into **five** station changes — which is what the first build did.
+
+   Nor is a flat 2 s the answer: it would make one deliberate click of the dial take two seconds to
+   respond, on a radio whose whole point is that it behaves like a radio.
+
+   So: **1 s after a reading that stands alone, 2 s once the dial is clearly mid-turn** — where "clearly"
+   means a second reading arrived within 2 s of the last. 2 s covers the 1.84 s worst case, so a sweep
+   coalesces to one change while a click still acts in a second.
+
+   Both settles comfortably exceed one Pico pass, which handles the *stationary* dial when its
+   excursions are tight: 28 `NewFrequency` messages from a knob parked on the 94/95 threshold over 75 s
+   produced **zero** station changes, because every excursion returned inside the settle.
+
+   **That is not true of every threshold, and no settle time fixes the rest.** At 100/101 the
+   excursions are irregular — 6–8 s apart — so the settle expires on whichever value came last, and not
+   always the same one: nine station changes in 73 s with the radio paused and untouched. The gaps are
+   unbounded, so a longer settle only moves the problem.
+
+   What separates chatter from tuning is the *shape* of the sequence. Chatter alternates between two
+   adjacent positions — **X, Y, X** — where a real turn is monotonic, and two readings of history are
+   enough to tell them apart. On that signature `RadioController` treats the pair as one place: it
+   applies the reading that detected it, then ignores further readings inside the pair until the dial
+   goes elsewhere. Applying the detecting reading is what lets a dial *turned onto* a boundary still
+   land on the station the user turned to.
+
+The data-ready interrupt pin is available but not required: polling `Serial2.available()` in the main
+loop is simpler and the ESP32 has nothing better to do. It is wired and, since M5, counted — an ISR
+increments a pulse counter that appears on the `[pico]` status line. That is a bring-up instrument
+rather than an optimisation: pulses without frames isolates the fault to the UART line, frames without
+pulses to the interrupt wire, and neither moving means the Pico is unpowered or the ground is not
+shared.
 
 ## 5. Station catalogue
 
@@ -548,6 +602,7 @@ HTTP stream pays no TLS cost, which swamps any real signal.
 | D15 | **AAC is required**, alongside MP3 | Resolved by evidence rather than deferred. The aggregate pool looks 91 % MP3, but the 14 stations actually curated for v1 tell a different story: 3 are explicitly AAC (`…/stream/aacp` ×2, `SAM03AAC226_SC`) and 2 more almost certainly are (Global's `media-ssl.musicradio.com` endpoints) — roughly a third of real picks. Dropping AAC would cut ROCK ANTENNE, which is the demo station. Mitigated by the §5.2 variant rule, so AAC is the exception rather than the common path. |
 | D16 | **Output stage settled: PCM5102A**, line-level stereo DAC into the SABA's existing mono mixer. Closed at M1. | Briefly reopened when the first PCM5102A module produced ~5 mV from valid I2S; a MAX98357A was wired to the same three pins purely to prove the ESP32 side, and it played. A **second PCM5102A** then played too, so the first board was faulty and nothing about the design was wrong. The MAX98357A is out of the project: as a mono class-D *amplifier* its output is a bridged PWM pair with no ground reference, so it cannot feed the SABA's 2.2 kΩ mixer and transformer (§3.1) — it would have to drive the speaker directly, bypassing the SABA amplifier and losing the analog volume pot. Practical consequences: keep a spare PCM5102A, and treat "valid I2S in, no audio out" as a suspect board before suspecting firmware. |
 | D17 | **Availability target is session-scale, not appliance-scale**: 2–3 hours of use, ~30–60 station changes, then switched off. Reconnect-after-stream-drop is required; **WiFi-loss recovery is best-effort and a power cycle is an acceptable remedy**. | Set from how the radio is actually used (§7.3), and it changes what the engineering has to prove. The dominant cost is the heap delta *per station change* — 60 of those an evening — not drift over days of uptime. Slow decay measured in KB-per-day is therefore not a defect: the mains switch resets it nightly. This is what lets M2 be a switch storm instead of an overnight soak, keeps §9.1 rung 5 (reboot-on-low-heap) as a backstop that will probably never be needed, and stops effort going into WiFi state-machine recovery that would be exercised perhaps twice a year. |
+| D18 | **The Pico's JSON is read by a ~90-line hand-written reader, not ArduinoJson.** Decided at M5, against the plan. | §4 is frozen and so are the four message shapes: flat objects, no nesting, no arrays, no escapes, no floats, every one of them emitted by a `sprintf()` with a literal format string in `UARTMessenger.cpp`. A general parser buys tolerance of variation that cannot occur, and charges a heap allocation for it on the one path that cannot afford one — a station change is when the largest free block is tightest (14–19 KB, §7.2), and **D5** is what happens when something assumes there is room. The reader is three functions (`fieldValue`, `intField`, `stringField`) over a fixed frame buffer and allocates nothing. The risk it carries is that a hand-written parser is wrong in ways a library would not be, so it is answered directly: `PicoLink::selfTest()` pushes the four real shapes — plus two frames run together with no separator, a garbage prefix, and four malformed ones — through the *live* framing and decode path at every boot, and prints one line. 11/11 on the board. Anything §4 does not describe is rejected and counted rather than guessed at, because a frequency that got through wrong is a station change nobody asked for. |
 
 ## 9. Open items and the WROOM fallback ladder
 

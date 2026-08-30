@@ -95,8 +95,23 @@ no image decoder (**D5**, revised at M4).
   drops must self-heal; WiFi-loss recovery is explicitly best-effort.
 - **The Pico sends JSON with no trailing newline.** `readStringUntil('\n')` will hang forever. Frame by
   counting braces. The Pico cannot be changed to fix this.
-- **The dial streams `NewFrequency` continuously while turning.** Debounce (~1 s settle) or a single
-  spin of the dial opens 19 stream connections.
+- **The dial streams `NewFrequency` while turning — and also while standing still.** A knob parked on a
+  capacitance threshold reports 95, 94, 95, 94 indefinitely: 28 messages in 75 idle seconds, measured at
+  M5. `RadioController` waits for the reading to hold still before acting, with **two** settle times —
+  1 s for a reading that stands alone, 2 s once a second reading has arrived within 2 s of the last.
+  Both numbers are measured, not chosen: gaps *within one continuous turn* land on 0.61, 1.22 and 1.84 s
+  (one, two or three Pico passes) while a stopped dial goes quiet for ≥3 s, so a flat 1 s splits a sweep
+  into five station changes and a flat 2 s makes a single click feel sluggish. Do not replace this with
+  the Pi's `PlayerProcessorDebounceFrequencyService`, which is a 500 ms *leading-edge* throttle and
+  would act on all 28 idle messages.
+- **Some thresholds chatter on a schedule no settle time can catch** — 6–8 s between excursions, which
+  produced nine unprompted station changes in 73 s on a paused radio. `RadioController` detects the
+  **X, Y, X** shape across two adjacent positions and then treats the pair as one place. Timing cannot
+  distinguish chatter from tuning here; only the sequence shape can.
+- **Sixteen of the 76 slots are the second half of a spanning entry** (`100-101`, `102-103` in
+  `RadioStationsList.md` become two identical CSV rows), so one dial click in five lands on the station
+  already playing. `RadioController` compares URLs and leaves the stream alone, redrawing only the
+  frequency. Anything that changes station must go through it, or that check is bypassed.
 - **`buttonIndex` mapping**: `-1` none, `0` Phono (unused), `1` L, `2` M, `3` K, `4` U.
 - **Repartitioning wipes LittleFS.** The partition table is deliberately still undecided; settle it
   before the radio is reassembled (M6).
@@ -164,7 +179,13 @@ for v1; ESP32 wiring gets its own document once as-built (M6).
 C++ / Pico SDK 2.1.1, built through the VS Code Raspberry Pi Pico extension (`ninja -C build`; flash with
 `picotool load` or OpenOCD — see `.vscode/tasks.json`).
 
-Polls the button ladder, play/pause button and tuning capacitor every 200 ms; on change pulls its
-interrupt pin low and writes a JSON message over UART1 at 115200. The full wire contract, including the
-missing-newline framing problem, is in `Architecture.md` §4. `RadioIO/src/UARTMessenger.cpp` is the
+Polls the button ladder, play/pause button and tuning capacitor, then pulls its interrupt pin low and
+writes a JSON message over UART1 at 115200 for anything that changed. The full wire contract, including
+the missing-newline framing problem, is in `Architecture.md` §4. `RadioIO/src/UARTMessenger.cpp` is the
 source of truth for the message shapes.
+
+**That poll is ~650 ms, not the `sleep_ms(200)` at the bottom of `RadioIO.cpp`'s loop.** Every pass also
+measures the tuning capacitor, and `CapacitanceState::getCapacitance()` ends in a `sleep_ms(400)`
+discharge plus the charge time. Measured at M5. It sets two numbers on the ESP32 side: the request-state
+pin must be held ≥1 pass (1500 ms is used, for two chances), and the frequency debounce must settle for
+longer than one pass or a dial parked on a threshold changes station on its own.

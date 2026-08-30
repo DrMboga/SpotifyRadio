@@ -7,17 +7,21 @@ Incremental path from the original scaffold (a WiFi + HTTPS connectivity test th
 Each milestone is independently testable and ends in a state you could stop at. Nothing outside
 `Esp32InternetRadio/`, `Tools/` and the repo-root docs is touched (**D11**).
 
-**Where things stand (August 2026): M0–M4 and MD are done.**
-The radio plays internet radio over HTTPS through a PCM5102A and draws the Pi version's screen —
-frequency, 92×92 logo, station name and live ICY titles, on an ST7735 driven from the serial console.
-All **76 dial slots are filled**, station changes on a live HTTPS stream draw the new logo with
-`fails=0`, the 60-change storm passes with the screen running, and **station changes are inaudible**.
+**Where things stand (August 2026): M0–M5 and MD are done.**
+The radio plays internet radio over HTTPS through a PCM5102A, draws the Pi version's screen —
+frequency, 92×92 logo, station name and live ICY titles — and **is driven by its own dial and
+buttons**. All **76 dial slots are filled**, station changes on a live HTTPS stream draw the new logo
+with `fails=0`, the 60-change storm passes with the screen running, and **station changes are
+inaudible**. It comes up already tuned to wherever the knobs are sitting.
 
 M4 cost **D5**: there is no image decoder on the board any more. PNGdec needs a 45,604-byte contiguous
 allocation and the ESP32 has one only at boot, so the logos are pre-rendered to raw RGB565 by
 `build-data.mjs` — see *The 45 KB that would not fit*.
 
-Next is **M5**: the Pico UART, which replaces the serial console with the real dial and buttons.
+M5 added **D18** and corrected **§4** twice: the Pico's poll is ~650 ms, not 200 ms, and the Pi's
+debounce was never the settle timer this plan credited it with.
+
+Next is **M6**: lock the partition table and put it in the cabinet.
 
 ```
 M0 ✅ docs + secrets
@@ -25,7 +29,7 @@ M0 ✅ docs + secrets
       ▼
 M1 ✅ first sound ──▶ M2 ✅ stream robustness ──▶ M3 ✅ catalogue ──▶ M4 ✅ display
       │                                          ▲                       │
-      └── MD ✅ data mining (laptop, parallel) ──┘    M5 Pico UART ◀─────┘
+      └── MD ✅ data mining (laptop, parallel) ──┘    M5 ✅ Pico UART ◀──┘
                                                           │
                                                           ▼
                                                   M6 install in cabinet
@@ -774,27 +778,204 @@ drift under that name — renaming it would break the link to a measurement that
 
 ---
 
-## M5 — Pico UART integration
+## M5 — Pico UART integration ✅
 
 *Bench assembly: ESP32 + DAC + TFT + the existing Pico I/O board. Everything electrically loose.*
 
 - UART2 at 115200; **brace-counting frame reader** — the Pico sends no terminator (**§4**).
-- Parse the four commands with ArduinoJson; map `buttonIndex` → `L/M/K/U`, ignore `-1` and `0`.
+- ~~Parse the four commands with ArduinoJson~~ → **a ~90-line hand-written reader with a boot-time
+  self-test**, decided on the board. See **D18**. Map `buttonIndex` → `L/M/K/U`, ignore `-1` and `0`.
 - **Boot-time state sync — raise the request-state pin (GPIO 33 → Pico GP22), take one `State`, drop
   it.** This is what makes the radio come up already tuned to wherever the knobs are sitting instead of
   playing `L 87` until someone touches a control, and `State` carries play/pause as well as bank and
-  frequency, so a radio switched off while paused comes back paused. **§4** now records the four frozen
-  details that make it work — the Pico re-sends every 200 ms while the pin is held (drop it on the
+  frequency, so a radio switched off while paused comes back paused. **§4** records the four frozen
+  details that make it work — the Pico re-sends on every poll while the pin is held (drop it on the
   first snapshot, tolerate duplicates), it never initialises GP22 so the ESP32 must drive its side low
   early rather than trust a floating line, there is no acknowledgement so it needs a retry, and the Pi
   dropped the pin on any message read while the request was outstanding to survive a button press
-  arriving mid-handshake.
-- Debounce `NewFrequency` (~1 s settle) so spinning the dial does not open 19 streams (**§4**).
+  arriving mid-handshake. That poll turned out to be **~650 ms, not the 200 ms §4 assumed**, which is
+  what sizes the 1500 ms hold — see below.
+- ~~Debounce `NewFrequency` (~1 s settle) so spinning the dial does not open 19 streams~~ → **it took
+  three mechanisms, not one**: two settle times, a boundary-chatter detector, and same-URL reuse. Each
+  was forced by a measurement; all three are below.
 - `PlayPause`: disconnect / reconnect at the live edge; paused renders frequency-only.
 
 **Done when:** the physical dial and the four toggle buttons drive station changes on the bench, the
 radio comes up already tuned to wherever the controls are sitting — including paused if it was left
 paused — and fast dial spins produce exactly one stream connection.
+
+### Built and running, August 2026
+
+Two new modules, both core 0, both polled from `loop()`:
+
+- **`PicoLink`** — the wire. Brace-counting frame reader with an idle-gap timeout, the four-message
+  decoder, the state-request handshake, and the diagnostics that make a loose jumper findable.
+- **`RadioController`** — what the radio is tuned to. Holds *desired* (what the controls say) against
+  *applied* (what is playing), and closing that gap is the whole of `update()`. It is the Pi's
+  `RadioStatus` + `InternetRadioPlayerProcessor.Reset()` collapsed into one module, since there is only
+  one player now.
+
+The serial console did not go away; it now feeds the *same setters* the Pico does, so the bench and the
+cabinet cannot drift apart. `s`/`g` are pause and play, `p` re-runs the state handshake by hand — which
+is what you want when the Pico gets plugged in after the ESP32 has already booted.
+
+**Boot no longer plays `L 87`.** Until M4 the boot log wanted a genuine connect to look at; from M5 the
+answer to "which station" comes from the knobs, and anything else would be both wrong and audible. The
+handshake runs in `loop()`, so an absent Pico costs a retry line every couple of seconds and nothing
+else.
+
+### Measured on the board, August 2026
+
+| | |
+|---|---|
+| State handshake | answered on **attempt 1**, 220 ms after the request; radio tuned to `L 103` before WiFi finished |
+| Parser self-test | **11 of 11** cases, every boot (**D18**) |
+| Frames rejected | **0** across every run |
+| Dial → station change | works, `L`/`M`/`K`/`U` all select their bank |
+| Static DRAM | `_bss_end` = `0x3ffcb888`, **67,960 free in `dram0_0_seg`** — 4,680 bytes more used than M4's 72,640. `pio` prints 56,616/532,480; both halves of that are wrong, so take the map (M4's table above) |
+| Flash | 60.8 % of the 2 MB app partition |
+
+### The debounce had to survive a *stationary* dial, not just a spun one
+
+The plan asked for a settle timer so a spin would not open 19 streams. The bench immediately produced a
+different problem, and a more common one: **a dial parked on a capacitance threshold reports 95, 94, 95,
+94 forever.** Seventy-five seconds of an untouched radio produced **28 `NewFrequency` messages**, every
+95 followed by a 94 **0.60–0.65 s** later.
+
+Those 28 messages produced **zero** station changes, because the settle waits longer than one Pico poll
+and boundary chatter is a single-pass excursion that comes back.
+
+Which also settles what the Pi actually did. §4 credited `PlayerProcessorDebounceFrequencyService` with
+"a ~1 s settle timer"; it is a **500 ms leading-edge throttle** — it acts on the *first* reading and
+mutes the next 500 ms. On this cadence it would have changed station on all 28. §4 is corrected.
+
+### …and then one settle turned out not to be enough
+
+A 1 s settle handled the parked dial and still **split one sweep of the knob into five station
+changes**. The gap histogram over a real sweep says why, and it is unusually clean:
+
+| Gap between consecutive `NewFrequency` | Count | What it is |
+|---|---|---|
+| 0.59–0.65 s | 11 | one Pico pass |
+| 1.19–1.23 s | 7 | two passes — still the same continuous turn |
+| 1.84 s | 1 | three passes — still the same turn |
+| 3.05 s and up | 8 | the dial actually stopped |
+
+**Nothing between 1.84 s and 3.05 s was ever observed.** Mid-turn and stopped are two separated
+populations, and a 1 s settle expires inside the upper half of the mid-turn one — five times over a
+single sweep, each one a full TLS teardown and reconnect.
+
+A flat 2 s would fix the sweep and make one deliberate click of the dial take two seconds to answer,
+which is the wrong trade on a radio that is supposed to feel like a radio. So there are two settles:
+**1 s for a reading that stands alone, 2 s once a second reading has arrived within 2 s of the last.**
+2 s covers the 1.84 s worst case, so a sweep coalesces to one change and a click still acts in a second.
+Both are far enough above one Pico pass that the parked-dial result is unaffected.
+
+### The Pico's poll is ~650 ms, not 200 ms
+
+`RadioIO.cpp`'s loop ends in `sleep_ms(200)`, which is what §4 recorded and what the state handshake was
+sized against — "hold the pin up for a second and roughly five snapshots arrive". Every pass also calls
+`CapacitanceState::updateState()`, and measuring the tuning capacitor ends in `sleep_ms(400)` plus the
+charge time. The 0.60–0.65 s above is that period, measured.
+
+So a one-second hold buys **one** snapshot, not five. The ESP32 holds for **1500 ms** per attempt — two
+chances — and retries out of a 400 ms gap. In practice attempt 1 has always been enough.
+
+### Sixteen catalogue entries span two dial positions, and that turned out to matter
+
+`RadioStationsList.md` writes some stations as `100-101` or `102-103`, which `build-data.mjs` expands
+into two identical CSV rows. **Sixteen of the 76 slots are the second half of such a pair**, so roughly
+one dial click in five lands on the station already playing — and the first build tore down a live TLS
+session and reopened the identical URL for it. A second of silence, a fresh ~40 KB allocation, and back
+where it started.
+
+`RadioController` now compares the new slot's URL against what the audio task was last asked to play and
+leaves the stream alone when they match, redrawing **only the frequency** in the corner
+(`Display::updateFrequency`) rather than repainting the layout — the logo and name are already right,
+and the song title belongs to a stream that never stopped. Counted as `reused=` on the `[pico]` line.
+Typing a slot on the console still forces a real reconnect, because M2's measurements depend on it.
+
+### The data-ready pin is an instrument, not a message count
+
+GPIO 34 is one of the ESP32's input-only pins, and **those have no internal pull-up or pull-down**. On
+the bench the line collects spurious falling edges: a 150-second idle run counted **6 pulses against 1
+actual message**. Harmless — nothing depends on the pin (§4) — but it means `pulses=` answers "is the
+Pico alive and is that wire connected", never "how many messages arrived". `stray=` on the same line is
+the byte-level counterpart: bytes seen outside any frame, which stayed at 0 throughout.
+
+### The other thing no settle time can fix: a dial parked on a boundary
+
+The parked-dial result above was luckier than it looked. At the 94/95 threshold every excursion came
+back within 0.62 s, so the settle always expired with desired equal to applied and nothing happened.
+**At the 100/101 threshold it does not.** There the excursions are irregular — sometimes 6–8 s apart —
+so the settle expires on whichever value arrived last, and it is not always the same one.
+
+Measured, radio paused, **nobody touching it**: `changes` climbed 12 → 21. **Nine station changes in
+73 seconds.** The audio survived only because 100 and 101 are both Rammstein and the spanning-slot
+shortcut caught it; on a boundary between two different stations the radio would have retuned itself
+every few seconds.
+
+No settle short enough to feel responsive can fix this, because the gaps are unbounded. What separates
+it from real tuning is the *shape* of the sequence, not its timing: chatter alternates between two
+adjacent positions — **X, Y, X** — and a real turn is monotonic. Two readings of history tell them
+apart.
+
+So `RadioController` watches for that signature, and once it fires it treats the two positions as one
+place: the reading that detected it is applied, and further readings inside the pair are ignored until
+the dial goes somewhere else. Applying the detecting reading is deliberate — it is how a dial *turned
+onto* a boundary still lands on the station the user turned to rather than freezing on the one they
+left. The cost is that nudging deliberately between exactly those two positions does nothing, but they
+are the two the hardware cannot tell apart anyway, and turning past either releases it at once.
+Reported as `chatter=<ignored>/<active>` on the `[pico]` line.
+
+**Reproduced deliberately on the board**, after the original 100/101 spot stopped chattering — the knob
+was crept onto the 99/100 threshold instead:
+
+```
+117,94  [pico] frequency 99
+118,94  [radio] L 99  Radio Bob Metallica          <- isolated reading, 1.0 s settle
+129,96  [pico] frequency 100
+130,58  [pico] frequency 99
+130,61  [radio] dial is chattering between 99 and 100 - holding 99
+131,23  [pico] frequency 100                       <- and seven more, all ignored
+   ...
+159,08  [pico] ... freq_msgs=10 changes=2 chatter=7/1
+219,12  [pico] ... freq_msgs=10 changes=2 chatter=7/1
+221,36  [pico] frequency 101
+221,36  [radio] dial left the 99/100 boundary      <- outside the pair, released at once
+221,99  [pico] frequency 100
+221,99  [radio] is chattering between 100 and 101 - holding 100
+224,00  [radio] L 100  Best of rock: Rammstein     <- the position turned *onto*, not the one left
+```
+
+Detected on the third reading, 0.67 s in. Seven further readings dropped and **zero station changes
+across the next 84 seconds** — `changes` and `connects` both flat at 2. Released the instant the dial
+reached 101, then re-armed on the new pair and applied the value it had been turned onto rather than
+freezing on the one it left, which is the case the "apply the detecting reading" rule exists for.
+
+### Verified on the bench
+
+| Check | Result |
+|---|---|
+| Sweep → one connection | **Pass.** 96→97→99→100 in one motion (gaps 0.60/0.64/0.60) coalesced to one change; `connects` 4→5. The single-settle build made five. |
+| Single click still prompt | **Pass.** Isolated readings applied ~1.0 s later. |
+| Play/pause | **Pass.** Four pause→resume cycles, clean. |
+| Boot while paused | **Pass.** `state: button 1 (L) frequency 100 paused` → `L 100 paused`, no audio started. |
+| Spanning slots on the real dial | **Pass.** `reused=3`, three `same stream, left playing`, no reconnect. |
+| Link integrity | `rejected=0`, `stray=0` across every run. |
+| Chatter detector | **Pass.** Detected 0.67 s in, 7 readings dropped, 0 changes over 84 s, released on leaving the pair. |
+
+### Carried into M6 and M7
+
+1. **The audio task's stack headroom is down to 3,708 bytes** (`stack_free`), from 7,440 at M4. It fell
+   the first time an AAC stream played and has not recovered, which is expected — the figure is a
+   high-water mark. Not a fault, but it is the number to watch in M7's soak now that there is a third
+   subsystem in the build.
+2. **The largest free block reaches 11,764 bytes** during back-to-back dial-driven changes with a stream
+   live, against the 14–19 KB §7.2 records for the steady state. Nothing failed, and **D5** is the
+   reminder of what does at that size. M7's soak should sample it under dial load rather than at rest.
+3. **A 60-change storm driven by the dial** rather than by the console would finally exercise the file
+   read path across a session — the open item M4 left at #4. The controls are now capable of it.
 
 ---
 
