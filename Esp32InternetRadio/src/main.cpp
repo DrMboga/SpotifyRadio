@@ -1,10 +1,15 @@
-// M4 — display.
+// M5 — Pico UART.
 //
-// ESP32 + PCM5102A + ST7735 on a breadboard. Connects to WiFi, parses
-// `data/stations.csv` off LittleFS into 4 banks × 19 dial positions, and
-// drives both the audio task and the screen from the serial console — so the
-// whole selection path is exercised without the Pico. Typing `M 92` is what
-// the toggle button and the tuning capacitor will do at M5.
+// ESP32 + PCM5102A + ST7735 + the frozen Pico I/O board on a bench. Connects to
+// WiFi, parses `data/stations.csv` off LittleFS into 4 banks × 19 dial
+// positions, then asks the Pico where the knobs are sitting and tunes there.
+// From that point the physical toggle buttons, tuning capacitor and play/pause
+// button drive everything (PicoLink → RadioController).
+//
+// The serial console is still here and still does the same job: it is the only
+// way to run M2's measurements, and it is what keeps the board useful when the
+// Pico is unplugged. It now feeds RadioController through the same setters the
+// Pico does, so the bench and the cabinet cannot drift apart.
 //
 // M2's tooling is still here and still earns its place: the switch storm (`t`)
 // is the heap measurement (§7.3, D17), and it deliberately runs against the
@@ -25,6 +30,8 @@
 #include "AudioEngine.h"
 #include "Display.h"
 #include "Log.h"
+#include "PicoLink.h"
+#include "RadioController.h"
 #include "Secrets.h"
 #include "StationCatalogue.h"
 #include "SwitchStorm.h"
@@ -38,13 +45,12 @@ constexpr uint16_t kStormChanges = 60;
 constexpr uint32_t kWifiTimeoutMs = 30000;
 constexpr uint32_t kReportIntervalMs = 30000;
 
-// The slot the screen is currently showing. A stop has to redraw the
-// frequency it stopped on (§6: paused and empty look the same), and `r`
-// re-decodes the logo of whatever is up, so both need to know. '\0' means no
-// slot has been selected yet — the bench-station world, which has no dial
-// position to show.
-char currentBank = '\0';
-uint8_t currentFrequency = 0;
+// No catalogue on the filesystem: the board falls back to the compiled-in
+// bench stations so M2's storm still runs with nothing uploaded. The Pico is
+// still read and still logged in that world — seeing `[pico] frequency 92`
+// scroll past is how the UART wiring gets checked before `uploadfs` has ever
+// run — but it drives nothing, because every slot it could ask for is empty.
+bool benchOnly = false;
 
 bool connectWifi() {
   Log::printf("[wifi] connecting to %s", WIFI_SSID);
@@ -119,6 +125,40 @@ void printStatus() {
       Display::lastLogoDrawOk() ? "ok" : "-");
 }
 
+// The Pico link, on its own line rather than appended to `[stat]`.
+//
+// Two reasons for the separate line. The `[stat]` format string has already
+// been miscounted once — see the note above — and it is now at fourteen
+// specifiers. And these fields answer a different question: `[stat]` is the
+// heap and the stream, this is whether the radio can see its own controls.
+//
+// Reading it during bring-up: `pulses` climbing with `frames` flat means GP14
+// is landing but the UART line is not, `frames` with no `pulses` means the
+// interrupt wire is loose, and neither moving at all means the Pico is
+// unpowered or the ground is not shared. A few stray pulses per minute are
+// normal and are not messages — see the ISR. `freq_msgs` against `changes` is
+// the debounce working: a spin of the dial should move the first by many and
+// the second by one.
+void printPicoStatus() {
+  Log::printf(
+      "[pico] frames=%u rejected=%u stray=%u pulses=%u ready=%d requests=%u "
+      "state=%s freq_msgs=%u changes=%u reused=%u chatter=%u/%d settling=%d "
+      "tuned=%c%u%s\n",
+      PicoLink::framesRead(), PicoLink::framesRejected(),
+      PicoLink::strayBytes(), PicoLink::readyPulses(),
+      PicoLink::readyPinLevel() ? 1 : 0,
+      PicoLink::stateRequests(), PicoLink::haveState() ? "taken" : "pending",
+      RadioController::frequencyUpdates(), RadioController::changesApplied(),
+      RadioController::reusedStreams(), RadioController::chatterIgnored(),
+      RadioController::isChattering() ? 1 : 0,
+      RadioController::isSettling() ? 1 : 0,
+      RadioController::isTuned() && RadioController::bank() != '\0'
+          ? RadioController::bank()
+          : '-',
+      (unsigned)RadioController::frequency(),
+      RadioController::isPaused() ? " paused" : "");
+}
+
 // The three-hour hold half of M2 reads these lines. Largest free block is the
 // one that matters (§7.3); every 30 s is dense enough to see a slope and sparse
 // enough that a whole evening still fits in a text file.
@@ -131,16 +171,18 @@ void reportStatusPeriodically() {
 
   lastReportAt = millis();
   printStatus();
+  printPicoStatus();
 }
 
 void printHelp() {
   Log::println("[cmd] M 92  play a dial slot: bank L/M/K/U + frequency 87-105");
-  Log::println("[cmd] 1-9   play bench station     s  stop");
-  Log::println("[cmd] n     next bench station     h  heap now");
+  Log::println("[cmd] 1-9   play bench station     s  pause (stop the stream)");
+  Log::println("[cmd] n     next bench station     g  resume playing");
   Log::printf("[cmd] t     switch storm (%u changes)   x  abort storm\n",
                 kStormChanges);
   Log::println("[cmd] l     list the catalogue      b  list bench stations");
   Log::println("[cmd] r     redraw the current slot, audio untouched");
+  Log::println("[cmd] h     heap and stream now     p  re-read the Pico state");
   Log::println("[cmd] ?     this help");
 }
 
@@ -148,68 +190,6 @@ void listBenchStations() {
   for (size_t i = 0; i < kTestStationCount; i++) {
     Log::printf("[cmd] %u  %-20s %s\n", (unsigned)(i + 1),
                   kTestStations[i].name, kTestStations[i].url);
-  }
-}
-
-// Draws a slot and nothing else — no audio, no reconnect.
-//
-// Separated out because this is the half of a station change M4 needs to be
-// able to run alone. A TLS handshake and a PNG decode both cost heap, and a
-// measurement that always runs them together cannot say which of the two
-// moved the largest free block. The `r` command is this function.
-void drawSlot(char bank, uint8_t frequency,
-              const StationCatalogue::Station* station) {
-  if (station == nullptr) {
-    Display::showFrequencyOnly(bank, frequency);
-    return;
-  }
-
-  // 64 bytes holds "/logos/" plus the longest `.565` filename the build
-  // script emits with room to spare; logoPath() reports the overflow it
-  // cannot produce rather than truncating into an open() that fails
-  // obscurely.
-  char logoPath[64];
-  const bool haveLogo =
-      StationCatalogue::logoPath(*station, logoPath, sizeof(logoPath));
-
-  Display::showStation(bank, frequency, station->name,
-                       haveLogo ? logoPath : nullptr);
-}
-
-// Selects a dial slot, exactly as the Pico will at M5.
-//
-// An empty slot is not an error (§6): it stops audio and says so once. That is
-// the behaviour the real dial needs — 76 positions, and turning past an unfilled
-// one has to go quiet rather than keep the previous station playing or complain.
-void playSlot(char button, uint8_t frequency) {
-  const StationCatalogue::Station* station =
-      StationCatalogue::find(button, frequency);
-
-  currentBank = (char)toupper((unsigned char)button);
-  currentFrequency = frequency;
-
-  if (station == nullptr) {
-    Log::printf("[cmd] %c %u is empty\n", currentBank, (unsigned)frequency);
-    AudioEngine::stop();
-    drawSlot(currentBank, currentFrequency, nullptr);
-    return;
-  }
-
-  Log::printf("[cmd] %c %u  %s\n", currentBank, (unsigned)frequency,
-              station->name);
-
-  // Draw before queueing the stream, not after. playUrl() returns straight
-  // away but the audio task then sits on a TLS handshake for well over a
-  // second (see attemptConnect), and a screen that only changes once the
-  // sound starts makes the radio look like it ignored the dial.
-  drawSlot(currentBank, currentFrequency, station);
-
-  // playUrl() only fails on an over-long URL or a full queue. The catalogue
-  // already rejected the first at boot, so this is worth reporting rather than
-  // ignoring: it means commands are arriving faster than the audio task retires
-  // them, which is the debounce problem M5 has to solve for the tuning dial.
-  if (!AudioEngine::playUrl(station->url)) {
-    Log::println("[cmd] busy - command queue full, try again");
   }
 }
 
@@ -240,7 +220,8 @@ bool parseSlotCommand(const char* line) {
     return true;  // recognised, just wrong — do not fall through to help
   }
 
-  playSlot(line[0], (uint8_t)frequency);
+  // No settle timer: a typed slot is not a dial being spun.
+  RadioController::selectNow(line[0], (uint8_t)frequency);
   return true;
 }
 
@@ -270,7 +251,7 @@ void handleCommandLine(char* line) {
   // audio: it repaints the screen and re-decodes a logo, which lands in the
   // middle of the heap sample the storm is in the process of taking.
   const bool disturbsAMeasurement =
-      line[1] != '\0' || line[0] == 's' || line[0] == 'n' ||
+      line[1] != '\0' || line[0] == 's' || line[0] == 'g' || line[0] == 'n' ||
       line[0] == 'r' || (line[0] >= '1' && line[0] <= '9');
 
   // A manual station change during a storm silently corrupts the run: the
@@ -309,32 +290,47 @@ void handleCommandLine(char* line) {
       break;
 
     case 's':
-      Log::println("[cmd] stop");
-      AudioEngine::stop();
-      // §6: a pause is a disconnect, and it looks the same as an empty slot
-      // — frequency on black. With no slot selected there is no frequency to
-      // draw, so the screen simply goes dark.
-      if (currentBank != '\0') {
-        Display::showFrequencyOnly(currentBank, currentFrequency);
-      } else {
+      // The play/pause button, typed. It goes through RadioController rather
+      // than straight to AudioEngine so the console and the Pico cannot end up
+      // disagreeing about whether the radio is paused.
+      Log::println("[cmd] pause");
+      if (benchOnly) {
+        AudioEngine::stop();
         Display::showBenchStation("");
+      } else {
+        RadioController::setPaused(true);
+      }
+      break;
+
+    case 'g':
+      Log::println("[cmd] play");
+      if (benchOnly) {
+        Log::println("[cmd] no catalogue - pick a bench station with 1-9");
+      } else {
+        RadioController::setPaused(false);
       }
       break;
 
     case 'r':
-      // Redraw only: the logo is decoded again and the whole layout is
-      // repainted, but the stream is left playing. Run it against `h` to see
-      // what the PNG path alone does to the largest free block, with no TLS
-      // session being torn down underneath the measurement.
-      if (currentBank == '\0') {
-        Log::println("[cmd] no slot selected - pick one with e.g. M 92");
-      } else {
-        drawSlot(currentBank, currentFrequency,
-                 StationCatalogue::find(currentBank, currentFrequency));
-      }
+      // Redraw only: the logo is read again and the whole layout is repainted,
+      // but the stream is left playing. Run it against `h` to see what the
+      // drawing path alone does to the largest free block, with no TLS session
+      // being torn down underneath the measurement.
+      RadioController::redraw();
+      break;
+
+    case 'p':
+      // Re-run the boot handshake by hand. Useful when the Pico is plugged in
+      // after the ESP32 has already booted, which on a bench is most of the
+      // time.
+      Log::println("[cmd] asking the Pico for its state");
+      PicoLink::requestState();
       break;
 
     case 't':
+      // The storm drives AudioEngine itself, so whatever RadioController
+      // thinks is playing stops being true the moment it starts.
+      RadioController::forgetStream();
       SwitchStorm::start(kStormChanges);
       break;
 
@@ -344,6 +340,7 @@ void handleCommandLine(char* line) {
 
     case 'h':
       printStatus();
+      printPicoStatus();
       break;
 
     case 'l':
@@ -408,6 +405,82 @@ void pollStreamTitle() {
   }
 }
 
+// The physical controls (§4). Every decoded message is logged before it is
+// acted on, because during bring-up the interesting question is usually "did
+// the knob produce anything at all" rather than what the radio did about it.
+void pollPico() {
+  static bool saidStormIsRunning = false;
+
+  if (!SwitchStorm::isRunning()) {
+    saidStormIsRunning = false;
+  }
+
+  PicoLink::Message message;
+
+  while (PicoLink::poll(message)) {
+    switch (message.command) {
+      case PicoLink::Command::ButtonPressed:
+        Log::printf("[pico] button %d (%c)\n", (int)message.buttonIndex,
+                    PicoLink::bankLetter(message.buttonIndex) == '\0'
+                        ? '-'
+                        : PicoLink::bankLetter(message.buttonIndex));
+        break;
+
+      case PicoLink::Command::NewFrequency:
+        Log::printf("[pico] frequency %u\n", (unsigned)message.frequency);
+        break;
+
+      case PicoLink::Command::PlayPause:
+        Log::printf("[pico] %s\n", message.isPause ? "pause" : "play");
+        break;
+
+      case PicoLink::Command::State:
+        Log::printf("[pico] state: button %d (%c) frequency %u %s\n",
+                    (int)message.buttonIndex,
+                    PicoLink::bankLetter(message.buttonIndex) == '\0'
+                        ? '-'
+                        : PicoLink::bankLetter(message.buttonIndex),
+                    (unsigned)message.frequency,
+                    message.isPause ? "paused" : "playing");
+        break;
+    }
+
+    if (benchOnly) {
+      continue;  // logged, but there are no slots for it to select
+    }
+
+    // A station change the storm did not make corrupts its measurement exactly
+    // as a typed one does — and unlike the console, the dial cannot be told to
+    // wait. Say so once per storm rather than once per message.
+    if (SwitchStorm::isRunning()) {
+      if (!saidStormIsRunning) {
+        Log::println("[pico] ignoring the controls - switch storm running, press x to abort");
+        saidStormIsRunning = true;
+      }
+      continue;
+    }
+
+    switch (message.command) {
+      case PicoLink::Command::ButtonPressed:
+        RadioController::setBank(PicoLink::bankLetter(message.buttonIndex));
+        break;
+
+      case PicoLink::Command::NewFrequency:
+        RadioController::setFrequency(message.frequency);
+        break;
+
+      case PicoLink::Command::PlayPause:
+        RadioController::setPaused(message.isPause);
+        break;
+
+      case PicoLink::Command::State:
+        RadioController::applySnapshot(PicoLink::bankLetter(message.buttonIndex),
+                                       message.frequency, message.isPause);
+        break;
+    }
+  }
+}
+
 }  // namespace
 
 void setup() {
@@ -416,7 +489,21 @@ void setup() {
   delay(1000);
 
   Log::println();
-  Log::println("ESP32 internet radio - M4 display");
+  Log::println("ESP32 internet radio - M5 Pico UART");
+
+  // First, before the screen and long before WiFi. GPIO 33 is high-Z out of
+  // reset and the Pico polls it without ever initialising its own end (§4), so
+  // until this line runs the request-state line is floating and the Pico may
+  // already be streaming State snapshots at a board that is not listening.
+  PicoLink::begin();
+
+  // One line unless it fails. §4 is frozen and the parser is hand-written
+  // against it, so this is the cheapest possible check that the two still
+  // agree — and it runs before anything else can be blamed for a dial that
+  // does nothing.
+  PicoLink::selfTest();
+
+  RadioController::begin();
 
   // Before WiFi and before the catalogue: a screen that stays black is the
   // first symptom of miswiring, and it should be visible immediately rather
@@ -441,7 +528,9 @@ void setup() {
     // The bench stations are compiled in, so the board is still useful for the
     // storm and for M2's measurements with no filesystem at all. Say which
     // world we are in rather than looking like a catalogue full of empty slots.
+    benchOnly = true;
     Log::println("[cat] no catalogue - bench stations only (keys 1-9)");
+    Log::println("[cat] the Pico is still read and logged, but drives nothing");
     listBenchStations();
     playBenchStation(0);
     return;
@@ -452,14 +541,19 @@ void setup() {
                 (unsigned)StationCatalogue::rejectedRows());
   }
 
-  // L 87 is the first filled slot in the shipped catalogue, and starting on a
-  // real station means the boot log shows a genuine connect rather than
-  // silence that has to be told apart from a fault.
-  playSlot('L', 87);
+  // No default station any more. Until M4 the boot log wanted a genuine connect
+  // to look at, so it played L 87; from M5 the answer to "which station" comes
+  // from the knobs, and playing anything else first would be both wrong and
+  // audible. The handshake runs in loop(), so a Pico that is unplugged costs a
+  // retry line every couple of seconds and nothing else — the console still
+  // works, and `p` re-runs this by hand once it is plugged in.
+  PicoLink::requestState();
 }
 
 void loop() {
   pollSerial();
+  pollPico();
+  RadioController::update();
   pollStreamTitle();
   SwitchStorm::update();
   reportStatusPeriodically();

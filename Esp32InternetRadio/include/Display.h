@@ -34,6 +34,15 @@ void begin();
 void showStation(char bank, uint8_t frequency, const char* name,
                  const char* logoPath);
 
+// Rewrites the frequency in the top-right corner and touches nothing else.
+//
+// For the one case where the dial moved but the station did not: sixteen
+// catalogue entries span two dial positions, so 102 → 103 is a new frequency on
+// the same stream. Repainting the whole layout for that would blank the screen
+// for ~110 ms and redraw an identical logo, which is a visible flash in
+// exchange for nothing.
+void updateFrequency(char bank, uint8_t frequency);
+
 // Empty slot, and paused: black screen with the frequency and nothing else
 // (§6). Both mean the same thing on screen because both mean silence.
 void showFrequencyOnly(char bank, uint8_t frequency);

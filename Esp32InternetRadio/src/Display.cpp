@@ -247,6 +247,15 @@ void showStation(char bank, uint8_t frequency, const char* name,
   drawText(kStationNameX, kStationNameY, name, kStationNameColor);
 }
 
+void updateFrequency(char bank, uint8_t frequency) {
+  // Blank the strip first rather than relying on drawChar painting its own
+  // background: that only covers the new text, so 100 -> 99 would leave the
+  // last character of the old string behind.
+  tft.fillRect(kFrequencyX, kFrequencyY, kScreenWidth - kFrequencyX,
+               Font5x7::kHeight, kBackgroundColor);
+  drawFrequency(bank, frequency);
+}
+
 void showFrequencyOnly(char bank, uint8_t frequency) {
   tft.fillScreen(kBackgroundColor);
   drawFrequency(bank, frequency);
